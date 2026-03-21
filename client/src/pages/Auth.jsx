@@ -24,7 +24,11 @@ const Auth = () => {
     setLoading(true);
 
     try {
-      const endpoint = isLogin ? '/api/auth/login' : '/api/auth/register';
+      const API_BASE = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+        ? '/api' 
+        : 'https://ai-fact-checker-rvih.onrender.com/api';
+        
+      const endpoint = isLogin ? `${API_BASE}/auth/login` : `${API_BASE}/auth/register`;
       const response = await axios.post(endpoint, { email, password });
       
       if (isLogin) {

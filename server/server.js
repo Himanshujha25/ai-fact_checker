@@ -228,7 +228,23 @@ function formatHistoryItem(h) {
 }
 
 // ─── Middleware ───
-app.use(cors());
+const allowedOrigins = [
+  'https://ai-fact-checker-dusky.vercel.app',
+  'https://ai-fact-checker-dusky-git-main-himanshujha25s-projects.vercel.app',
+  'http://localhost:3000',
+  'http://localhost:5173'
+];
+
+app.use(cors({
+  origin: (origin, callback) => {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Cross-Origin Protocol Rejection'));
+    }
+  },
+  credentials: true
+}));
 app.use(helmet({ contentSecurityPolicy: false, crossOriginEmbedderPolicy: false }));
 app.use(morgan('dev'));
 app.use(express.json({ limit: '25mb' }));

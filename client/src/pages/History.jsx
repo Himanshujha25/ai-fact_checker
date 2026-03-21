@@ -7,7 +7,9 @@ import {
 } from 'lucide-react';
 import axios from 'axios';
 
-const API_BASE = '/api';
+const API_BASE = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+  ? '/api' 
+  : 'https://ai-fact-checker-rvih.onrender.com/api';
 
 /* ── score helpers ── */
 const scoreColor = s => s > 70 ? '#10b981' : s > 40 ? '#f59e0b' : '#ef4444';
