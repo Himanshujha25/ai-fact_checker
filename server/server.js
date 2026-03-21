@@ -650,7 +650,7 @@ async function runVerificationPipeline(contentToProcess, mode = 'normal') {
     "verdict": "True"|"False"|"Partially True"|"Unverifiable", 
     "confidence": number, 
     "reasoning": "string", 
-    "evidence": [{"text": "string", "source": "string"}],
+    "evidence": [{"text": "snippet text", "source": "site name", "url": "direct URL"}],
     "chainOfThought": ["step1..."]
   }`;
 

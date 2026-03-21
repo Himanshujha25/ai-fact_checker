@@ -635,11 +635,18 @@ const Verify = () => {
                         <div>
                           <p style={{ fontSize: '0.7rem', fontWeight: 800, color: '#475569', marginBottom: 8 }}>EVIDENCE</p>
                           {claim.evidence?.map((e, i) => (
-                            <div key={i} style={{ fontSize: '0.8rem', display: 'flex', gap: 6, marginBottom: 6 }}>
-                              <ExternalLink size={12} color="#10b981" />
-                              <span>{typeof e === 'string' ? e : e.text}</span>
-                              {e.source && <span style={{ color: '#818cf8', fontSize: '0.65rem' }}>— {e.source}</span>}
-                              {e.credibility != null && <span style={{ color: '#6366f1', fontSize: '0.7rem' }}>({e.credibility}%)</span>}
+                            <div key={i} style={{ fontSize: '0.8rem', display: 'flex', gap: 6, marginBottom: 8, alignItems: 'flex-start' }}>
+                              <ExternalLink size={12} color="#10b981" style={{ flexShrink: 0, marginTop: 3 }} />
+                              <div style={{ flex: 1 }}>
+                                <span style={{ color: '#cbd5e1' }}>{typeof e === 'string' ? e : e.text}</span>
+                                {e.url ? (
+                                  <a href={e.url} target="_blank" rel="noopener noreferrer" style={{ display: 'block', color: '#6366f1', textDecoration: 'none', fontSize: '0.7rem', marginTop: 2, wordBreak: 'break-all', fontWeight: 600 }}>
+                                    Visit Source: {e.source || e.url.substring(0, 40) + '...'}
+                                  </a>
+                                ) : (
+                                  e.source && <span style={{ color: '#818cf8', fontSize: '0.65rem' }}> — Source: {e.source}</span>
+                                )}
+                              </div>
                             </div>
                           ))}
                         </div>
