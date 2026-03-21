@@ -32,13 +32,21 @@ const Verify = () => {
   const [dragOver, setDragOver] = useState(false);
   const fileInputRef = useRef(null);
 
+  const [mode, setMode] = useState('normal');
+
   const addLog = (msg) => setLogs(prev => [...prev.slice(-4), { msg, id: Date.now() }]);
 
+  const modes = [
+    { id: 'normal', label: 'Express', time: '1m', icon: <Zap size={14} />, desc: 'Gemini Knowledge + Basic Scraping' },
+    { id: 'deep', label: 'Deep Search', time: '2m', icon: <Search size={14} />, desc: 'Tavily Live Web Research + Cross-Ref' },
+    { id: 'pro', label: 'Pro Agent', time: '3m', icon: <BrainCircuit size={14} />, desc: 'Multi-Source Synthesis + Wiki Profile' }
+  ];
+
   const pipeline = [
-    { title: 'Preprocessing', icon: <FileText size={18} />, desc: 'Parsing input text and URL content' },
-    { title: 'Claim Extraction', icon: <BrainCircuit size={18} />, desc: 'Identifying atomic verifiable facts' },
-    { title: 'Evidence & CoT', icon: <Search size={18} />, desc: '7-step Chain-of-Thought verification' },
-    { title: 'Self-Reflection', icon: <ShieldCheck size={18} />, desc: 'Bias check, confidence calibration' }
+    { title: 'Extraction', icon: <FileText size={18} />, desc: 'Identifying verifiable factual assertions' },
+    { title: 'Research', icon: <Search size={18} />, desc: mode === 'normal' ? 'Internal Knowledge Check' : 'Tavily Live Web Search' },
+    { title: 'Audit', icon: <BrainCircuit size={18} />, desc: 'Cross-referencing evidence & logic' },
+    { title: 'Validation', icon: <ShieldCheck size={18} />, desc: 'Truth score aggregation & final report' }
   ];
 
   const handleVerify = async () => {
@@ -47,11 +55,11 @@ const Verify = () => {
     setResults(null);
     setError(null);
     setStep(1);
-    setLogs([{ msg: 'Initializing Fact-Check Pipeline...', id: Date.now() }]);
+    setLogs([{ msg: `Initializing ${mode.toUpperCase()} Research Pipeline...`, id: Date.now() }]);
 
     try {
       const isUrl = input.match(/^https?:\/\/[^\s$.?#].[^\s]*$/gm);
-      const payload = isUrl ? { url: input } : { text: input };
+      const payload = isUrl ? { url: input, mode } : { text: input, mode };
 
       setElapsed(0);
       const clock = setInterval(() => setElapsed(p => p + 1), 1000);
@@ -153,10 +161,41 @@ const Verify = () => {
       {/* Input Card */}
       <main className="glass-card">
         <div className="input-group">
+          {/* Mode Selector */}
+          <div style={{ display: 'flex', gap: '8px', marginBottom: '1rem', width: '100%' }}>
+            {modes.map(m => (
+              <button
+                key={m.id}
+                onClick={() => setMode(m.id)}
+                style={{
+                  flex: 1,
+                  padding: '10px',
+                  background: mode === m.id ? 'rgba(99,102,241,0.1)' : 'transparent',
+                  border: `1px solid ${mode === m.id ? '#6366f1' : 'var(--border-light)'}`,
+                  borderRadius: '10px',
+                  cursor: 'pointer',
+                  textAlign: 'left',
+                  transition: 'all 0.2s',
+                  position: 'relative',
+                  overflow: 'hidden'
+                }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                  <span style={{ fontSize: '0.75rem', fontWeight: 800, color: mode === m.id ? '#818cf8' : '#64748b' }}>
+                    {m.icon} {m.label}
+                  </span>
+                  <span style={{ fontSize: '0.65rem', fontWeight: 700, color: '#94a3b8' }}>{m.time}</span>
+                </div>
+                <p style={{ fontSize: '0.6rem', color: '#475569', margin: 0, lineHeight: 1.2 }}>{m.desc}</p>
+                {mode === m.id && <motion.div layoutId="mode-bg" style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: 2, background: '#6366f1' }} />}
+              </button>
+            ))}
+          </div>
+
           <textarea value={input} onChange={(e) => setInput(e.target.value)} placeholder="Paste URL or Text Snippet..." className="text-area" />
           <button onClick={handleVerify} disabled={loading || !input.trim()} className="btn-primary">
             {loading ? <Loader2 className="animate-spin" /> : <ShieldCheck />}
-            <span>Verify Claims</span>
+            <span>{mode === 'pro' ? 'Verify with Pro Agent' : 'Verify Claims'}</span>
           </button>
         </div>
 

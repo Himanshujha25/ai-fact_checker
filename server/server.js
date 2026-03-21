@@ -8,6 +8,42 @@ const rateLimit = require('express-rate-limit');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 const axios = require('axios');
 const CryptoJS = require('crypto-js');
+
+// ─── Tavily Research Agent (Live Web Search) ───
+async function performTavilySearch(query, depth = 'basic') {
+  const apiKey = process.env.TAVILY_API_KEY;
+  if (!apiKey) {
+    console.warn('  ⚠ TAVILY_API_KEY missing — skipping live web search');
+    return null;
+  }
+
+  try {
+    console.log(`  [Tavily] Researching query: "${query}" (depth: ${depth})...`);
+    const response = await axios.post('https://api.tavily.com/search', {
+      api_key: apiKey,
+      query: query,
+      search_depth: depth,
+      include_answer: true,
+      max_results: depth === 'advanced' ? 8 : 4
+    }, { timeout: 15000 });
+
+    const results = response.data;
+    console.log(`  [Tavily] Found ${results.results?.length || 0} sources.`);
+    
+    return {
+      answer: results.answer,
+      sources: (results.results || []).map(r => ({
+        title: r.title,
+        url: r.url,
+        snippet: r.content,
+        score: r.score
+      }))
+    };
+  } catch (err) {
+    console.error('  ✗ Tavily Search Error:', err.message);
+    return null;
+  }
+}
 const { Pool } = require('pg');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
@@ -560,171 +596,77 @@ async function retryWithBackoff(fn, retries = 3, baseDelay = 1000) {
   }
 }
 
-// Core verification pipeline — Chain-of-Thought + Self-Reflection + Entity Validation
-async function runVerificationPipeline(contentToProcess) {
+// Core verification pipeline — Chain-of-Thought + Multi-Mode Research Agent
+// Core verification pipeline — Chain-of-Thought + Multi-Mode Research Agent
+async function runVerificationPipeline(contentToProcess, mode = 'normal') {
   const model = genAI.getGenerativeModel({ model: "gemini-2.5-pro" });
   const currentDate = new Date().toISOString().split('T')[0];
 
-  // ─── PHASE 1: Claim Extraction with Entity Clarity Scoring ───
-  console.log('  [Phase 1] Extracting claims with entity validation...');
+  console.log(`🚀 Starting ${mode.toUpperCase()} Agentic Research Pipeline...`);
+
+  // ─── PHASE 1: Claim Extraction ───
+  console.log('  [Phase 1] Extracting claims...');
   const extractionPrompt = `You are a precision fact-extraction agent. Today's date is ${currentDate}.
-
-TASK: Extract every atomic, verifiable factual claim from the text below. 
-
-DYNAMIC AGENTIC MODE:
-- If the text provided is a URL, a query, or a short direct question (e.g., "Is this person employed?", "Analyze this link"), you MUST generate the implicit factual claims that need to be verified to answer the user's intent. 
-- Example input: "https://linkedin.com/in/user is he employed?" -> Extract: "The person associated with LinkedIn profile 'user' is currently employed."
-- Always try to identify the SUBJECT (Person, Place, Project) and the specific ASSERTION.
-
-CRITICAL RULES:
-- Only extract specific, verifiable FACTS (not opinions, predictions, or subjective statements).
-- For each claim, assess ENTITY CLARITY — can you clearly identify WHO or WHAT the claim is about?
-  - "HIGH": Named, well-known entity (e.g., "Elon Musk", "Himanshu Jha", "Google")
-  - "MEDIUM": Partially identifiable (e.g., "the CEO of Apple", "the profile at this URL")
-  - "LOW": Ambiguous, vague, or unidentifiable (e.g., "someone", "he", "they" - unless the URL or context identifies them)
-- If entity_clarity is LOW, the claim is likely UNVERIFIABLE — flag this.
-- For temporal claims (e.g., "The current CEO is..."), mark them as time-sensitive.
-- Classify importance: "high" (core factual assertion), "medium", or "low".
-
-FORMAT: Return ONLY a JSON array:
-[{
-  "id": number,
-  "claim": "exact factual claim",
-  "context": "surrounding context from text",
-  "importance": "high" | "medium" | "low",
-  "isTemporalSensitive": boolean,
-  "temporalNote": "string or null",
-  "entityClarity": "HIGH" | "MEDIUM" | "LOW",
-  "entityClarityReason": "Why the entity is or isn't clearly identifiable",
-  "primaryEntity": "Specific name of the person/organization to lookup (e.g. 'Honey Singh', 'Himanshu Jha') or null"
-}]
-
-TEXT:
-${contentToProcess}`;
+  TASK: Extract verifiable factual claims from the text. 
+  If the text is a question, extract the facts that need verification to ANSWER that question.
+  Return ONLY JSON array: [{"id": number, "claim": "string", "context": "string", "primaryEntity": "string or null"}]
+  TEXT: ${contentToProcess}`;
 
   const extractionResult = await retryWithBackoff(() => model.generateContent(extractionPrompt));
   let claims;
   try {
     claims = JSON.parse(extractionResult.response.text().match(/\[[\s\S]*\]/)?.[0] || '[]');
-  } catch (e) {
-    claims = [];
-  }
-  console.log(`  [Phase 1] Extracted ${claims.length} claims (${claims.filter(c => c.entityClarity === 'LOW').length} ambiguous)`);
+  } catch (e) { claims = []; }
 
-  // ─── PHASE 2: Chain-of-Thought Verification with Anti-Hallucination ───
-  console.log('  [Phase 2] Verifying claims with CoT + entity validation...');
+  // ─── PHASE 2: Verification with Multi-Mode Tools ───
+  console.log(`  [Phase 2] Verifying ${claims.length} claims (Mode: ${mode})...`);
   const verificationResults = [];
-  for (const claim of claims.slice(0, 6)) {
+  
+  // Limit claims to save speed (Normal: 4, Deep: 7, Pro: 10)
+  const claimLimit = mode === 'normal' ? 4 : (mode === 'deep' ? 7 : 10);
+  
+  for (const claim of claims.slice(0, claimLimit)) {
     try {
-      const verifyResult = await retryWithBackoff(async () => {
-        const verifyPrompt = `You are a meticulous, skeptical fact-verification agent. Today is ${currentDate}.
-Use Chain-of-Thought reasoning to verify this claim. BE SKEPTICAL BY DEFAULT.
-
-CLAIM: "${claim.claim}"
-CONTEXT: "${claim.context}"
-ENTITY CLARITY: ${claim.entityClarity || 'UNKNOWN'} — ${claim.entityClarityReason || 'Not assessed'}
-${claim.isTemporalSensitive ? `⚠️ TEMPORAL WARNING: ${claim.temporalNote || 'Time-sensitive claim.'}` : ''}
-
-═══════════════════════════════════════════
-CRITICAL ANTI-HALLUCINATION RULES (MUST FOLLOW):
-═══════════════════════════════════════════
-
-1. NEVER mark a claim as "True" unless you have SPECIFIC, CONCRETE evidence from KNOWN, RELIABLE sources.
-2. If the subject/entity is AMBIGUOUS (e.g., "honey", "someone", a nickname, a pronoun without clear referent):
-   → Verdict MUST be "Unverifiable"
-   → Confidence MUST be ≤ 0.25
-   → Reasoning MUST explain: "The subject cannot be clearly identified"
-3. If you cannot find SPECIFIC evidence from NAMED sources:
-   → Verdict MUST be "Unverifiable"
-   → Do NOT assume or guess
-4. "No evidence found" does NOT mean "True". It means "Unverifiable".
-5. Your DEFAULT assumption should be SKEPTICISM, not trust.
-6. If confidence would be below 0.6, the verdict CANNOT be "True" — use "Partially True" or "Unverifiable".
-
-═══════════════════════════════════════════
-
-VERIFICATION STEPS (follow each one carefully):
-
-Step 1 — ENTITY CHECK: Is the subject of this claim a clearly identifiable, real-world entity?
-  - If NO → immediately set verdict to "Unverifiable" with low confidence and skip to Step 7.
-  - If YES → continue.
-Step 2 — DECOMPOSE: Break the claim into its core assertions.
-Step 3 — SEARCH STRATEGY: Formulate 2-3 targeted search queries.
-Step 4 — EVIDENCE: What do the most reliable sources say? Name specific sources.
-  - If NO reliable sources found → verdict must be "Unverifiable".
-Step 5 — SOURCE CONFLICT CHECK: Do sources agree or conflict?
-  - Weight: academic > .gov/.edu > major news > blog > social media.
-Step 6 — TEMPORAL CHECK: Is this still accurate as of ${currentDate}?
-Step 7 — SELF-REFLECTION: 
-  - "Am I hallucinating? Do I actually have evidence, or am I making this up?"
-  - "Could this be a trick question with an ambiguous subject?"
-  - "If I showed this to a skeptic, would they agree?"
-  - If uncertain, LOWER confidence substantially.
-Step 8 — FINAL VERDICT: Only mark "True" if ALL of the following are met:
-  a) Entity is clearly identified
-  b) You have named, concrete evidence
-  c) Confidence is ≥ 0.6
-
-Return ONLY JSON:
-{
-  "claimId": ${claim.id},
-  "verdict": "True"|"False"|"Partially True"|"Unverifiable",
-  "confidence": number (0.0-1.0),
-  "reasoning": "multi-sentence explanation",
-  "chainOfThought": ["Step 1: ...", "Step 2: ...", ...],
-  "searchQueriesUsed": ["query1", "query2"],
-  "evidence": [{"text": "snippet", "source": "source name", "credibility": number}],
-  "sourceConflicts": "string or null",
-  "temporalWarning": "string or null",
-  "entityClarity": "HIGH"|"MEDIUM"|"LOW",
-  "entityClarityReason": "why entity is/isn't identifiable",
-  "originalSentence": "matching sentence from original text"
-}`;
-        return await model.generateContent(verifyPrompt);
-      });
-
-      let parsed;
-      try {
-        parsed = JSON.parse(verifyResult.response.text().match(/\{[\s\S]*\}/)?.[0] || '{}');
-      } catch (e) {
-        parsed = { claimId: claim.id, verdict: 'Unverifiable', confidence: 0.2,
-          reasoning: 'Failed to parse verification result.', evidence: [], searchQueriesUsed: [] };
-      }
-
-      // ─── POST-VERIFICATION VALIDATION ───
-      // Guard: if entity clarity is LOW, force Unverifiable
-      if ((claim.entityClarity === 'LOW' || parsed.entityClarity === 'LOW') && parsed.verdict === 'True') {
-        console.log(`  ⚠ Overriding claim ${claim.id}: LOW entity clarity cannot be "True"`);
-        parsed.verdict = 'Unverifiable';
-        parsed.confidence = Math.min(parsed.confidence, 0.25);
-        parsed.reasoning = `[Entity Validation Override] ${parsed.reasoning}. The subject of this claim is ambiguous and cannot be reliably verified.`;
-      }
-      // Guard: if no real evidence but marked True, demote
-      if (parsed.verdict === 'True' && (!parsed.evidence || parsed.evidence.length === 0)) {
-        console.log(`  ⚠ Overriding claim ${claim.id}: No evidence but marked True`);
-        parsed.verdict = 'Unverifiable';
-        parsed.confidence = Math.min(parsed.confidence, 0.3);
-        parsed.reasoning = `[Evidence Validation Override] ${parsed.reasoning}. No concrete evidence was provided to support this claim.`;
-      }
-
-      // ─── NEW: Fetch Entity Metadata with aggressive name detection fallback ───
-      const entityToFetch = claim.primaryEntity || parsed.primaryEntity || (claim.entityClarity !== 'LOW' && claim.claim.split(' ').slice(0, 3).join(' '));
+      let researchData = null;
       
-      if (entityToFetch && (claim.entityClarity !== 'LOW' || parsed.entityClarity !== 'LOW')) {
-        console.log(`  [Phase 2] Attempting to fetch metadata for entity: "${entityToFetch}"`);
-        parsed.entityMetadata = await fetchEntityImage(entityToFetch);
-      } else {
-        console.log(`  [Phase 2] Skipping metadata fetch: clarity="${claim.entityClarity}", entity="${entityToFetch}"`);
+      // DEEP or PRO Mode: Activate Tavily Live Web Research
+      if (mode === 'deep' || mode === 'pro') {
+        const query = claim.primaryEntity ? `${claim.claim} regarding ${claim.primaryEntity}` : claim.claim;
+        researchData = await performTavilySearch(query, mode === 'pro' ? 'advanced' : 'basic');
+      }
+
+      const verifyPrompt = `You are a skeptical fact-checker. Date: ${currentDate}.
+  CLAIM: "${claim.claim}"
+  MODE: ${mode.toUpperCase()}
+  RESEARCH DATA: ${researchData ? JSON.stringify(researchData) : "No external search performed."}
+
+  RULES:
+  1. Rely on RESEARCH DATA if provided.
+  2. If info is missing or ambiguous, verdict MUST be "Unverifiable".
+  3. Be extremely concise in reasoning.
+
+  Return JSON: 
+  { 
+    "verdict": "True"|"False"|"Partially True"|"Unverifiable", 
+    "confidence": number, 
+    "reasoning": "string", 
+    "evidence": [{"text": "string", "source": "string"}],
+    "chainOfThought": ["step1..."]
+  }`;
+
+      const verifyResult = await retryWithBackoff(() => model.generateContent(verifyPrompt));
+      let parsed = JSON.parse(verifyResult.response.text().match(/\{[\s\S]*\}/)?.[0] || '{}');
+      parsed.claimId = claim.id;
+
+      // PRO Mode: Extra Entity Validation (Wikipedia)
+      if (mode === 'pro' && claim.primaryEntity) {
+        parsed.entityMetadata = await fetchEntityImage(claim.primaryEntity);
       }
 
       verificationResults.push(parsed);
     } catch (err) {
-      console.error(`  ✗ Claim ${claim.id} failed after retries: ${err.message?.substring(0, 80)}`);
-      verificationResults.push({
-        claimId: claim.id, verdict: 'Unverifiable', confidence: 0, pipelineError: true,
-        reasoning: `Verification failed (pipeline recovered): ${err.message?.substring(0, 100)}`,
-        evidence: [], searchQueriesUsed: []
-      });
+      console.error(`  ✗ Error on claim ${claim.id}:`, err.message);
+      verificationResults.push({ claimId: claim.id, verdict: 'Unverifiable', confidence: 0, reasoning: 'Pipeline error' });
     }
   }
 
@@ -733,49 +675,31 @@ Return ONLY JSON:
   let aiDetection = { score: 0, explanation: 'Analysis unavailable' };
   try {
     const aiRes = await retryWithBackoff(() =>
-      model.generateContent(`You are an AI text detection specialist. Today is ${currentDate}.
-Analyze this text and estimate probability (0-100) it was AI-generated.
-Consider: sentence structure uniformity, vocabulary diversity, hedging patterns, factual precision, paragraph flow.
-Return ONLY JSON: {"score": number, "explanation": "string"}.
-Text: ${contentToProcess.substring(0, 1500)}`)
+      model.generateContent(`Analyze this text for AI generation probability (0-100). Return JSON: {"score": number, "explanation": "string"}. Text: ${contentToProcess.substring(0, 1000)}`)
     );
     aiDetection = JSON.parse(aiRes.response.text().match(/\{[\s\S]*\}/)?.[0] || '{"score": 0, "explanation": "Unavailable"}');
-  } catch (err) {
-    console.error('  ✗ AI text detection failed (non-blocking):', err.message?.substring(0, 60));
-  }
+  } catch (err) { }
 
   // ─── PHASE 4: Aggregate & Score ───
-  const successfulResults = verificationResults.filter(v => !v.pipelineError);
+  const successfulResults = verificationResults.filter(v => v.verdict);
   const trueCount = successfulResults.filter(v => v.verdict === 'True').length;
   const partialCount = successfulResults.filter(v => v.verdict === 'Partially True').length;
   const totalVerified = successfulResults.length || 1;
   const truthScore = ((trueCount + partialCount * 0.5) / totalVerified) * 100;
 
-  const pipelineMeta = {
-    totalClaims: claims.length,
-    verifiedClaims: successfulResults.length,
-    failedClaims: verificationResults.filter(v => v.pipelineError).length,
-    temporalClaims: claims.filter(c => c.isTemporalSensitive).length,
-    conflictingClaims: verificationResults.filter(v => v.sourceConflicts).length,
-    ambiguousClaims: claims.filter(c => c.entityClarity === 'LOW').length,
-  };
-  console.log(`  [Phase 4] Score: ${Math.round(truthScore)}% | ${pipelineMeta.verifiedClaims} verified, ${pipelineMeta.ambiguousClaims} ambiguous`);
-
   return {
     originalText: contentToProcess,
-    claims: claims.map(c => ({ ...c, ...verificationResults.find(v => v.claimId === c.id) })),
+    claims: claims.slice(0, claimLimit).map(c => ({ ...c, ...verificationResults.find(v => v.claimId === c.id) })),
     aiTextDetection: aiDetection,
-    aiMediaDetection: null,
     truthScore,
-    pipelineMeta,
-    cached: false,
+    pipelineMeta: { mode, totalClaims: claims.length, verifiedCount: successfulResults.length },
     timestamp: new Date().toISOString()
   };
 }
 
 // POST: Single Fact-Check (Protected)
 app.post('/api/verify', authenticate, async (req, res) => {
-  const { text, url } = req.body;
+  const { text, url, mode } = req.body;
   const userId = req.userId;
   let identifier = url || text;
   const hashKey = getHash(identifier);
@@ -809,7 +733,7 @@ app.post('/api/verify', authenticate, async (req, res) => {
     if (!contentToProcess.trim()) return res.status(400).json({ error: 'No content provided' });
 
     console.log(`  [Dynamic] Processing payload: ${contentToProcess.substring(0, 50)}...`);
-    const responseData = await runVerificationPipeline(contentToProcess);
+    const responseData = await runVerificationPipeline(contentToProcess, mode || 'normal');
 
     // AI Media Detection: analyze extracted images
     if (imageUrls.length > 0) {
@@ -855,7 +779,7 @@ app.post('/api/verify', authenticate, async (req, res) => {
 
 // POST: Bulk URL Verification (Protected)
 app.post('/api/verify/bulk', authenticate, async (req, res) => {
-  const { urls } = req.body;
+  const { urls, mode } = req.body;
   const userId = req.userId;
   if (!urls || !Array.isArray(urls) || urls.length === 0) return res.status(400).json({ error: 'Provide an array of URLs' });
   if (urls.length > 5) return res.status(400).json({ error: 'Maximum 5 URLs per bulk request' });
@@ -865,7 +789,7 @@ app.post('/api/verify/bulk', authenticate, async (req, res) => {
     for (const url of urls) {
       try {
         const content = await extractTextFromUrl(url);
-        const result = await runVerificationPipeline(content);
+        const result = await runVerificationPipeline(content, mode || 'normal');
         const reportId = getHash(url).substring(0, 12);
         result.reportId = reportId;
         await dbSaveVerification(userId, reportId, url, result.truthScore, result.claims.length, result);
