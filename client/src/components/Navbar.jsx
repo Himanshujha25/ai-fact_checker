@@ -8,23 +8,28 @@ const Navbar = ({ darkMode, setDarkMode }) => {
   const navigate = useNavigate();
 
   return (
-    <nav className="navbar">
-      <div style={{ fontSize: '1.2rem', fontWeight: 900, letterSpacing: '-1px', display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }} onClick={() => navigate('/')}>
-        <ShieldCheck color="#6366f1" size={24} /> VERICHECK.AI
+    <nav className="navbar-capsule">
+      <div 
+        className="flex items-center gap-2 cursor-pointer group" 
+        onClick={() => navigate('/')}
+      >
+        <ShieldCheck className="text-primary w-5 h-5 group-hover:drop-shadow-[0_0_12px_rgba(139,92,246,0.6)] transition-all" />
+        <span className="text-[12px] font-black tracking-tighter text-white uppercase italic">VeriCheck.AI</span>
       </div>
-      <div className="nav-links">
-        <NavLink to="/" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`} end>Home</NavLink>
+      
+      <div className="flex items-center gap-8">
+        <NavLink to="/" className={({ isActive }) => `nav-link-item ${isActive ? 'active' : ''}`} end>Home</NavLink>
         {user ? (
           <>
-            <NavLink to="/verify" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>Verify</NavLink>
-            <NavLink to="/history" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>History</NavLink>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginLeft: '1rem', paddingLeft: '1.5rem', borderLeft: '1px solid var(--border-light)' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.75rem', color: '#94a3b8' }}>
-                <User size={14} /> {user.email?.split('@')[0]}
+            <NavLink to="/verify" className={({ isActive }) => `nav-link-item ${isActive ? 'active' : ''}`}>Verify</NavLink>
+            <NavLink to="/history" className={({ isActive }) => `nav-link-item ${isActive ? 'active' : ''}`}>History</NavLink>
+            <div className="flex items-center gap-6 ml-4 pl-6 border-l border-white/5 text-text-muted">
+              <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest bg-white/5 px-3 py-1.5 rounded-full border border-white/5">
+                <User size={12} className="text-primary" /> {user.email?.split('@')[0]}
               </div>
               <button 
                 onClick={logout}
-                style={{ background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+                className="hover:text-danger transition-colors p-1"
                 title="Logout"
               >
                 <LogOut size={16} />
@@ -32,11 +37,14 @@ const Navbar = ({ darkMode, setDarkMode }) => {
             </div>
           </>
         ) : (
-          <NavLink to="/auth" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>Sign In</NavLink>
+          <NavLink to="/auth" className={({ isActive }) => `nav-link-item ${isActive ? 'active' : ''}`}>Sign In</NavLink>
         )}
-        <NavLink to="/architecture" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>Arch</NavLink>
-        <button onClick={() => setDarkMode(!darkMode)} style={{ background: 'transparent', border: 'none', color: 'inherit', cursor: 'pointer', padding: '4px', marginLeft: '8px' }}>
-          {darkMode ? <Sun size={18} /> : <Moon size={18} />}
+        <NavLink to="/architecture" className={({ isActive }) => `nav-link-item ${isActive ? 'active' : ''}`}>Arch</NavLink>
+        <button 
+          onClick={() => setDarkMode(!darkMode)} 
+          className="p-2 ml-2 rounded-lg bg-white/5 hover:bg-white/10 border border-white/5 transition-all text-text-muted hover:text-white"
+        >
+          {darkMode ? <Sun size={14} /> : <Moon size={14} />}
         </button>
       </div>
     </nav>
