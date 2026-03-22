@@ -59,6 +59,7 @@ export default function AnalysisProcessing({ elapsed, step, logs, inputTitle, on
     velocity: 0,
   });
   const [agents, setAgents] = React.useState(3);
+  const [dynamicProb, setDynamicProb] = React.useState(74.2);
 
   React.useEffect(() => {
     const timer = setInterval(() => {
@@ -69,10 +70,15 @@ export default function AnalysisProcessing({ elapsed, step, logs, inputTitle, on
         velocity: (2.5 + Math.random() * 3).toFixed(1),
       }));
       setAgents(Math.floor(2 + Math.random() * 4));
+      
+      setDynamicProb(prev => {
+        if (prev >= 98.8) return prev;
+        const increment = Math.random() * 0.35;
+        return parseFloat((prev + increment).toFixed(1));
+      });
     }, 1500);
     return () => clearInterval(timer);
   }, []);
-
 
   const STEPS = [
     { icon: FileText,   label: 'Claim Extraction',  active: step === 1, done: step > 1, pct: step === 1 ? 84 : step > 1 ? 100 : 0,  status: step === 1 ? '84% complete'    : step > 1 ? 'Complete'  : 'Pending' },
@@ -80,18 +86,16 @@ export default function AnalysisProcessing({ elapsed, step, logs, inputTitle, on
     { icon: ShieldCheck,label: 'Final Synthesis',    active: step === 3, done: step > 3, pct: step === 3 ? 40 : step > 3 ? 100 : 0,  status: step === 3 ? 'Synthesising…'   : step > 3 ? 'Complete'  : 'Awaiting' },
   ];
 
-  const displayLogs = logs.length > 0 ? logs : [
-    'GET https://api.osint.archive/v2/fetch_primary_stream…',
-    'POST query://semantic_audit/entity_verification_vector',
-    'GET https://reuters.com/business/archive/live_feed_8271',
-    'CONNECT node://cluster_sigma_9/agent_handshake',
-  ].map((msg, i) => ({ id: i, msg }));
+  const displayLogs = (logs && logs.length > 0) ? logs : [
+    { id: 1, msg: 'GET https://api.osint.archive/v2/fetch_primary_stream…' },
+    { id: 2, msg: 'POST query://semantic_audit/entity_verification_vector' },
+    { id: 3, msg: 'GET https://reuters.com/business/archive/live_feed_8271' },
+    { id: 4, msg: 'CONNECT node://cluster_sigma_9/agent_handshake' },
+  ];
 
   return (
     <div style={{ paddingTop: 40, paddingBottom: 100, fontFamily: "'DM Sans', system-ui, sans-serif" }}>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;0,600&family=DM+Serif+Display@0;1&family=DM+Mono:wght@400;500&display=swap');
-
         @keyframes ap-spin    { to { transform: rotate(360deg); } }
         @keyframes ap-ping    { 0%,100% { transform: scale(1);   opacity:.5 } 50% { transform: scale(1.5); opacity:0 } }
         @keyframes ap-pulse   { 0%,100% { opacity:1 } 50% { opacity:.35 } }
@@ -99,7 +103,7 @@ export default function AnalysisProcessing({ elapsed, step, logs, inputTitle, on
         @keyframes ap-scan    { 0% { transform:translateY(0) } 100% { transform:translateY(100%) } }
 
         .ap-log-row {
-          display: flex; align-items: center; gap: 10;
+          display: flex; align-items: center; gap: 10px;
           background: rgba(255,255,255,0.025);
           border: 1px solid rgba(255,255,255,0.06);
           border-radius: 8px; padding: 10px 14px;
@@ -121,19 +125,19 @@ export default function AnalysisProcessing({ elapsed, step, logs, inputTitle, on
         }
 
         .ap-metric {
-          display: flex; flex-direction: column; gap: 5;
+          display: flex; flex-direction: column; gap: 5px;
+        }
+
+        @media (max-width: 768px) {
+          .ap-log-row { font-size: 9px !important; }
+          .ap-claim-card { padding: 16px !important; }
+          .ap-header-flex { flex-direction: column !important; align-items: flex-start !important; gap: 20px !important; }
         }
       `}</style>
 
       {/* ── Session header ── */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 40, paddingBottom: 24, borderBottom: `1px solid ${LINE}` }}>
+      <div className="ap-header-flex" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 40, paddingBottom: 24, borderBottom: `1px solid ${LINE}` }}>
         <div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
-            <div style={{ width: 7, height: 7, borderRadius: '50%', background: GOLD, animation: 'ap-pulse 2s ease-in-out infinite' }} />
-            <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 10, fontWeight: 500, color: GOLD, letterSpacing: '0.14em', textTransform: 'uppercase' }}>
-              Jurist Protocol Active
-            </span>
-          </div>
           <h1 style={{ fontFamily: "'DM Serif Display', Georgia, serif", fontSize: 'clamp(26px, 3vw, 40px)', fontWeight: 400, color: TEXT, letterSpacing: '-0.02em', lineHeight: 1.1 }}>
             Analysis Session: {sessionID}
           </h1>
@@ -162,249 +166,118 @@ export default function AnalysisProcessing({ elapsed, step, logs, inputTitle, on
               padding: '10px 14px',
               color: '#f87171',
               fontFamily: "'DM Mono', monospace",
-              fontSize: 10,
-              textTransform: 'uppercase',
-              letterSpacing: '0.08em',
-              cursor: 'pointer',
-              transition: 'all 0.2s',
+              fontSize: 10, fontWeight: 500, letterSpacing: '0.08em', textTransform: 'uppercase',
+              cursor: 'pointer', transition: '0.2s',
             }}
-            onMouseOver={e => { e.currentTarget.style.background = 'rgba(248,113,113,0.12)'; e.currentTarget.style.borderColor = 'rgba(248,113,113,0.3)'; }}
-            onMouseOut={e => { e.currentTarget.style.background = 'rgba(248,113,113,0.06)'; e.currentTarget.style.borderColor = 'rgba(248,113,113,0.15)'; }}
+            onMouseOver={e => { e.currentTarget.style.background = 'rgba(248,113,113,0.12)'; e.currentTarget.style.borderColor = 'rgba(248,113,113,0.25)' }}
+            onMouseOut={e => { e.currentTarget.style.background = 'rgba(248,113,113,0.06)'; e.currentTarget.style.borderColor = 'rgba(248,113,113,0.15)' }}
           >
-            Cancel Audit
+            Terminal
           </button>
         </div>
       </div>
 
-      {/* ── Pipeline steps ── */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: 36, position: 'relative' }}>
-        {/* connector line */}
-        <div style={{ position: 'absolute', top: 22, left: '16.67%', right: '16.67%', height: 1, background: LINE, zIndex: 0 }} />
-
-        {STEPS.map((s, i) => (
-          <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12, opacity: step >= i + 1 ? 1 : 0.25, transition: 'opacity 0.5s', position: 'relative', zIndex: 1 }}>
-            {/* Icon ring */}
-            <div style={{
-              width: 44, height: 44, borderRadius: '50%',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              background: s.active ? GOLD2 : s.done ? 'rgba(74,222,128,0.08)' : SURF,
-              border: `1px solid ${s.active ? 'rgba(201,168,76,0.4)' : s.done ? 'rgba(74,222,128,0.25)' : LINE}`,
-              position: 'relative',
-              transition: 'background 0.4s, border-color 0.4s',
-              boxShadow: s.active ? `0 0 20px rgba(201,168,76,0.2)` : 'none',
-            }}>
-              <s.icon size={17} color={s.active ? GOLD : s.done ? '#4ade80' : DIM} />
-              {s.active && (
-                <div style={{
-                  position: 'absolute', inset: -4, borderRadius: '50%',
-                  border: `1px solid ${GOLD}`,
-                  animation: 'ap-ping 2s ease-in-out infinite',
-                  opacity: 0.3,
-                }} />
-              )}
-            </div>
-
-            <div style={{ textAlign: 'center' }}>
-              <p style={{ fontFamily: "'DM Sans', system-ui, sans-serif", fontSize: 13, fontWeight: 600, color: s.active ? TEXT : s.done ? 'rgba(232,228,220,0.6)' : DIM, marginBottom: 3 }}>
-                {s.label}
-              </p>
-              <p style={{ fontFamily: "'DM Mono', monospace", fontSize: 9, color: s.active ? GOLD : s.done ? '#4ade80' : DIM, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
-                {s.status}
-              </p>
-            </div>
-
-            {/* Progress bar */}
-            <div style={{ width: '80%', height: 2, background: 'rgba(255,255,255,0.06)', borderRadius: 4, overflow: 'hidden' }}>
-              <motion.div
-                initial={{ width: 0 }}
-                animate={{ width: `${s.pct}%` }}
-                transition={{ duration: 0.8, ease: 'easeOut' }}
-                style={{ height: '100%', background: s.done ? '#4ade80' : GOLD, borderRadius: 4 }}
-              />
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {/* ── Main grid ── */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 340px', gap: 16 }}>
-
-        {/* Left: claims feed */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          {/* Header */}
-          <div style={{ background: SURF, border: `1px solid ${LINE}`, borderRadius: 14, padding: '18px 22px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 10, fontWeight: 500, color: DIM, letterSpacing: '0.1em', textTransform: 'uppercase' }}>
-                Extracted Claims Pipeline
-              </span>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-                <div style={{ width: 6, height: 6, borderRadius: '50%', background: GOLD, animation: 'ap-pulse 2s ease-in-out infinite' }} />
-                <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 9, color: GOLD, letterSpacing: '0.1em', textTransform: 'uppercase' }}>
-                  Live
-                </span>
+      {/* ── Main content ── */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 32 }}>
+        
+        {/* Left Col: Protocol Progression */}
+        <div>
+          <h3 style={{ fontFamily: "'DM Mono', monospace", fontSize: 9, color: DIM, letterSpacing: '0.14em', textTransform: 'uppercase', marginBottom: 20 }}>
+            Audit Progression
+          </h3>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+            {STEPS.map((s, i) => (
+              <div key={i} style={{ opacity: s.done || s.active ? 1 : 0.35, transition: 'opacity 0.5s' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 10 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <div style={{ width: 32, height: 32, borderRadius: 8, background: s.done ? 'rgba(74,222,128,0.06)' : s.active ? 'rgba(201,168,76,0.08)' : SURF, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <s.icon size={16} color={s.done ? '#4ade80' : s.active ? GOLD : DIM} />
+                    </div>
+                    <div>
+                      <span style={{ display: 'block', fontSize: 13, fontWeight: s.active ? 600 : 500, color: s.done ? '#4ade80' : s.active ? TEXT : DIM }}>{s.label}</span>
+                      <span style={{ fontSize: 9, color: DIM, fontFamily: "'DM Mono', monospace", textTransform: 'uppercase' }}>{s.status}</span>
+                    </div>
+                  </div>
+                </div>
+                <div style={{ height: 4, background: SURF, borderRadius: 2, overflow: 'hidden' }}>
+                   <motion.div 
+                     initial={{ width: 0 }}
+                     animate={{ width: `${s.pct}%` }}
+                     style={{ height: '100%', background: s.done ? '#4ade80' : GOLD, boxShadow: s.active ? `0 0 10px ${GOLD}60` : 'none' }}
+                   />
+                </div>
               </div>
-            </div>
+            ))}
           </div>
 
-          {/* Claim cards */}
-          {dynamicClaims.map((c, i) => (
-            <motion.div
-              key={i}
-              className={`ap-claim-card ${c.active ? 'active' : ''}`}
-              initial={{ opacity: 0, x: -12 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: i * 0.15, duration: 0.35 }}
-            >
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-                <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 9, color: DIM, letterSpacing: '0.1em', textTransform: 'uppercase' }}>
-                  Claim {c.id}
-                </span>
-                <span style={{
-                  fontFamily: "'DM Mono', monospace", fontSize: 9,
-                  color: c.active ? GOLD : DIM,
-                  letterSpacing: '0.08em', textTransform: 'uppercase',
-                  animation: c.active ? 'ap-pulse 2s ease-in-out infinite' : 'none',
-                }}>
-                  {c.active ? 'Extracting context…' : 'Queued for evidence'}
-                </span>
-              </div>
+          {/* Engine Status (Static) moved to bottom or side? No, let's keep it here */}
+          <div style={{ marginTop: 40, padding: 20, background: SURF, border: `1px solid ${LINE}`, borderRadius: 12 }}>
+             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+                <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#4ade80', animation: 'ap-pulse 2s infinite' }} />
+                <span style={{ fontSize: 10, fontFamily: "'DM Mono', monospace", color: DIM, letterSpacing: '0.08em', textTransform: 'uppercase' }}>Neural Engine v4.2 · Operational</span>
+             </div>
+             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+                <div className="ap-metric">
+                  <span style={{ fontSize: 9, color: DIM, textTransform: 'uppercase' }}>Est. Confidence</span>
+                  <span style={{ fontSize: 18, fontFamily: "'DM Serif Display', serif", color: TEXT }}>{dynamicProb}%</span>
+                </div>
+                <div className="ap-metric">
+                  <span style={{ fontSize: 9, color: DIM, textTransform: 'uppercase' }}>Latency</span>
+                  <span style={{ fontSize: 18, fontFamily: "'DM Serif Display', serif", color: TEXT }}>{telemetry.velocity}ms</span>
+                </div>
+             </div>
+          </div>
+        </div>
 
-              <p style={{ fontSize: 14, color: c.active ? TEXT : MUTED, lineHeight: 1.6, fontWeight: c.active ? 500 : 400, marginBottom: 14 }}>
-                "{c.text}"
-              </p>
-
-              <div style={{ display: 'flex', gap: 8 }}>
-                <span style={{
-                  fontFamily: "'DM Mono', monospace", fontSize: 9, letterSpacing: '0.1em',
-                  background: SURF, border: `1px solid ${LINE}`,
-                  color: DIM, padding: '3px 10px', borderRadius: 4, textTransform: 'uppercase',
-                }}>
-                  {c.entity}
-                </span>
-                {c.confidence && (
-                  <span style={{
-                    fontFamily: "'DM Mono', monospace", fontSize: 9, letterSpacing: '0.1em',
-                    background: 'rgba(74,222,128,0.08)', border: '1px solid rgba(74,222,128,0.2)',
-                    color: '#4ade80', padding: '3px 10px', borderRadius: 4, textTransform: 'uppercase',
-                  }}>
-                    {c.confidence}
-                  </span>
+        {/* Right Col: Active Claims & Live Stream */}
+        <div>
+           <h3 style={{ fontFamily: "'DM Mono', monospace", fontSize: 9, color: DIM, letterSpacing: '0.14em', textTransform: 'uppercase', marginBottom: 20 }}>
+            Claim Decomposition & Cross-Ref
+          </h3>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 14, marginBottom: 32 }}>
+            {dynamicClaims.map(c => (
+              <div key={c.id} className={`ap-claim-card ${c.active ? 'active' : ''}`}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
+                   <span style={{ px: 6, py: 2, borderRadius: 4, background: c.active ? 'rgba(201,168,76,0.15)' : SURF, color: c.active ? GOLD : DIM, fontSize: 8, fontFamily: "'DM Mono', monospace", letterSpacing: '0.05em' }}>
+                     {c.id} // {c.entity}
+                   </span>
+                   {c.confidence && (
+                     <span style={{ fontSize: 9, color: '#4ade80', fontWeight: 600, fontFamily: "'DM Mono', monospace" }}>
+                        {c.confidence}
+                     </span>
+                   )}
+                </div>
+                <p style={{ fontSize: 13, color: c.active ? TEXT : DIM, lineHeight: 1.5 }}>
+                  {c.text}
+                </p>
+                {c.active && (
+                  <div style={{ marginTop: 12, height: 1, background: `linear-gradient(90deg, ${GOLD}40 0%, transparent 100%)` }} />
                 )}
               </div>
-            </motion.div>
-          ))}
+            ))}
+          </div>
 
-          {/* Scanning placeholder */}
-          <div style={{
-            background: SURF, border: `1px dashed rgba(255,255,255,0.08)`,
-            borderRadius: 12, padding: '22px', display: 'flex',
-            alignItems: 'center', justifyContent: 'center',
-          }}>
-            <span style={{
-              fontFamily: "'DM Mono', monospace", fontSize: 10, color: DIM,
-              letterSpacing: '0.1em', textTransform: 'uppercase',
-              animation: 'ap-pulse 2.5s ease-in-out infinite',
-            }}>
-              Scanning next segment…
-            </span>
+          <h3 style={{ fontFamily: "'DM Mono', monospace", fontSize: 9, color: DIM, letterSpacing: '0.14em', textTransform: 'uppercase', marginBottom: 16 }}>
+            Verification Stream
+          </h3>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxHeight: 180, overflow: 'hidden' }}>
+            <AnimatePresence>
+              {displayLogs.slice(-5).map((log, i) => (
+                <motion.div 
+                  key={log.id}
+                  initial={{ opacity: 0, x: -10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  className="ap-log-row"
+                  style={{ opacity: 1 - i*0.15 }}
+                >
+                   <span style={{ color: GOLD, marginRight: 8 }}>›</span>
+                   <span style={{ color: TEXT, whiteSpace: 'nowrap' }}>{log.msg}</span>
+                </motion.div>
+              ))}
+            </AnimatePresence>
           </div>
         </div>
 
-        {/* Right: log feed + telemetry */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-
-          {/* Log feed */}
-          <div style={{ background: 'rgba(10,10,18,0.95)', border: `1px solid rgba(255,255,255,0.09)`, borderRadius: 14, padding: '0', overflow: 'hidden', flex: '1 1 auto', display: 'flex', flexDirection: 'column' }}>
-            {/* terminal bar */}
-            <div style={{ padding: '12px 16px', borderBottom: `1px solid ${LINE}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'rgba(255,255,255,0.02)' }}>
-              <div style={{ display: 'flex', gap: 6 }}>
-                {['#ff5f57','#febc2e','#28c840'].map(c => (
-                  <div key={c} style={{ width: 9, height: 9, borderRadius: '50%', background: c, opacity: 0.6 }} />
-                ))}
-              </div>
-              <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 9, color: DIM, letterSpacing: '0.06em' }}>
-                osint-stream
-              </span>
-              <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#4ade80', boxShadow: '0 0 6px rgba(74,222,128,0.5)' }} />
-            </div>
-
-            <div style={{ padding: '14px 14px', display: 'flex', flexDirection: 'column', gap: 8, flex: 1, overflowY: 'auto' }}>
-              <AnimatePresence>
-                {displayLogs.map((log, i) => (
-                  <motion.div
-                    key={log.id ?? i}
-                    className="ap-log-row"
-                    initial={{ opacity: 0, x: 8 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: i * 0.08, duration: 0.25 }}
-                  >
-                    <span style={{ color: GOLD, fontWeight: 500, flexShrink: 0 }}>GET</span>
-                    <span style={{ color: MUTED, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1, fontSize: 10 }}>
-                      {log.msg}
-                    </span>
-                    <span style={{ color: '#4ade80', flexShrink: 0, fontSize: 9 }}>200</span>
-                  </motion.div>
-                ))}
-              </AnimatePresence>
-
-              {/* blinking cursor */}
-              <div style={{ fontFamily: "'DM Mono', monospace", fontSize: 11, color: GOLD, paddingLeft: 2, paddingTop: 4 }}>
-                $ <span style={{ borderRight: `2px solid ${GOLD}`, paddingRight: 2, animation: 'ap-blink 1.1s step-start infinite' }} />
-              </div>
-            </div>
-          </div>
-
-          {/* Telemetry card */}
-          <div style={{
-            background: GOLD2, border: `1px solid rgba(201,168,76,0.2)`,
-            borderRadius: 14, padding: '22px 22px',
-            position: 'relative', overflow: 'hidden',
-          }}>
-            <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 9, color: GOLD, letterSpacing: '0.12em', textTransform: 'uppercase', display: 'block', marginBottom: 18, opacity: 0.7 }}>
-              Telemetry
-            </span>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px 24px' }}>
-              {[
-                { label: 'Citations',   val: telemetry.citations.toLocaleString() },
-                { label: 'Sources',     val: telemetry.sources },
-                { label: 'Drift',       val: `${telemetry.drift}%`, gold: true },
-                { label: 'Token vel.', val: `${telemetry.velocity}k/s` },
-              ].map((m, i) => (
-                <div key={i} className="ap-metric">
-                  <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 8, color: DIM, letterSpacing: '0.1em', textTransform: 'uppercase' }}>
-                    {m.label}
-                  </span>
-                  <span style={{ fontFamily: "'DM Serif Display', Georgia, serif", fontSize: 24, fontWeight: 400, color: m.gold ? GOLD : TEXT, lineHeight: 1, letterSpacing: '-0.02em' }}>
-                    {m.val}
-                  </span>
-                </div>
-              ))}
-            </div>
-            {/* ambient glow */}
-            <div style={{ position: 'absolute', bottom: -30, right: -30, width: 100, height: 100, borderRadius: '50%', background: `radial-gradient(circle, ${GOLD} 0%, transparent 70%)`, opacity: 0.08, pointerEvents: 'none' }} />
-          </div>
-
-          {/* Node cluster status */}
-          <div style={{ background: SURF, border: `1px solid ${LINE}`, borderRadius: 14, padding: '16px 18px', display: 'flex', alignItems: 'center', gap: 12 }}>
-            <div style={{ position: 'relative', flexShrink: 0 }}>
-              <div style={{ width: 32, height: 32, borderRadius: '50%', border: `2px solid rgba(201,168,76,0.2)`, borderTopColor: GOLD, animation: 'ap-spin 1.2s linear infinite' }} />
-              <div style={{ position: 'absolute', inset: 6, borderRadius: '50%', background: GOLD2 }} />
-            </div>
-            <div>
-              <p style={{ fontFamily: "'DM Mono', monospace", fontSize: 11, color: TEXT, fontWeight: 500, marginBottom: 2 }}>
-                Node Cluster Sigma-{Math.floor(sessionID.split('-')[1]/1000 % 10)}
-              </p>
-              <p style={{ fontFamily: "'DM Mono', monospace", fontSize: 9, color: DIM, letterSpacing: '0.06em' }}>
-                Processing · {agents} agents active
-              </p>
-            </div>
-            <div style={{ marginLeft: 'auto', display: 'flex', gap: 4 }}>
-              {[0.4, 0.7, 1].map((o, i) => (
-                <div key={i} style={{ width: 4, borderRadius: 2, background: GOLD, opacity: o, height: 12 + i * 6, animation: `ap-pulse ${1.2 + i * 0.3}s ease-in-out infinite` }} />
-              ))}
-            </div>
-          </div>
-        </div>
       </div>
     </div>
   );

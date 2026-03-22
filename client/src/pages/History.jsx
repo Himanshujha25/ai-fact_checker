@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Clock, Trash2, ShieldAlert, Plus,
@@ -55,6 +55,8 @@ export default function History() {
   const [activeFilter, setActiveFilter]   = useState('All');
   const [activeTab, setActiveTab]         = useState('All Records');
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const query = searchParams.get('q')?.toLowerCase() || '';
 
   useEffect(() => {
     axios.get(`${API_BASE}/history`)
@@ -62,15 +64,28 @@ export default function History() {
       .catch(() => setLoading(false));
   }, []);
 
-  const filteredHistory = activeFilter === 'All'
-    ? history
-    : history.filter(h => {
-        const v = (h.topClaims?.[0]?.verdict || h.claims?.[0]?.verdict || '').toLowerCase();
-        if (activeFilter === 'Verified')    return ['true', 'accurate', 'verified'].includes(v);
-        if (activeFilter === 'Refuted')     return ['false', 'inaccurate'].includes(v);
-        if (activeFilter === 'Inconclusive') return ['partially true', 'mixed', 'inconclusive'].includes(v);
-        return true;
-      });
+  const filteredHistory = history.filter(h => {
+    // 1. Verdict Filter
+    const v = (h.topClaims?.[0]?.verdict || h.claims?.[0]?.verdict || '').toLowerCase();
+    let verdictMatch = true;
+    if (activeFilter === 'Verified') verdictMatch = ['true', 'accurate', 'verified'].includes(v);
+    else if (activeFilter === 'Refuted') verdictMatch = ['false', 'inaccurate'].includes(v);
+    else if (activeFilter === 'Inconclusive') verdictMatch = ['partially true', 'mixed', 'inconclusive'].includes(v);
+
+    if (!verdictMatch) return false;
+
+    // 2. Search Keyword Filter
+    if (query) {
+      const matchText = (
+        (h.input || '') + 
+        (h.title || '') + 
+        (h.topClaims?.[0]?.claim || '')
+      ).toLowerCase();
+      if (!matchText.includes(query)) return false;
+    }
+
+    return true;
+  });
 
   const handleDeleteAll = async () => {
     try {
@@ -146,12 +161,12 @@ export default function History() {
         .hy-btn-gold:hover { opacity: 0.85; }
       `}</style>
 
-      <Sidebar activeFilter={activeFilter} onFilterChange={setActiveFilter} />
+      <Sidebar id="sidebar-container" activeFilter={activeFilter} onFilterChange={setActiveFilter} />
 
       <main style={{ flex: 1, maxWidth: 1240, margin: '0 auto', padding: '4px 48px 80px', overflowY: 'auto', width: '100%' }}>
 
         {/* ── Header ── */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 48, paddingBottom: 32, borderBottom: `1px solid ${LINE}` }}>
+        <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'flex-end', gap: 24, marginBottom: 48, paddingBottom: 32, borderBottom: `1px solid ${LINE}` }}>
           <div>
             {/* <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
               <div style={{ width: 20, height: 1, background: GOLD, opacity: 0.55 }} />
@@ -168,13 +183,13 @@ export default function History() {
           </div>
 
           {/* Stats */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 32, flexShrink: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 32, flexShrink: 0, paddingBottom: 8 }}>
             <div style={{ textAlign: 'right' }}>
               <div style={{ fontFamily: "'DM Serif Display', Georgia, serif", fontSize: 40, fontWeight: 400, color: TEXT, lineHeight: 1 }}>
-                {history.length}
+                {filteredHistory.length}
               </div>
               <div style={{ fontFamily: "'DM Mono', monospace", fontSize: 9, color: DIM, textTransform: 'uppercase', letterSpacing: '0.1em', marginTop: 4 }}>
-                Total Dossiers
+                Total Reports
               </div>
             </div>
             <div style={{ width: 1, height: 36, background: LINE }} />
@@ -190,7 +205,7 @@ export default function History() {
         </div>
 
         {/* ── Toolbar ── */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+        <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: 16, marginBottom: 24 }}>
           <div style={{ display: 'flex', gap: 28 }}>
             {tabs.map(t => (
               <button
@@ -243,10 +258,14 @@ export default function History() {
                 <HistoryIcon size={20} color={DIM} />
               </div>
               <p style={{ fontSize: 15, color: MUTED, fontWeight: 500 }}>
-                No {activeFilter === 'All' ? '' : activeFilter.toLowerCase()} dossiers found.
+                {query 
+                  ? `No matches found for "${query}"` 
+                  : `No ${activeFilter === 'All' ? '' : activeFilter.toLowerCase()} reports found.`}
               </p>
               <p style={{ fontSize: 12, color: DIM }}>
-                Audit logs matching this filter will appear here.
+                {query 
+                  ? 'Try refining your investigation keywords or clearing the search.' 
+                  : 'Audit logs matching this filter will appear here.'}
               </p>
               <button className="hy-btn-gold" onClick={() => navigate('/verify')} style={{ marginTop: 8 }}>
                 <Plus size={14} /> Initiate Audit
@@ -278,7 +297,7 @@ export default function History() {
                         flexShrink: 0, position: 'relative'
                       }}>
                         {h.thumbnail ? (
-                          <img src={h.thumbnail} alt="Ref" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                          <img src={h.thumbnail} alt="Ref" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
                         ) : (
                           <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                             <Layers size={14} color={DIM} />
@@ -346,7 +365,7 @@ export default function History() {
                 Purge Registry?
               </h3>
               <p style={{ fontSize: 13, color: MUTED, lineHeight: 1.6, marginBottom: 28 }}>
-                This will permanently delete all stored forensic dossiers and audit trails. This action cannot be undone.
+                This will permanently delete all stored forensic reports and audit trails. This action cannot be undone.
               </p>
               <div style={{ display: 'flex', gap: 10 }}>
                 <button

@@ -89,14 +89,13 @@ const AppFooter = () => {
   ];
 
   return (
-    <footer style={{
+    <footer className="app-footer" style={{
       background: '#08080E',
       borderTop: `1px solid ${LINE}`,
       padding: '80px 64px 44px',
       fontFamily: "'DM Sans', system-ui, sans-serif",
     }}>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;0,600&family=DM+Serif+Display@0;1&family=DM+Mono:wght@400;500&display=swap');
         .ft-col-link {
           background: none; border: none; cursor: pointer; padding: 0;
           font-family: 'DM Sans', system-ui, sans-serif;
@@ -106,9 +105,38 @@ const AppFooter = () => {
         .ft-col-link:hover { color: ${TEXT}; }
         .ft-col-link.static { cursor: default; color: rgba(232,228,220,0.22); }
         .ft-col-link.static:hover { color: rgba(232,228,220,0.22); }
+
+        /* ── Mobile Footer Redesign ── */
+        @media (max-width: 1024px) {
+          .app-footer { padding-left: 32px !important; padding-right: 32px !important; }
+          .ft-grid    { grid-template-columns: 1fr 1fr !important; gap: 48px !important; }
+        }
+
+        @media (max-width: 768px) {
+          .app-footer { padding-top: 54px !important; padding-bottom: 100px !important; text-align: center; }
+          .ft-grid    { display: flex !important; flex-direction: column !important; gap: 48px !important; align-items: center !important; }
+          
+          .ft-brand-sec { display: flex !important; flex-direction: column !important; align-items: center !important; text-align: center !important; }
+          .ft-brand-p   { max-width: 100% !important; margin: 0 auto 24px !important; }
+          
+          .ft-links-grid { 
+            display: grid !important; 
+            grid-template-columns: 1fr 1fr !important; 
+            gap: 40px 24px !important; 
+            width: 100% !important; 
+            text-align: left !important;
+          }
+          
+          .ft-bottom  { flex-direction: column !important; gap: 32px !important; align-items: center !important; text-align: center !important; }
+          .ft-stats   { width: 100% !important; justify-content: center !important; gap: 40px !important; flex-wrap: wrap !important; }
+        }
+
+        @media (max-width: 480px) {
+          .app-footer { padding-left: 20px !important; padding-right: 20px !important; }
+        }
       `}</style>
 
-      <div style={{
+      <div className="ft-grid" style={{
         display: 'grid',
         gridTemplateColumns: '1.2fr repeat(4, 1fr)',
         gap: 64,
@@ -116,7 +144,7 @@ const AppFooter = () => {
         alignItems: 'start',
       }}>
         {/* Brand */}
-        <div>
+        <div className="ft-brand-sec">
           <span style={{
             fontFamily: "'DM Serif Display', Georgia, serif",
             fontSize: 22, fontWeight: 400, color: TEXT,
@@ -125,7 +153,7 @@ const AppFooter = () => {
           }}>
             Truecast
           </span>
-          <p style={{
+          <p className="ft-brand-p" style={{
             fontSize: 13, color: MUTED, lineHeight: 1.8,
             maxWidth: 300, marginBottom: 24,
           }}>
@@ -149,33 +177,35 @@ const AppFooter = () => {
           </div>
         </div>
 
-        {/* Link columns */}
-        {cols.map(col => (
-          <div key={col.heading} style={{ minWidth: 120 }}>
-            <p style={{
-              fontFamily: "'DM Mono', monospace",
-              fontSize: 9, fontWeight: 600, letterSpacing: '0.14em',
-              color: GOLD, textTransform: 'uppercase',
-              marginBottom: 18,
-            }}>
-              {col.heading}
-            </p>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 11 }}>
-              {col.items.map(item => (
-                <button
-                  key={item.label}
-                  className={`ft-col-link${item.static ? ' static' : ''}`}
-                  onClick={item.action || undefined}
-                >
-                  {item.label}
-                </button>
-              ))}
+        {/* Link columns container for mobile grid trick */}
+        <div className="ft-links-grid" style={{ display: 'contents' }}>
+          {cols.map(col => (
+            <div key={col.heading} style={{ minWidth: 120 }}>
+              <p style={{
+                fontFamily: "'DM Mono', monospace",
+                fontSize: 9, fontWeight: 600, letterSpacing: '0.14em',
+                color: GOLD, textTransform: 'uppercase',
+                marginBottom: 18,
+              }}>
+                {col.heading}
+              </p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 11 }}>
+                {col.items.map(item => (
+                  <button
+                    key={item.label}
+                    className={`ft-col-link${item.static ? ' static' : ''}`}
+                    onClick={item.action || undefined}
+                  >
+                    {item.label}
+                  </button>
+                ))}
+              </div>
             </div>
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
 
-      <div style={{
+      <div className="ft-bottom" style={{
         borderTop: `1px solid ${LINE}`,
         paddingTop: 32,
         display: 'flex', justifyContent: 'space-between', alignItems: 'center',
@@ -187,7 +217,7 @@ const AppFooter = () => {
           © 2026 Truecast · like a forecast, but for truth · v1.2.4
         </span>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: 32 }}>
+        <div className="ft-stats" style={{ display: 'flex', alignItems: 'center', gap: 32 }}>
           <div style={{ textAlign: 'right' }}>
             <div style={{
               fontFamily: "'DM Serif Display', Georgia, serif",
@@ -225,7 +255,7 @@ const AppContent = () => {
   const isStandalone = standalonePages.includes(location.pathname);
 
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', background: '#08080E' }}>
+    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', background: '#08080E', overflowX: 'hidden' }}>
       <SubNavbar />
       <main style={{ flex: 1, width: '100%' }}>
         <AnimatePresence mode="wait">

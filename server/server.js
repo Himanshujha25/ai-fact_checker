@@ -666,9 +666,16 @@ async function runVerificationPipeline(contentToProcess, mode = 'normal') {
   // ─── PHASE 1: Claim Extraction ───
   console.log('  [Phase 1] Extracting claims...');
   const extractionPrompt = `You are a precision fact-extraction agent. Today's date is ${currentDate}.
-  TASK: Extract AT MOST ${claimLimit} verifiable factual claims from the text. 
-  Focus on high-stakes, specific, and impactful statement fragments.
-  MODE: ${mode} audit depth requested.
+  TASK: Extract AT MOST ${claimLimit} verifiable factual assertions from the text. 
+  
+  EXAMPLES OF REPHRASING QUESTIONS:
+  - "Is Messi the goat?" -> "Lionel Messi is the greatest football player of all time."
+  - "Is it raining in London?" -> "It is currently raining in London."
+  
+  CONVERSATIONAL RULES:
+  1. If the input is a short question, rephrase it into a strong testable claim.
+  2. If the input has typos, fix them mentally and extract the intended claim.
+  3. Extract "Subject", "Context", and "Primary Entity" carefully.
   
   Return ONLY a JSON array: [{"id": 1, "claim": "string", "context": "string", "primaryEntity": "string"}].
   Text: ${contentToProcess.substring(0, 5000)}`;
@@ -678,6 +685,13 @@ async function runVerificationPipeline(contentToProcess, mode = 'normal') {
   try {
     claims = JSON.parse(extractionResult.response.text().match(/\[[\s\S]*\]/)?.[0] || '[]');
   } catch (e) { claims = []; }
+
+  // FAILSAFE: If extraction returned nothing but we have input, force-inject a claim
+  if (claims.length === 0 && contentToProcess.trim().length > 3) {
+    console.log('  [Failsafe] Manual claim injection triggered.');
+    const genericSubject = contentToProcess.split(' ').slice(0, 5).join(' ');
+    claims = [{ id: 1, claim: contentToProcess, context: "Direct User Inquiry", primaryEntity: genericSubject }];
+  }
 
   // ─── PHASE 2: Verification with Multi-Mode Tools ───
   console.log(`  [Phase 2] Verifying ${claims.length} claims (Mode: ${mode})...`);
