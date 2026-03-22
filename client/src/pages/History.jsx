@@ -278,13 +278,13 @@ export default function History() {
                         flexShrink: 0, position: 'relative'
                       }}>
                         {h.thumbnail ? (
-                          <img src={h.thumbnail} alt="Ref" style={{ width: '100%', height: '100%', objectFit: 'cover', opacity: 0.7 }} />
+                          <img src={h.thumbnail} alt="Ref" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                         ) : (
                           <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                             <Layers size={14} color={DIM} />
                           </div>
                         )}
-                        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(rgba(0,0,0,0), rgba(0,0,0,0.3))' }} />
+                        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(rgba(0,0,0,0), rgba(0,0,0,0.4))', opacity: h.thumbnail ? 0 : 1 }} />
                       </div>
 
                       <div style={{ flex: 1, minWidth: 0 }}>

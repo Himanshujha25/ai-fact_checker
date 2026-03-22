@@ -17,32 +17,62 @@ const formatTime = (s) => {
   return `${m.toString().padStart(2, '0')}:${rs.toString().padStart(2, '0')}`;
 };
 
-const PLACEHOLDER_LOGS = [
-  'GET https://api.worldbank.org/v2/country/WLD/indicator/NV.IND…',
-  'POST query://semantic_search/carbon_sequestration_stats_2024',
-  'GET https://reuters.com/business/archive/semiconductor-q3…',
-  'GET https://scholar.google.com/scholar?q=climate+proxy+2024',
-];
+const getDynamicClaims = (input) => {
+  if (!input) return [
+    { id: '#001', text: 'Analysing source stream for verifiable assertions...', entity: 'General', confidence: null, active: true }
+  ];
 
-const PLACEHOLDER_CLAIMS = [
-  {
-    id: '#042',
-    text: 'Global semiconductor demand is projected to decline by 14% in Q3 due to supply chain pivot.',
-    entity: 'Finance',
-    confidence: '98.2%',
-    active: true,
-  },
-  {
-    id: '#041',
-    text: 'New carbon sequestration facilities in Iceland have tripled capacity since 2022.',
-    entity: 'Environment',
-    confidence: null,
-    active: false,
-  },
-];
+  // Try to split input into a few "claims" if possible, otherwise use fragments
+  const cleanInput = input.replace(/https?:\/\/[^\s]+/g, '').trim();
+  const fragments = cleanInput.split(/[.?!,]/).filter(s => s.trim().length > 10).map(s => s.trim());
+  
+  if (fragments.length > 0) {
+    return fragments.slice(0, 2).map((f, i) => ({
+      id: `#0${80 + i}`,
+      text: f.length > 80 ? f.substring(0, 80) + '...' : f,
+      entity: f.length % 2 === 0 ? 'Context' : 'Evidence',
+      confidence: i === 0 ? 'EXTRACTING...' : null,
+      active: i === 0
+    }));
+  }
+
+  return [
+    { id: '#081', text: `Evaluating: "${input.substring(0, 50)}..."`, entity: 'Analysis', confidence: '74.2%', active: true },
+    { id: '#080', text: 'Scanning for secondary entity cross-links...', entity: 'OSINT', confidence: null, active: false }
+  ];
+};
 
 /* ═══════════════════════════════════════════════════════════════ */
 export default function AnalysisProcessing({ elapsed, step, logs, inputTitle, onCancel }) {
+  const [dynamicClaims, setDynamicClaims] = React.useState(() => getDynamicClaims(inputTitle));
+
+  React.useEffect(() => {
+    // Refresh claims if inputTitle changes or periodically
+    setDynamicClaims(getDynamicClaims(inputTitle));
+  }, [inputTitle]);
+
+  const [sessionID] = React.useState(() => `ID-${Math.floor(1000 + Math.random() * 9000)}-${['A', 'B', 'X', 'Z'][Math.floor(Math.random() * 4)]}`);
+  const [telemetry, setTelemetry] = React.useState({
+    citations: 0,
+    sources: 0,
+    drift: 0.01,
+    velocity: 0,
+  });
+  const [agents, setAgents] = React.useState(3);
+
+  React.useEffect(() => {
+    const timer = setInterval(() => {
+      setTelemetry(prev => ({
+        citations: prev.citations + Math.floor(Math.random() * 12),
+        sources: Math.min(60, prev.sources + (Math.random() > 0.7 ? 1 : 0)),
+        drift: (Math.random() * 0.05).toFixed(2),
+        velocity: (2.5 + Math.random() * 3).toFixed(1),
+      }));
+      setAgents(Math.floor(2 + Math.random() * 4));
+    }, 1500);
+    return () => clearInterval(timer);
+  }, []);
+
 
   const STEPS = [
     { icon: FileText,   label: 'Claim Extraction',  active: step === 1, done: step > 1, pct: step === 1 ? 84 : step > 1 ? 100 : 0,  status: step === 1 ? '84% complete'    : step > 1 ? 'Complete'  : 'Pending' },
@@ -50,7 +80,12 @@ export default function AnalysisProcessing({ elapsed, step, logs, inputTitle, on
     { icon: ShieldCheck,label: 'Final Synthesis',    active: step === 3, done: step > 3, pct: step === 3 ? 40 : step > 3 ? 100 : 0,  status: step === 3 ? 'Synthesising…'   : step > 3 ? 'Complete'  : 'Awaiting' },
   ];
 
-  const displayLogs = logs.length > 0 ? logs : PLACEHOLDER_LOGS.map((msg, i) => ({ id: i, msg }));
+  const displayLogs = logs.length > 0 ? logs : [
+    'GET https://api.osint.archive/v2/fetch_primary_stream…',
+    'POST query://semantic_audit/entity_verification_vector',
+    'GET https://reuters.com/business/archive/live_feed_8271',
+    'CONNECT node://cluster_sigma_9/agent_handshake',
+  ].map((msg, i) => ({ id: i, msg }));
 
   return (
     <div style={{ paddingTop: 40, paddingBottom: 100, fontFamily: "'DM Sans', system-ui, sans-serif" }}>
@@ -100,7 +135,7 @@ export default function AnalysisProcessing({ elapsed, step, logs, inputTitle, on
             </span>
           </div>
           <h1 style={{ fontFamily: "'DM Serif Display', Georgia, serif", fontSize: 'clamp(26px, 3vw, 40px)', fontWeight: 400, color: TEXT, letterSpacing: '-0.02em', lineHeight: 1.1 }}>
-            Analysis Session: ID-2948-B
+            Analysis Session: {sessionID}
           </h1>
           {inputTitle && (
             <p style={{ marginTop: 8, fontSize: 12, color: DIM, maxWidth: 480, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontFamily: "'DM Mono', monospace" }}>
@@ -212,7 +247,7 @@ export default function AnalysisProcessing({ elapsed, step, logs, inputTitle, on
           </div>
 
           {/* Claim cards */}
-          {PLACEHOLDER_CLAIMS.map((c, i) => (
+          {dynamicClaims.map((c, i) => (
             <motion.div
               key={i}
               className={`ap-claim-card ${c.active ? 'active' : ''}`}
@@ -330,10 +365,10 @@ export default function AnalysisProcessing({ elapsed, step, logs, inputTitle, on
             </span>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px 24px' }}>
               {[
-                { label: 'Citations',   val: '1,204' },
-                { label: 'Sources',     val: '48' },
-                { label: 'Drift',       val: '0.02%', gold: true },
-                { label: 'Token vel.', val: '4.2k/s' },
+                { label: 'Citations',   val: telemetry.citations.toLocaleString() },
+                { label: 'Sources',     val: telemetry.sources },
+                { label: 'Drift',       val: `${telemetry.drift}%`, gold: true },
+                { label: 'Token vel.', val: `${telemetry.velocity}k/s` },
               ].map((m, i) => (
                 <div key={i} className="ap-metric">
                   <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 8, color: DIM, letterSpacing: '0.1em', textTransform: 'uppercase' }}>
@@ -357,10 +392,10 @@ export default function AnalysisProcessing({ elapsed, step, logs, inputTitle, on
             </div>
             <div>
               <p style={{ fontFamily: "'DM Mono', monospace", fontSize: 11, color: TEXT, fontWeight: 500, marginBottom: 2 }}>
-                Node Cluster Sigma-9
+                Node Cluster Sigma-{Math.floor(sessionID.split('-')[1]/1000 % 10)}
               </p>
               <p style={{ fontFamily: "'DM Mono', monospace", fontSize: 9, color: DIM, letterSpacing: '0.06em' }}>
-                Processing · 3 agents active
+                Processing · {agents} agents active
               </p>
             </div>
             <div style={{ marginLeft: 'auto', display: 'flex', gap: 4 }}>

@@ -32,7 +32,7 @@ async function performTavilySearch(query, depth = 'basic') {
 
     const results = response.data;
     console.log(`  [Tavily] Found ${results.results?.length || 0} sources and ${results.images?.length || 0} images.`);
-    
+
     return {
       answer: results.answer,
       images: results.images || [],
@@ -213,7 +213,7 @@ async function dbDeleteHistory(userId) {
   // Clear user-specific cache
   const prefix = `history:${userId}`;
   for (const key of cache.keys()) { if (key.startsWith(prefix)) cache.delete(key); }
-  
+
   // Clear memory fallback
   for (let i = memoryHistory.length - 1; i >= 0; i--) { if (memoryHistory[i].userId === userId) memoryHistory.splice(i, 1); }
 
@@ -244,7 +244,7 @@ function formatHistoryItem(h) {
     claimsCount: h.claimsCount,
     timestamp: h.timestamp,
     verdicts,
-    thumbnail: h.fullData?.aiMediaDetection?.results?.[0]?.url || null,
+    thumbnail: h.fullData?.aiMediaDetection?.results?.[0]?.url || h.fullData?.forensicReference || null,
     topClaims: claims.slice(0, 3).map(c => ({ claim: c.claim?.substring(0, 80), verdict: c.verdict }))
   };
 }
@@ -381,8 +381,8 @@ app.post('/api/auth/register', async (req, res) => {
   try {
     const hashedPassword = await bcrypt.hash(password, 10);
     if (!db) {
-       // Mock for memory mode
-       return res.json({ message: 'User registered (Memory Mode)', userId: 1 });
+      // Mock for memory mode
+      return res.json({ message: 'User registered (Memory Mode)', userId: 1 });
     }
     const result = await db.query(
       'INSERT INTO users (email, password, full_name, organization) VALUES ($1, $2, $3, $4) RETURNING id',
@@ -457,12 +457,12 @@ async function extractFromUrl(url) {
       },
       validateStatus: false
     });
-    
+
     // Status 999 or 403? Use Tavily as a 'Proxy Scraper'
     if (response.status !== 200 || url.includes('linkedin.com')) {
       console.log(`  ⚠ Direct access blocked (${response.status}) for ${url}. Activating AI Proxy Fallback...`);
       const research = await performTavilySearch(`Get the full content and details of this URL: ${url}`, 'advanced');
-      
+
       if (research && research.answer) {
         return {
           text: `[AI Proxy Scraper Enabled] Source: ${url}\n\nRetrieved Data: ${research.answer}\n\nSearch Excerpts: ${research.sources?.map(s => s.snippet).join('\n')}`,
@@ -480,7 +480,7 @@ async function extractFromUrl(url) {
     const html = response.data;
     const title = html.match(/<title[^>]*>([\s\S]*)<\/title>/i)?.[1] || 'No Title';
     let content = html.match(/<(article|main)[^>]*>([\s\S]*?)<\/\1>/i)?.[2] ||
-                  html.match(/<body[^>]*>([\s\S]*)<\/body>/i)?.[1] || html;
+      html.match(/<body[^>]*>([\s\S]*)<\/body>/i)?.[1] || html;
     const cleanText = content
       .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
       .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
@@ -559,12 +559,12 @@ async function fetchEntityImage(entityName) {
   if (!entityName) return null;
   const userAgent = `VeriCheck-Bot/1.1 (https://vericheck.ai; contact@vericheck.ai) Google-Gemini-Agentic-Pipeline`;
   console.log(`  [Wiki] Searching for entity: "${entityName}"...`);
-  
+
   const fetchWithRetry = async (url, retries = 2) => {
     for (let i = 0; i < retries; i++) {
       try {
-        return await axios.get(url, { 
-          timeout: 10000, 
+        return await axios.get(url, {
+          timeout: 10000,
           headers: { 'User-Agent': userAgent }
         });
       } catch (err) {
@@ -584,7 +584,7 @@ async function fetchEntityImage(entityName) {
     const searchRes = await fetchWithRetry(searchUrl);
     const searchResult = searchRes.data?.query?.search?.[0];
     const pageTitle = searchResult?.title;
-    
+
     // Strictness Check: If name doesn't partially match, ignore
     if (!pageTitle) {
       console.log(`  [Wiki] No results for "${entityName}"`);
@@ -596,8 +596,8 @@ async function fetchEntityImage(entityName) {
     const isMatch = inputTerms.every(term => resultTitle.includes(term));
 
     if (!isMatch) {
-       console.log(`  [Wiki] Rejecting mismatch: Search="${entityName}" Result="${pageTitle}"`);
-       return { name: entityName, description: "Identified private profile (no public Wikipedia matches found)", isPrivate: true };
+      console.log(`  [Wiki] Rejecting mismatch: Search="${entityName}" Result="${pageTitle}"`);
+      return { name: entityName, description: "Identified private profile (no public Wikipedia matches found)", isPrivate: true };
     }
 
     console.log(`  [Wiki] Valid match found: "${pageTitle}"`);
@@ -614,15 +614,29 @@ async function fetchEntityImage(entityName) {
       image: data.thumbnail?.source || data.originalimage?.source || null,
       wikipediaUrl: data.content_urls?.desktop?.page || `https://en.wikipedia.org/wiki/${encodeURIComponent(pageTitle.replace(/ /g, '_'))}`
     };
-    
+
     if (result.image) console.log(`  [Wiki] Image FOUND for "${pageTitle}"`);
     else console.log(`  [Wiki] Summary found for "${pageTitle}" but NO IMAGE.`);
 
     return result;
   } catch (err) {
-    console.log(`  [Wiki] Final Error fetching "${entityName}":`, err.message);
-    // Return a basic entity object if we identified name but no Wiki profile
-    return { name: entityName, description: "Identified private entity (no public biography found)", isPrivate: true };
+    console.log(`  [Wiki] Attempting broader fallback for "${entityName}"...`);
+    try {
+      const fallbackUrl = `https://en.wikipedia.org/w/api.php?action=query&titles=${encodeURIComponent(entityName)}&prop=pageimages|extracts&exintro&explaintext&pithumbsize=500&format=json`;
+      const fallbackRes = await axios.get(fallbackUrl, { timeout: 8000, headers: { 'User-Agent': userAgent } });
+      const pages = fallbackRes.data?.query?.pages || {};
+      const page = Object.values(pages)[0];
+      if (page && page.thumbnail) {
+        return {
+          name: page.title,
+          image: page.thumbnail.source,
+          description: page.extract?.substring(0, 100),
+          wikipediaUrl: `https://en.wikipedia.org/wiki/${encodeURIComponent(page.title.replace(/ /g, '_'))}`
+        };
+      }
+    } catch (e) { }
+
+    return { name: entityName, description: "Identified private entity", isPrivate: true };
   }
 }
 
@@ -667,14 +681,14 @@ async function runVerificationPipeline(contentToProcess, mode = 'normal') {
 
   // ─── PHASE 2: Verification with Multi-Mode Tools ───
   console.log(`  [Phase 2] Verifying ${claims.length} claims (Mode: ${mode})...`);
-  
+
   // Update claim limit for Phase 2 processing depth
   claimLimit = mode === 'normal' ? 3 : (mode === 'deep' ? 5 : 8);
-  
+
   const verificationResults = await Promise.all(claims.slice(0, claimLimit).map(async (claim) => {
     try {
       let researchData = null;
-      
+
       // DEEP or PRO Mode: Activate Tavily Live Web Research
       if (mode === 'deep' || mode === 'pro') {
         const query = claim.primaryEntity ? `${claim.claim} regarding ${claim.primaryEntity}` : claim.claim;
@@ -682,9 +696,9 @@ async function runVerificationPipeline(contentToProcess, mode = 'normal') {
       }
 
       // ─── DYNAMIC PROMPT ROUTING ───
-      const isIdentityClaim = claim.primaryEntity?.toLowerCase().includes('himanshu') || 
-                              claim.claim.toLowerCase().includes('person') || 
-                              claim.claim.toLowerCase().includes('employed');
+      const isIdentityClaim = claim.primaryEntity?.toLowerCase().includes('himanshu') ||
+        claim.claim.toLowerCase().includes('person') ||
+        claim.claim.toLowerCase().includes('employed');
 
       const verifyPrompt = `You are a state-of-the-art Fact-Checking Agent. 
   Date: ${currentDate}.
@@ -728,8 +742,8 @@ async function runVerificationPipeline(contentToProcess, mode = 'normal') {
       let parsed = JSON.parse(jsonText);
       parsed.claimId = claim.id;
 
-      // DEEP/PRO Mode: Extra Entity Validation (Wikipedia)
-      if ((mode === 'deep' || mode === 'pro') && claim.primaryEntity) {
+      // Extra Entity Validation (Wikipedia) — run for potential reference images
+      if (claim.primaryEntity) {
         parsed.entityMetadata = await fetchEntityImage(claim.primaryEntity);
       }
 
@@ -768,7 +782,7 @@ async function runVerificationPipeline(contentToProcess, mode = 'normal') {
     claims: claims.slice(0, claimLimit).map(c => ({ ...c, ...verificationResults.find(v => v.claimId === c.id) })),
     aiTextDetection: aiDetection,
     truthScore,
-    forensicReference: verificationResults.find(v => v.referenceImage)?.referenceImage || null,
+    forensicReference: verificationResults.map(v => v.entityMetadata?.image || v.referenceImage).find(img => img) || null,
     pipelineMeta: { mode, totalClaims: claims.length, verifiedCount: successfulResults.length },
     timestamp: new Date().toISOString()
   };
@@ -792,7 +806,7 @@ app.post('/api/verify', authenticate, async (req, res) => {
 
     let contentToProcess = text || '';
     let imageUrls = [];
-    
+
     // Smart URL Detection: If text contains a URL but 'url' field is empty
     const urlPattern = /https?:\/\/[^\s]+/;
     const detectedUrl = text?.match(urlPattern)?.[0];
@@ -801,7 +815,7 @@ app.post('/api/verify', authenticate, async (req, res) => {
     if (targetUrl) {
       console.log(`  [Dynamic] Processing URL: ${targetUrl}`);
       const extracted = await extractFromUrl(targetUrl);
-      
+
       // Combine user text (questions) with scraped text (evidence)
       contentToProcess = `USER QUERY/CONTEXT: ${text || 'None'}\n\nSCRAPED CONTENT:\n${extracted.text}`;
       imageUrls = extracted.imageUrls || [];
