@@ -9,7 +9,7 @@ const { GoogleGenerativeAI } = require('@google/generative-ai');
 const axios = require('axios');
 const CryptoJS = require('crypto-js');
 
-app.set('trust proxy', 1);
+
 
 // ─── Tavily Research Agent (Live Web Search) ───
 async function performTavilySearch(query, depth = 'basic') {
@@ -69,6 +69,7 @@ const upload = multer({
 
 const app = express();
 const PORT = process.env.PORT || 5000;
+app.set('trust proxy', 1);
 
 // ─── PostgreSQL (with graceful fallback) ───
 let db = null;
