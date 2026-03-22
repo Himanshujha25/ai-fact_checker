@@ -289,7 +289,7 @@ app.post('/api/analyze-media', upload.array('media', 5), async (req, res) => {
       return res.status(400).json({ error: 'No files uploaded' });
     }
 
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-pro' });
+    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-pro' });
     const results = [];
 
     for (const file of req.files) {
@@ -519,7 +519,7 @@ async function extractTextFromUrl(url) {
 // Helper: Analyze an image for AI-generation / deepfake indicators
 async function analyzeImageForAI(imageUrl) {
   try {
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-pro' });
+    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-pro' });
     // Fetch image as base64
     const imgResponse = await axios.get(imageUrl, { responseType: 'arraybuffer', timeout: 8000 });
     const base64 = Buffer.from(imgResponse.data).toString('base64');
@@ -640,7 +640,7 @@ async function retryWithBackoff(fn, retries = 3, baseDelay = 1000) {
 
 // Core verification pipeline — Chain-of-Thought + Multi-Mode Research Agent
 async function runVerificationPipeline(contentToProcess, mode = 'normal') {
-  const model = genAI.getGenerativeModel({ model: "gemini-2.5-pro" });
+  const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
   const currentDate = new Date().toISOString().split('T')[0];
   let claimLimit = mode === 'pro' ? 8 : (mode === 'deep' ? 5 : 3);
 
@@ -823,7 +823,7 @@ app.post('/api/verify', authenticate, async (req, res) => {
       };
     } else {
       // Text-only input — use text-based media analysis
-      const model = genAI.getGenerativeModel({ model: 'gemini-2.5-pro' });
+      const model = genAI.getGenerativeModel({ model: 'gemini-1.5-pro' });
       const mediaPrompt = `Analyze this text for references to synthetic/AI-generated media. Return JSON: {"score": number, "mediaFound": string[], "verdict": "string", "summary": "string"}. Text: ${contentToProcess.substring(0, 1000)}`;
       const mediaResult = await model.generateContent(mediaPrompt);
       responseData.aiMediaDetection = JSON.parse(mediaResult.response.text().match(/\{[\s\S]*\}/)?.[0] || '{"score": 0, "mediaFound": [], "verdict": "Clear", "summary": "No media references detected"}');

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import {
   ArrowLeft, ArrowRight, ExternalLink, ShieldCheck,
-  Layers, Sparkles, ChevronRight
+  Layers, Sparkles, ChevronRight, FileText
 } from 'lucide-react';
 import axios from 'axios';
 import { motion } from 'framer-motion';
@@ -14,6 +14,7 @@ const API_BASE = window.location.hostname === 'localhost' || window.location.hos
 
 /* ─── Design tokens ───────────────────────────────────────────── */
 const GOLD  = '#C9A84C';
+const GOLD_L= 'rgba(201,168,76,0.12)';
 const GOLD2 = 'rgba(201,168,76,0.10)';
 const LINE  = 'rgba(255,255,255,0.07)';
 const TEXT  = '#E8E4DC';
@@ -190,12 +191,20 @@ export default function SourceExplorer() {
                     <span style={{ fontSize: 9, fontFamily: "'DM Mono', monospace", color: DIM, textTransform: 'uppercase', letterSpacing: '0.1em' }}>Forensic Source</span>
                     <span style={{ fontSize: 9, fontFamily: "'DM Mono', monospace", color: '#f87171', fontWeight: 600 }}>[SUBJECT]</span>
                  </div>
-                 <div style={{ position: 'relative', height: 220, background: '#000' }}>
-                    <img 
-                      src={data.aiMediaDetection?.results?.[0]?.url || 'https://via.placeholder.com/400x300?text=No+Media'} 
-                      alt="Source" 
-                      style={{ width: '100%', height: '100%', objectFit: 'cover', opacity: 0.85 }} 
-                    />
+                 <div style={{ position: 'relative', height: 220, background: '#000', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    {data.aiMediaDetection?.results?.[0]?.url ? (
+                      <img 
+                        src={data.aiMediaDetection.results[0].url} 
+                        alt="Source" 
+                        style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+                      />
+                    ) : (
+                      <div style={{ textAlign: 'center', color: DIM }}>
+                        <FileText size={38} style={{ opacity: 0.5, marginBottom: 10, margin: '0 auto' }} />
+                        <div style={{ fontSize: 9, fontFamily: "'DM Mono', monospace", textTransform: 'uppercase', letterSpacing: '0.12em' }}>Voice / Text Source</div>
+                      </div>
+                    )}
+                    <div style={{ position: 'absolute', inset: 0, boxShadow: 'inset 0 0 40px rgba(0,0,0,0.6)', pointerEvents: 'none' }} />
                  </div>
               </div>
 

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import { Search, Bell, Settings, LogOut, Key, Moon, Sun } from 'lucide-react';
+import { Search, Bell, Settings, LogOut, Key, Moon, Sun, ArrowLeft } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { motion } from 'framer-motion';
 
@@ -144,18 +144,42 @@ export default function SubNavbar() {
       `}</style>
 
       {/* ── Brand + Nav links ── */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 36 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 24 }}>
+        
+        {/* Global Back Button */}
+        {/* <button
+          onClick={() => navigate(-1)}
+          style={{
+            background: 'none', border: '1px solid transparent', cursor: 'pointer',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            width: 32, height: 32, borderRadius: 8, color: DIM,
+            transition: 'all 0.2s', padding: 0,
+          }}
+          onMouseOver={e => { e.currentTarget.style.color = TEXT; e.currentTarget.style.borderColor = LINE; e.currentTarget.style.background = 'rgba(255,255,255,0.03)' }}
+          onMouseOut={e => { e.currentTarget.style.color = DIM; e.currentTarget.style.borderColor = 'transparent'; e.currentTarget.style.background = 'transparent' }}
+          title="Go Back"
+        >
+          <ArrowLeft size={16} />
+        </button> */}
+
         {/* Wordmark */}
         <div
           onClick={() => navigate('/')}
-          style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 10 }}
+          style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 14 }}
         >
+          <div style={{ width: 28, height: 28, borderRadius: 6, overflow: 'hidden', border: `1px solid ${LINE}`, background: 'rgba(255,255,255,0.03)' }}>
+            <img 
+              src="https://lh3.googleusercontent.com/aida-public/AB6AXuDjUYtJ0yORs6yPNTdJwSZr__L9nULtru8NP22BYdhBdhZ6B0cJN-JsxA4LCxnq6j2pU2IQkS6GblpdOG0o3gysYwpbLCeQ83wt2WvMf9M92JJWiFzRi63m8paImUIBEq2ZIB6HMVlsxCVQqs_hzrEJdDm30tKnoUduOKeVbc4vgZja05-8yA0Tn7J8j7qmWg2O07LITQ_-vmFQCa81mJvkhJeIjTnQ5hhhHaygn5S9EWhmQX1yTF_Sx5nCPrNgu8416xaiMPc6aCo" 
+              alt="Logo" 
+              style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+            />
+          </div>
           <span style={{
             fontFamily: "'DM Serif Display', Georgia, serif",
             fontSize: 16, fontWeight: 400, color: TEXT,
             letterSpacing: '-0.01em', userSelect: 'none',
           }}>
-            The Verified Editorial
+            Truecast
           </span>
         </div>
 

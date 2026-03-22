@@ -1,7 +1,7 @@
 {
-  "name": "The Verified Editorial",
-  "short_name": "VeriEdit",
-  "description": "The Digital Jurist Protocol Truth Machine",
+  "name": "Truecast",
+  "short_name": "Truecast",
+  "description": "Like a forecast, but for truth",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#f7f9fb",

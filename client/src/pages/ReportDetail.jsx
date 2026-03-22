@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  ShieldCheck, ExternalLink, ArrowLeft, ArrowRight, Clock,
+  ShieldCheck, ExternalLink, ArrowLeft, ArrowRight, Clock, Activity,
   Download, ShieldAlert, Layers, ChevronRight, FileText
 } from 'lucide-react';
 import axios from 'axios';
@@ -16,6 +16,7 @@ const API_BASE = window.location.hostname === 'localhost' || window.location.hos
 
 /* ─── Design tokens ───────────────────────────────────────────── */
 const GOLD  = '#C9A84C';
+const GOLD_L= 'rgba(201,168,76,0.12)';
 const GOLD2 = 'rgba(201,168,76,0.10)';
 const LINE  = 'rgba(255,255,255,0.07)';
 const TEXT  = '#E8E4DC';
@@ -310,6 +311,36 @@ export default function ReportDetail() {
             />
           </div>
 
+          {/* ── AI Detection Summary ── */}
+          {data.aiTextDetection && (
+            <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)', gap: 16, marginBottom: 44 }}>
+              <div style={{ padding: '24px', background: SURF, border: `1px solid ${LINE}`, borderRadius: 16 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+                  <Activity size={16} color={data.aiTextDetection.score > 50 ? '#f87171' : '#4ade80'} />
+                  <span style={{ fontSize: 11, fontFamily: "'DM Mono', monospace", textTransform: 'uppercase', letterSpacing: '0.12em', color: DIM }}>AI Text Probability</span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'flex-end', gap: 14 }}>
+                  <span style={{ fontFamily: "'DM Serif Display', Georgia, serif", fontSize: 38, color: TEXT, lineHeight: 1 }}>{data.aiTextDetection.score}%</span>
+                  <span style={{ fontSize: 13, color: MUTED, paddingBottom: 4 }}>{data.aiTextDetection.score > 50 ? 'Likely Synthesized' : 'Likely Human Written'}</span>
+                </div>
+                <p style={{ fontSize: 13, color: DIM, marginTop: 14, lineHeight: 1.5 }}>{data.aiTextDetection.explanation}</p>
+              </div>
+              
+              {data.aiMediaDetection && (
+                <div style={{ padding: '24px', background: SURF, border: `1px solid ${LINE}`, borderRadius: 16 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+                    <ShieldAlert size={16} color={data.aiMediaDetection.score > 0 ? '#fb923c' : '#4ade80'} />
+                    <span style={{ fontSize: 11, fontFamily: "'DM Mono', monospace", textTransform: 'uppercase', letterSpacing: '0.12em', color: DIM }}>Media Authentication</span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'flex-end', gap: 14 }}>
+                    <span style={{ fontFamily: "'DM Serif Display', Georgia, serif", fontSize: 38, color: TEXT, lineHeight: 1 }}>{data.aiMediaDetection.verdict || 'Clear'}</span>
+                  </div>
+                  <p style={{ fontSize: 13, color: DIM, marginTop: 14, lineHeight: 1.5 }}>{data.aiMediaDetection.summary}</p>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* ── Visual Forensic Comparison ────────────────────────── */}
           {data.forensicReference && (
             <div style={{ marginBottom: 48 }}>
@@ -337,13 +368,20 @@ export default function ReportDetail() {
                       </span>
                       <span style={{ fontSize: 9, fontFamily: "'DM Mono', monospace", color: '#f87171', fontWeight: 600 }}>[SUBJECT]</span>
                    </div>
-                   <div style={{ position: 'relative', height: 280, background: '#000' }}>
-                      <img 
-                        src={data.aiMediaDetection?.results?.[0]?.url || 'https://via.placeholder.com/400x300?text=No+Media+Found'} 
-                        alt="Forensic Source" 
-                        style={{ width: '100%', height: '100%', objectFit: 'cover', opacity: 0.9 }} 
-                      />
-                      <div style={{ position: 'absolute', inset: 0, boxShadow: 'inset 0 0 40px rgba(0,0,0,0.6)' }} />
+                   <div style={{ position: 'relative', height: 280, background: '#000', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      {data.aiMediaDetection?.results?.[0]?.url ? (
+                        <img 
+                          src={data.aiMediaDetection.results[0].url} 
+                          alt="Forensic Source" 
+                          style={{ width: '100%', height: '100%', objectFit: 'cover', opacity: 0.9 }} 
+                        />
+                      ) : (
+                        <div style={{ textAlign: 'center', color: DIM }}>
+                          <FileText size={42} style={{ opacity: 0.5, marginBottom: 12, margin: '0 auto' }} />
+                          <div style={{ fontSize: 10, fontFamily: "'DM Mono', monospace", textTransform: 'uppercase', letterSpacing: '0.12em' }}>Voice / Text Source</div>
+                        </div>
+                      )}
+                      <div style={{ position: 'absolute', inset: 0, boxShadow: 'inset 0 0 40px rgba(0,0,0,0.6)', pointerEvents: 'none' }} />
                    </div>
                 </div>
 

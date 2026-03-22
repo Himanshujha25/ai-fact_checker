@@ -102,3 +102,72 @@
 .font-manrope { font-family: 'Manrope', sans-serif; }
 .font-inter { font-family: 'Inter', sans-serif; }
 .font-serif-italic { font-family: 'Libre Baskerville', serif; font-style: italic; }
+
+/* ── Global Responsive Overrides for Inline Styles ── */
+@media (max-width: 960px) {
+  /* Flatten 2, 3, 4 and 5 column grids into single columns */
+  [style*="grid-template-columns: 1fr 1fr"],
+  [style*="grid-template-columns: minmax(0px, 1fr)"],
+  [style*="grid-template-columns: minmax(0, 1fr)"],
+  [style*="grid-template-columns: 1fr 1fr 1fr"],
+  [style*="grid-template-columns: 300px 1fr"],
+  [style*="grid-template-columns: 380px 1fr"],
+  [style*="grid-template-columns: repeat(3, 1fr)"],
+  [style*="grid-template-columns: 1.2fr repeat(4, 1fr)"],
+  [style*="grid-template-columns: 1.2fr 1fr 1fr 1fr 1fr"] {
+    grid-template-columns: 1fr !important;
+    gap: 20px !important;
+  }
+
+  /* Stack main flex layouts */
+  [style*="display: flex; gap: 72px;"] {
+    flex-direction: column !important;
+    gap: 40px !important;
+  }
+  [style*="display: flex; gap: 64px;"] {
+    flex-direction: column !important;
+    gap: 32px !important;
+  }
+  [style*="display: flex; gap: 20px;"] {
+    flex-wrap: wrap !important;
+  }
+
+  /* Adjust global paddings on mobile */
+  [style*="padding: 40px 48px"] {
+    padding: 24px 20px !important;
+  }
+  [style*="padding: 8px 64px"],
+  [style*="padding: 80px 64px"],
+  [style*="padding: 0px 64px"] {
+    padding-left: 20px !important;
+    padding-right: 20px !important;
+  }
+
+  /* Complex Assertions / Data ledgers */
+  [style*="grid-template-columns: 130px 1fr 76px"],
+  [style*="grid-template-columns: 130px 1fr 90px 160px"] {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 8px !important;
+    padding: 16px !important;
+  }
+
+  /* Typography scale-downs */
+  h1[style*="font-size: clamp("],
+  h1[style*="font-size: 76px"],
+  h1[style*="font-size: 46px"] {
+    font-size: clamp(32px, 8vw, 42px) !important;
+    line-height: 1.15 !important;
+  }
+}
+
+@media (max-width: 600px) {
+  /* Mobile Sidebar Override (hiding or transforming could be done here if needed) */
+  #sidebar-container {
+    display: none !important;
+  }
+  main {
+    padding-left: 20px !important;
+    padding-right: 20px !important;
+  }
+}

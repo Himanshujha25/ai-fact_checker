@@ -123,13 +123,13 @@ const AppFooter = () => {
             letterSpacing: '-0.01em',
             display: 'block', marginBottom: 16,
           }}>
-            The Verified Editorial
+            Truecast
           </span>
           <p style={{
             fontSize: 13, color: MUTED, lineHeight: 1.8,
             maxWidth: 300, marginBottom: 24,
           }}>
-            The global standard for truth representation and forensic intelligence adjudication, powered by neural synthesis.
+            Like a forecast, but for truth. The global standard for forensic intelligence adjudication.
           </p>
           <div style={{
             display: 'inline-flex', alignItems: 'center', gap: 7,
@@ -184,7 +184,7 @@ const AppFooter = () => {
           fontFamily: "'DM Mono', monospace",
           fontSize: 10, color: DIM, letterSpacing: '0.07em',
         }}>
-          © 2026 The Verified Editorial · Forensic Intelligence Engine · v1.2.4
+          © 2026 Truecast · like a forecast, but for truth · v1.2.4
         </span>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 32 }}>

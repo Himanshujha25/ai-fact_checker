@@ -212,7 +212,7 @@ export default function Home() {
       <section style={{
         minHeight: '92vh',
         display: 'flex', alignItems: 'center',
-        padding: '80px 64px',
+        padding: '8px 64px',
         maxWidth: 1280, margin: '0 auto',
         gap: 72,
       }}>

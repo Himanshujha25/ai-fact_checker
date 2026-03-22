@@ -3,7 +3,7 @@ import axios from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Gavel, Link as LinkIcon, FileText, Upload, ShieldCheck,
-  ChevronRight, Clock, Activity, Search, Mic, MicOff,
+  ChevronRight, Clock, Activity, Search, Mic, MicOff,ShieldAlert,
   Sparkles, Zap
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -586,6 +586,77 @@ export default function Verify() {
                   </button>
                 </div>
               </div>
+
+              {/* ── AI Detection Summary ── */}
+              {results.aiTextDetection && (
+                <div style={{ marginBottom: 36, display: 'flex', gap: 20 }}>
+                  <div style={{ flex: 1, padding: '20px 24px', background: SURF, border: `1px solid ${LINE}`, borderRadius: 16 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+                      <Activity size={16} color={results.aiTextDetection.score > 50 ? '#f87171' : '#4ade80'} />
+                      <span style={{ fontSize: 11, fontFamily: "'DM Mono', monospace", textTransform: 'uppercase', letterSpacing: '0.12em', color: DIM }}>AI Text Probability</span>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'flex-end', gap: 14 }}>
+                      <span style={{ fontFamily: "'DM Serif Display', Georgia, serif", fontSize: 36, color: TEXT, lineHeight: 1 }}>{results.aiTextDetection.score}%</span>
+                      <span style={{ fontSize: 13, color: MUTED, paddingBottom: 4 }}>{results.aiTextDetection.score > 50 ? 'Likely Synthesized' : 'Likely Human'}</span>
+                    </div>
+                    <p style={{ fontSize: 12, color: DIM, marginTop: 12, lineHeight: 1.5 }}>{results.aiTextDetection.explanation}</p>
+                  </div>
+                  
+                  {results.aiMediaDetection && (
+                    <div style={{ flex: 1, padding: '20px 24px', background: SURF, border: `1px solid ${LINE}`, borderRadius: 16 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+                        <ShieldAlert size={16} color={results.aiMediaDetection.score > 0 ? '#fb923c' : '#4ade80'} />
+                        <span style={{ fontSize: 11, fontFamily: "'DM Mono', monospace", textTransform: 'uppercase', letterSpacing: '0.12em', color: DIM }}>Media Authentication</span>
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'flex-end', gap: 14 }}>
+                        <span style={{ fontFamily: "'DM Serif Display', Georgia, serif", fontSize: 36, color: TEXT, lineHeight: 1 }}>{results.aiMediaDetection.verdict || 'Clear'}</span>
+                      </div>
+                      <p style={{ fontSize: 12, color: DIM, marginTop: 12, lineHeight: 1.5 }}>{results.aiMediaDetection.summary}</p>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* ── Visual Forensic Comparison ────────────────────────── */}
+              {results.forensicReference && (
+                <div style={{ marginBottom: 44 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20, paddingBottom: 14, borderBottom: `1px solid ${GOLD_L}` }}>
+                    <ShieldCheck size={18} color={GOLD} />
+                    <h3 style={{ fontFamily: "'DM Serif Display', Georgia, serif", fontSize: 26, fontWeight: 400, color: TEXT }}>
+                      A/B Forensic Comparison.
+                    </h3>
+                  </div>
+                  
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
+                    <div style={{ background: SURF, border: `1px solid ${LINE}`, borderRadius: 16, overflow: 'hidden' }}>
+                       <div style={{ padding: '10px 14px', background: 'rgba(255,255,255,0.03)', borderBottom: `1px solid ${LINE}`, display: 'flex', justifyContent: 'space-between' }}>
+                          <span style={{ fontSize: 9, fontFamily: "'DM Mono', monospace", color: DIM, textTransform: 'uppercase', letterSpacing: '0.1em' }}>Evidence Source</span>
+                          <span style={{ fontSize: 9, fontFamily: "'DM Mono', monospace", color: '#f87171' }}>[SUBJECT]</span>
+                       </div>
+                       <div style={{ height: 240, background: '#000', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          {results.aiMediaDetection?.results?.[0]?.url ? (
+                            <img src={results.aiMediaDetection.results[0].url} alt="Source" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                          ) : (
+                            <div style={{ textAlign: 'center', color: DIM }}>
+                              <FileText size={42} style={{ opacity: 0.5, marginBottom: 12, margin: '0 auto' }} />
+                              <div style={{ fontSize: 10, fontFamily: "'DM Mono', monospace", textTransform: 'uppercase', letterSpacing: '0.12em' }}>Voice / Text Source</div>
+                            </div>
+                          )}
+                       </div>
+                    </div>
+
+                    <div style={{ background: SURF, border: `1px solid ${GOLD_L}`, borderRadius: 16, overflow: 'hidden' }}>
+                       <div style={{ padding: '10px 14px', background: 'rgba(201,168,76,0.05)', borderBottom: `1px solid ${GOLD_L}`, display: 'flex', justifyContent: 'space-between' }}>
+                          <span style={{ fontSize: 9, fontFamily: "'DM Mono', monospace", color: GOLD, textTransform: 'uppercase', letterSpacing: '0.1em' }}>AI Target Reference</span>
+                          <span style={{ fontSize: 9, fontFamily: "'DM Mono', monospace", color: '#4ade80' }}>[VERIFIED]</span>
+                       </div>
+                       <div style={{ height: 240, background: '#000' }}>
+                          <img src={results.forensicReference} alt="Reference" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                       </div>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:14 }}>
                 <h3 style={{ fontFamily:"'DM Serif Display',Georgia,serif", fontSize:24, fontWeight:400, color:TEXT, letterSpacing:'-0.01em' }}>

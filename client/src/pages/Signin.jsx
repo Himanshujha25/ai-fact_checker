@@ -136,7 +136,7 @@ export default function Signin() {
             fontSize: 18, fontWeight: 400, color: TEXT,
             letterSpacing: '-0.01em',
           }}>
-            The Verified Editorial
+            Truecast
           </span>
         </Link>
         <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
@@ -379,7 +379,7 @@ export default function Signin() {
           fontFamily: "'DM Mono', monospace",
           fontSize: 10, color: DIM, letterSpacing: '0.07em',
         }}>
-          © 2026 The Verified Editorial
+          © 2026 Truecast
         </span>
         <div style={{ display: 'flex', gap: 24 }}>
           {['Legal', 'Privacy', 'Methodology', 'Support'].map(item => (
