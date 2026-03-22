@@ -643,7 +643,7 @@ async function retryWithBackoff(fn, retries = 3, baseDelay = 1000) {
 
 // Core verification pipeline — Chain-of-Thought + Multi-Mode Research Agent
 async function runVerificationPipeline(contentToProcess, mode = 'normal') {
-  const model = genAI.getGenerativeModel({ model: "gemini-2.5-pro" });
+  const model = genAI.getGenerativeModel({ model: 'gemini-2.5-pro' });
   const currentDate = new Date().toISOString().split('T')[0];
   let claimLimit = mode === 'pro' ? 8 : (mode === 'deep' ? 5 : 3);
 
@@ -667,12 +667,11 @@ async function runVerificationPipeline(contentToProcess, mode = 'normal') {
 
   // ─── PHASE 2: Verification with Multi-Mode Tools ───
   console.log(`  [Phase 2] Verifying ${claims.length} claims (Mode: ${mode})...`);
-  const verificationResults = [];
   
   // Update claim limit for Phase 2 processing depth
-  claimLimit = mode === 'normal' ? 4 : (mode === 'deep' ? 7 : 10);
+  claimLimit = mode === 'normal' ? 3 : (mode === 'deep' ? 5 : 8);
   
-  for (const claim of claims.slice(0, claimLimit)) {
+  const verificationResults = await Promise.all(claims.slice(0, claimLimit).map(async (claim) => {
     try {
       let researchData = null;
       
@@ -725,7 +724,8 @@ async function runVerificationPipeline(contentToProcess, mode = 'normal') {
   }`;
 
       const verifyResult = await retryWithBackoff(() => model.generateContent(verifyPrompt));
-      let parsed = JSON.parse(verifyResult.response.text().match(/\{[\s\S]*\}/)?.[0] || '{}');
+      const jsonText = verifyResult.response.text().match(/\{[\s\S]*\}/)?.[0] || '{}';
+      let parsed = JSON.parse(jsonText);
       parsed.claimId = claim.id;
 
       // DEEP/PRO Mode: Extra Entity Validation (Wikipedia)
@@ -733,12 +733,12 @@ async function runVerificationPipeline(contentToProcess, mode = 'normal') {
         parsed.entityMetadata = await fetchEntityImage(claim.primaryEntity);
       }
 
-      verificationResults.push(parsed);
+      return parsed;
     } catch (err) {
       console.error(`  ✗ Error on claim ${claim.id}:`, err.message);
-      verificationResults.push({ claimId: claim.id, verdict: 'Unverifiable', confidence: 0, reasoning: 'Pipeline error' });
+      return { claimId: claim.id, verdict: 'Unverifiable', confidence: 0, reasoning: 'Pipeline error: ' + err.message };
     }
-  }
+  }));
 
   // ─── PHASE 3: AI Text Detection ───
   console.log('  [Phase 3] AI text detection...');
@@ -751,11 +751,17 @@ async function runVerificationPipeline(contentToProcess, mode = 'normal') {
   } catch (err) { }
 
   // ─── PHASE 4: Aggregate & Score ───
-  const successfulResults = verificationResults.filter(v => v.verdict);
-  const trueCount = successfulResults.filter(v => v.verdict === 'True').length;
-  const partialCount = successfulResults.filter(v => v.verdict === 'Partially True').length;
+  const successfulResults = verificationResults.filter(v => v && v.verdict);
+  const trueCount = successfulResults.filter(v => {
+    const vLower = (v.verdict || '').toLowerCase();
+    return vLower === 'true' || vLower === 'likely true' || vLower === 'accurate' || vLower === 'verified';
+  }).length;
+  const partialCount = successfulResults.filter(v => {
+    const vLower = (v.verdict || '').toLowerCase();
+    return vLower === 'partially true' || vLower === 'mixed';
+  }).length;
   const totalVerified = successfulResults.length || 1;
-  const truthScore = ((trueCount + partialCount * 0.5) / totalVerified) * 100;
+  const truthScore = Math.min(100, ((trueCount + partialCount * 0.5) / totalVerified) * 100);
 
   return {
     originalText: contentToProcess,
@@ -809,11 +815,7 @@ app.post('/api/verify', authenticate, async (req, res) => {
     // AI Media Detection: analyze extracted images
     if (imageUrls.length > 0) {
       console.log(`Analyzing ${imageUrls.length} images for deepfake detection...`);
-      const imageAnalysis = [];
-      for (const imgUrl of imageUrls.slice(0, 3)) {
-        const analysis = await analyzeImageForAI(imgUrl);
-        imageAnalysis.push(analysis);
-      }
+      const imageAnalysis = await Promise.all(imageUrls.slice(0, 3).map(imgUrl => analyzeImageForAI(imgUrl)));
       const aiGenCount = imageAnalysis.filter(a => a.isAIGenerated).length;
       responseData.aiMediaDetection = {
         imagesFound: imageUrls.length,
