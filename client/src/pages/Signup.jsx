@@ -48,7 +48,7 @@ export default function Signup() {
       setSuccess('Account created. Redirecting…');
       setTimeout(() => navigate('/verify'), 1200);
     } catch (err) {
-      setError(err.response?.data?.error || 'Registration failed. Please try again.');
+      setError(err.message || 'Registration failed. Please try again.');
     } finally {
       setLoading(false);
     }

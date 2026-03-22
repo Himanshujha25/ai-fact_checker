@@ -35,7 +35,7 @@ export default function Signin() {
       setSuccess('Authenticated. Redirecting…');
       setTimeout(() => navigate('/verify'), 1200);
     } catch (err) {
-      setError(err.response?.data?.error || 'Authentication failed. Please check your credentials.');
+      setError(err.message || 'Authentication failed. Please check your credentials.');
     } finally {
       setLoading(false);
     }
