@@ -9,6 +9,8 @@ const { GoogleGenerativeAI } = require('@google/generative-ai');
 const axios = require('axios');
 const CryptoJS = require('crypto-js');
 
+app.set('trust proxy', 1);
+
 // ─── Tavily Research Agent (Live Web Search) ───
 async function performTavilySearch(query, depth = 'basic') {
   const apiKey = process.env.TAVILY_API_KEY;
