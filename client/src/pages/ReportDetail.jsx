@@ -3,7 +3,7 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   ShieldCheck, ExternalLink, ArrowLeft, ArrowRight, Clock, Activity,
-  Download, ShieldAlert, Layers, ChevronRight, FileText
+  Download, ShieldAlert, Layers, ChevronRight, FileText, AlertTriangle
 } from 'lucide-react';
 import axios from 'axios';
 import html2pdf from 'html2pdf.js';
@@ -157,7 +157,7 @@ export default function ReportDetail() {
   return (
     <div style={{ background: '#08080E', minHeight: 'calc(100vh - 64px)', color: TEXT, fontFamily: "'DM Sans', system-ui, sans-serif", display: 'flex' }}>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600&family=DM+Serif+Display@0;1&family=DM+Mono:wght@400;500&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;0,600&family=DM+Serif+Display@0;1&family=DM+Mono:wght@400;500&display=swap');
 
         .rd-btn-gold {
           background: ${GOLD}; color: #08080E; border: none; border-radius: 9px;
@@ -247,7 +247,10 @@ export default function ReportDetail() {
                 <button className="rd-btn-gold" onClick={handleExportPDF}>
                   <Download size={13} /> Export PDF
                 </button>
-                <button className="rd-btn-ghost">
+                <button className="rd-btn-ghost" onClick={() => {
+                  navigator.clipboard.writeText(window.location.href);
+                  alert('Public dossier link copied to clipboard!');
+                }}>
                   <ExternalLink size={13} /> Share
                 </button>
               </div>
@@ -342,72 +345,203 @@ export default function ReportDetail() {
           )}
 
           {/* ── Visual Forensic Comparison ────────────────────────── */}
-          {data.forensicReference && (
-            <div style={{ marginBottom: 48 }}>
-              <div style={{ 
-                display: 'flex', justifyContent: 'space-between', alignItems: 'center', 
-                marginBottom: 20, paddingBottom: 14, borderBottom: `1px solid ${GOLD_L}` 
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <ShieldCheck size={18} color={GOLD} />
-                  <h3 style={{ fontFamily: "'DM Serif Display', Georgia, serif", fontSize: 26, fontWeight: 400, color: TEXT }}>
-                    Visual Cross-Reference.
-                  </h3>
-                </div>
-                <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 10, color: GOLD, fontWeight: 600, letterSpacing: '0.12em' }}>
-                  A/B ENTITY ANALYSIS ACTIVE
-                </span>
-              </div>
-              
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
-                {/* Source Column */}
-                <div style={{ background: SURF, border: `1px solid ${LINE}`, borderRadius: 16, overflow: 'hidden' }}>
-                   <div style={{ padding: '12px 16px', background: 'rgba(255,255,255,0.03)', borderBottom: `1px solid ${LINE}`, display: 'flex', justifyContent: 'space-between' }}>
-                      <span style={{ fontSize: 9, fontFamily: "'DM Mono', monospace", color: DIM, textTransform: 'uppercase', letterSpacing: '0.1em' }}>
-                        Source evidence
-                      </span>
-                      <span style={{ fontSize: 9, fontFamily: "'DM Mono', monospace", color: '#f87171', fontWeight: 600 }}>[SUBJECT]</span>
-                   </div>
-                   <div style={{ position: 'relative', height: 280, background: '#000', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      {data.aiMediaDetection?.results?.[0]?.url ? (
-                        <img 
-                          src={data.aiMediaDetection.results[0].url} 
-                          alt="Forensic Source" 
-                          style={{ width: '100%', height: '100%', objectFit: 'cover', opacity: 0.9 }} 
-                        />
-                      ) : (
-                        <div style={{ textAlign: 'center', color: DIM }}>
-                          <FileText size={42} style={{ opacity: 0.5, marginBottom: 12, margin: '0 auto' }} />
-                          <div style={{ fontSize: 10, fontFamily: "'DM Mono', monospace", textTransform: 'uppercase', letterSpacing: '0.12em' }}>Voice / Text Source</div>
-                        </div>
-                      )}
-                      <div style={{ position: 'absolute', inset: 0, boxShadow: 'inset 0 0 40px rgba(0,0,0,0.6)', pointerEvents: 'none' }} />
-                   </div>
-                </div>
+         {data.forensicReference && (
+  <div style={{ marginBottom: 48 }}>
+    
+    {/* Header */}
+    <div
+      style={{
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "center",
+        marginBottom: 20,
+        paddingBottom: 14,
+        borderBottom: `1px solid ${GOLD_L}`,
+      }}
+    >
+      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+        <ShieldCheck size={18} color={GOLD} />
+        <h3
+          style={{
+            fontFamily: "'DM Serif Display', Georgia, serif",
+            fontSize: 26,
+            fontWeight: 400,
+            color: TEXT,
+          }}
+        >
+          Visual Cross-Reference.
+        </h3>
+      </div>
 
-                {/* Target Reference Column */}
-                <div style={{ background: SURF, border: `1px solid ${GOLD_L}`, borderRadius: 16, overflow: 'hidden' }}>
-                   <div style={{ padding: '12px 16px', background: 'rgba(201,168,76,0.05)', borderBottom: `1px solid ${GOLD_L}`, display: 'flex', justifyContent: 'space-between' }}>
-                      <span style={{ fontSize: 9, fontFamily: "'DM Mono', monospace", color: GOLD, textTransform: 'uppercase', letterSpacing: '0.1em' }}>
-                         AI Target Reference
-                      </span>
-                      <span style={{ fontSize: 9, fontFamily: "'DM Mono', monospace", color: '#4ade80', fontWeight: 600 }}>[VERIFIED]</span>
-                   </div>
-                   <div style={{ position: 'relative', height: 280, background: '#000' }}>
-                      <img 
-                        src={data.forensicReference} 
-                        alt="AI Verification Target" 
-                        style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
-                      />
-                      <div style={{ position: 'absolute', inset: 0, boxShadow: 'inset 0 0 40px rgba(0,0,0,0.4)' }} />
-                   </div>
-                </div>
+      <span
+        style={{
+          fontFamily: "'DM Mono', monospace",
+          fontSize: 10,
+          color: GOLD,
+          fontWeight: 600,
+          letterSpacing: "0.12em",
+        }}
+      >
+        A/B ENTITY ANALYSIS ACTIVE
+      </span>
+    </div>
+
+    {/* Grid */}
+    <div
+      style={{
+        display: "grid",
+        gridTemplateColumns: "1fr 1fr",
+        gap: 20,
+      }}
+    >
+      
+      {/* Evidence Source */}
+      <div
+        style={{
+          background: SURF,
+          border: `1px solid ${LINE}`,
+          borderRadius: 16,
+          overflow: "hidden",
+        }}
+      >
+        <div
+          style={{
+            padding: "10px 14px",
+            background: "rgba(255,255,255,0.03)",
+            borderBottom: `1px solid ${LINE}`,
+            display: "flex",
+            justifyContent: "space-between",
+          }}
+        >
+          <span
+            style={{
+              fontSize: 9,
+              fontFamily: "'DM Mono', monospace",
+              color: DIM,
+              textTransform: "uppercase",
+              letterSpacing: "0.1em",
+            }}
+          >
+            Evidence Source
+          </span>
+          <span
+            style={{
+              fontSize: 9,
+              fontFamily: "'DM Mono', monospace",
+              color: "#f87171",
+            }}
+          >
+            [SUBJECT]
+          </span>
+        </div>
+
+        <div
+          style={{
+            height: 240,
+            background: "#000",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          {data.aiMediaDetection?.results?.[0]?.url ? (
+            <img
+              src={data.aiMediaDetection.results[0].url}
+              alt="Source"
+              style={{ width: "100%", height: "100%", objectFit: "cover" }}
+            />
+          ) : (
+            <div style={{ textAlign: "center", color: DIM }}>
+              <FileText
+                size={42}
+                style={{ opacity: 0.5, marginBottom: 12 }}
+              />
+              <div
+                style={{
+                  fontSize: 10,
+                  fontFamily: "'DM Mono', monospace",
+                  textTransform: "uppercase",
+                  letterSpacing: "0.12em",
+                }}
+              >
+                Voice / Text Source
               </div>
-              <p style={{ marginTop: 16, fontSize: 12, color: MUTED, textAlign: 'center', fontFamily: "'DM Mono', monospace" }}>
-                 High-fidelity comparison used to identify specific landmark inconsistencies.
-              </p>
             </div>
           )}
+        </div>
+      </div>
+
+      {/* AI Target Reference */}
+      <div
+        style={{
+          background: SURF,
+          border: `1px solid ${GOLD_L}`,
+          borderRadius: 16,
+          overflow: "hidden",
+        }}
+      >
+        <div
+          style={{
+            padding: "10px 14px",
+            background: "rgba(201,168,76,0.05)",
+            borderBottom: `1px solid ${GOLD_L}`,
+          }}
+        >
+          <span
+            style={{
+              fontSize: 9,
+              fontFamily: "'DM Mono', monospace",
+              color: GOLD,
+              textTransform: "uppercase",
+              letterSpacing: "0.1em",
+            }}
+          >
+            AI Target Reference
+          </span>
+        </div>
+
+        <div style={{ position: "relative", height: 240, background: "#000" }}>
+          <img
+            src={
+              data.forensicReference ||
+              "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde"
+            }
+            alt="AI Verification Target"
+            style={{ width: "100%", height: "100%", objectFit: "cover" }}
+            onError={(e) => {
+              e.target.onerror = null;
+              e.target.src =
+                "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde";
+            }}
+          />
+          <div
+            style={{
+              position: "absolute",
+              inset: 0,
+              boxShadow: "inset 0 0 40px rgba(0,0,0,0.4)",
+            }}
+          />
+        </div>
+      </div>
+    </div>
+
+    {/* Footer */}
+    <p
+      style={{
+        marginTop: 16,
+        fontSize: 12,
+        color: MUTED,
+        textAlign: "center",
+        fontFamily: "'DM Mono', monospace",
+      }}
+    >
+      High-fidelity comparison used to identify specific landmark inconsistencies.
+    </p>
+  </div>
+)}
+
+
+
 
           {/* ── Forensic Media Section ──────────────────────────────── */}
           {data.aiMediaDetection?.results?.length > 0 && (
@@ -461,6 +595,71 @@ export default function ReportDetail() {
             </div>
           )}
 
+          {/* ── Confidence Heatmap ──────────────────────────────────── */}
+          {data.originalText && (
+            <div style={{ marginBottom: 44 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 18, paddingBottom: 14, borderBottom: `1px solid ${LINE}` }}>
+                <h3 style={{ fontFamily: "'DM Serif Display', Georgia, serif", fontSize: 28, fontWeight: 400, color: TEXT }}>
+                  Confidence Heatmap.
+                </h3>
+              </div>
+              <div style={{ padding: '24px', background: SURF, border: `1px solid ${LINE}`, borderRadius: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
+                {data.originalText.split('\n').filter(p => p.trim() !== '').map((para, i) => {
+                  let matchScore = 0;
+                  let pColor = 'transparent';
+                  let borderBase = 'transparent';
+                  
+                  if (data.claims) {
+                    for (const c of data.claims) {
+                      const cWords = (c.context || c.claim || '').toLowerCase().split(/\s+/);
+                      const significantWords = cWords.filter(w => w.length > 3);
+                      if (significantWords.length === 0) continue;
+                      
+                      let matches = 0;
+                      const pLower = para.toLowerCase();
+                      for (const w of significantWords) { if(pLower.includes(w)) matches++; }
+                      
+                      const overlap = matches / significantWords.length;
+                      if (overlap > 0.25 && overlap > matchScore) {
+                        matchScore = overlap;
+                        const pOpacity = (c.confidence || 0.8) * 0.45; 
+                        const vLower = (c.verdict || '').toLowerCase();
+                        
+                        if (['true','accurate','verified'].includes(vLower)) {
+                           pColor = `rgba(74,222,128,${pOpacity})`;
+                           borderBase = '#4ade80';
+                        } else if (['false','inaccurate'].includes(vLower)) {
+                           pColor = `rgba(248,113,113,${pOpacity})`;
+                           borderBase = '#f87171';
+                        } else if (['partially true','mixed'].includes(vLower)) {
+                           pColor = `rgba(251,191,36,${pOpacity})`;
+                           borderBase = '#fbbf24';
+                        } else {
+                           pColor = `rgba(255,255,255,${pOpacity * 0.3})`;
+                           borderBase = 'rgba(255,255,255,0.2)';
+                        }
+                      }
+                    }
+                  }
+
+                  return (
+                    <p key={i} style={{
+                      fontSize: 14, lineHeight: 1.6, color: matchScore > 0 ? TEXT : MUTED,
+                      background: pColor, padding: '10px 14px', borderRadius: 8, margin: 0,
+                      transition: 'background 0.3s',
+                      borderLeft: matchScore > 0 ? `3px solid ${borderBase}` : '3px solid transparent'
+                    }}>
+                      {para}
+                    </p>
+                  );
+                })}
+              </div>
+              <p style={{ marginTop: 14, fontSize: 11, color: MUTED, fontFamily: "'DM Mono', monospace", textAlign: 'center' }}>
+                 Source paragraphs dynamically color-coded by AI verification confidence and claim verdict polarity.
+              </p>
+            </div>
+          )}
+
           {/* ── Assertion ledger ── */}
           <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20, paddingBottom: 16, borderBottom: `1px solid ${LINE}` }}>
@@ -508,6 +707,11 @@ export default function ReportDetail() {
                       <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 10, color: DIM, display: 'flex', alignItems: 'center', gap: 4 }}>
                         <Clock size={10} /> {new Date(data.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                       </span>
+                      {c.isTimeSensitive && (
+                        <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 10, color: '#fbbf24', display: 'flex', alignItems: 'center', gap: 4, background: 'rgba(251,191,36,0.1)', padding: '2px 6px', borderRadius: 4 }}>
+                          <AlertTriangle size={10} /> Time Sensitive
+                        </span>
+                      )}
                     </div>
                   </div>
 

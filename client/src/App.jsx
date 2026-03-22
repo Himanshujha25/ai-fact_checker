@@ -96,7 +96,7 @@ const AppFooter = () => {
       fontFamily: "'DM Sans', system-ui, sans-serif",
     }}>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600&family=DM+Serif+Display@0;1&family=DM+Mono:wght@400;500&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;0,600&family=DM+Serif+Display@0;1&family=DM+Mono:wght@400;500&display=swap');
         .ft-col-link {
           background: none; border: none; cursor: pointer; padding: 0;
           font-family: 'DM Sans', system-ui, sans-serif;

@@ -13,16 +13,14 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // Set the global Axios base URL to prevent 404s across all network requests in production
   useEffect(() => {
-    axios.defaults.baseURL = API_BASE;
-  }, []);
-
-  useEffect(() => {
+    // Clear any sticky HMR cache of baseURL to fix double prefixing
+    axios.defaults.baseURL = '';
+    
     const token = localStorage.getItem('token');
     if (token) {
       axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-      axios.get('/auth/me')
+      axios.get(`${API_BASE}/auth/me`)
         .then(res => setUser(res.data))
         .catch(() => {
           localStorage.removeItem('token');
@@ -36,7 +34,7 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (email, password) => {
     try {
-      const res = await axios.post('/auth/login', { email, password });
+      const res = await axios.post(`${API_BASE}/auth/login`, { email, password });
       const { token, ...userData } = res.data;
       localStorage.setItem('token', token);
       axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
@@ -51,7 +49,7 @@ export const AuthProvider = ({ children }) => {
 
   const signup = async (email, password, fullName, organization) => {
     try {
-      await axios.post('/auth/register', { email, password, fullName, organization });
+      await axios.post(`${API_BASE}/auth/register`, { email, password, fullName, organization });
       // After registration, automatically log in
       await login(email, password);
     } catch (err) {

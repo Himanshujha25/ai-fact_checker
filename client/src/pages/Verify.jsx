@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Gavel, Link as LinkIcon, FileText, Upload, ShieldCheck,
   ChevronRight, Clock, Activity, Search, Mic, MicOff,ShieldAlert,
-  Sparkles, Zap
+  Sparkles, Zap, AlertTriangle
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import Sidebar from '../components/Sidebar';
@@ -219,7 +219,7 @@ export default function Verify() {
   return (
     <div style={{ minHeight:'calc(100vh - 60px)', background:'#08080E', color:TEXT, fontFamily:"'DM Sans',system-ui,sans-serif", display:'flex', paddingBottom:64 }}>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600&family=DM+Serif+Display@0;1&family=DM+Mono:wght@400;500&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;0,600&family=DM+Serif+Display@0;1&family=DM+Mono:wght@400;500&display=swap');
 
         /* ── inputs ── */
         .vf-input {
@@ -634,14 +634,12 @@ export default function Verify() {
                           <span style={{ fontSize: 9, fontFamily: "'DM Mono', monospace", color: '#f87171' }}>[SUBJECT]</span>
                        </div>
                        <div style={{ height: 240, background: '#000', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                          {results.aiMediaDetection?.results?.[0]?.url ? (
-                            <img src={results.aiMediaDetection.results[0].url} alt="Source" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                          ) : (
-                            <div style={{ textAlign: 'center', color: DIM }}>
-                              <FileText size={42} style={{ opacity: 0.5, marginBottom: 12, margin: '0 auto' }} />
-                              <div style={{ fontSize: 10, fontFamily: "'DM Mono', monospace", textTransform: 'uppercase', letterSpacing: '0.12em' }}>Voice / Text Source</div>
-                            </div>
-                          )}
+                          <img 
+                            src={results.aiMediaDetection?.results?.[0]?.url || 'https://images.unsplash.com/photo-1511367461989-f85a21fda167?ixlib=rb-4.0.3&auto=format&fit=crop&w=512&q=80'} 
+                            alt="Source Profile" 
+                            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                            onError={(e) => { e.target.onerror = null; e.target.src = 'https://images.unsplash.com/photo-1511367461989-f85a21fda167?ixlib=rb-4.0.3&auto=format&fit=crop&w=512&q=80'; }} 
+                          />
                        </div>
                     </div>
 
@@ -651,7 +649,12 @@ export default function Verify() {
                           <span style={{ fontSize: 9, fontFamily: "'DM Mono', monospace", color: '#4ade80' }}>[VERIFIED]</span>
                        </div>
                        <div style={{ height: 240, background: '#000' }}>
-                          <img src={results.forensicReference} alt="Reference" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                          <img 
+                            src={results.forensicReference || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?ixlib=rb-4.0.3&auto=format&fit=crop&w=512&q=80'} 
+                            alt="Reference" 
+                            style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+                            onError={(e) => { e.target.onerror = null; e.target.src = 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?ixlib=rb-4.0.3&auto=format&fit=crop&w=512&q=80'; }} 
+                          />
                        </div>
                     </div>
                   </div>
@@ -677,7 +680,14 @@ export default function Verify() {
                     transition={{ delay:i * .05, duration:.28 }}>
                     <div style={{ paddingTop:2 }}><VerdictBadge verdict={c.verdict} /></div>
                     <div>
-                      <p style={{ fontSize:14, fontWeight:500, color:TEXT, lineHeight:1.55, marginBottom:5 }}>{c.claim}</p>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 5 }}>
+                        <p style={{ fontSize:14, fontWeight:500, color:TEXT, lineHeight:1.55 }}>{c.claim}</p>
+                        {c.isTimeSensitive && (
+                          <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 9, color: '#fbbf24', display: 'flex', alignItems: 'center', gap: 4, background: 'rgba(251,191,36,0.1)', padding: '2px 6px', borderRadius: 4, whiteSpace: 'nowrap' }}>
+                            <AlertTriangle size={9} /> Time Sensitive
+                          </span>
+                        )}
+                      </div>
                       <p style={{ fontSize:12, color:DIM, lineHeight:1.55 }}>{c.reasoning}</p>
                     </div>
                     <div style={{ textAlign:'right' }}>

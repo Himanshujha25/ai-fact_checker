@@ -55,7 +55,7 @@ export default function AnalysisProcessing({ elapsed, step, logs, inputTitle, on
   return (
     <div style={{ paddingTop: 40, paddingBottom: 100, fontFamily: "'DM Sans', system-ui, sans-serif" }}>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600&family=DM+Serif+Display@0;1&family=DM+Mono:wght@400;500&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;0,600&family=DM+Serif+Display@0;1&family=DM+Mono:wght@400;500&display=swap');
 
         @keyframes ap-spin    { to { transform: rotate(360deg); } }
         @keyframes ap-ping    { 0%,100% { transform: scale(1);   opacity:.5 } 50% { transform: scale(1.5); opacity:0 } }

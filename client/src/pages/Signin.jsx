@@ -51,7 +51,7 @@ export default function Signin() {
       flexDirection: 'column',
     }}>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600&family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@400;500&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600&family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@400;500&display=swap');
 
         .si-input {
           width: 100%; box-sizing: border-box;
