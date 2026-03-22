@@ -204,7 +204,6 @@ export default function Verify() {
     const reportId = results.reportId || ('TC-'+Math.random().toString(36).substring(2,9).toUpperCase());
     const sanitized = exportName.trim().replace(/\s+/g,'_').toLowerCase();
     const fileName = sanitized ? `${sanitized}_truecast_${reportId}.pdf` : `TrueCast_Report_${reportId}.pdf`;
-
     const verdictColor = v => {
       const l=(v||'').toLowerCase();
       if (['true','accurate','verified'].includes(l)) return { bg:'#D1FAE5', fg:'#065F46', dot:'#10B981' };
@@ -216,96 +215,12 @@ export default function Verify() {
     const scoreBg    = s => s>=70?'#D1FAE5':s>=40?'#FEF3C7':'#FEE2E2';
     const sc = results.truthScore || 0;
     const scoreLabel = sc>=75?'High Confidence':sc>=50?'Moderate Confidence':'Low Confidence';
-
     const claimsHTML = (results.claims||[]).map((c,i) => {
       const vc=verdictColor(c.verdict), pct=fmt((c.confidence||0)*100), row=i%2===0?'#FFFFFF':'#F9FAFB';
-      return `<tr style="background:${row};border-bottom:1px solid #E5E7EB;">
-        <td style="padding:12px 16px;width:120px;vertical-align:top;">
-          <span style="display:inline-flex;align-items:center;gap:5px;background:${vc.bg};color:${vc.fg};font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:3px 9px;border-radius:4px;">
-            <span style="width:6px;height:6px;border-radius:50%;background:${vc.dot};flex-shrink:0;"></span>${c.verdict||'Pending'}
-          </span>
-        </td>
-        <td style="padding:12px 16px;vertical-align:top;">
-          <p style="margin:0 0 4px;font-size:13px;font-weight:600;color:#111827;line-height:1.5;">${c.claim||'—'}</p>
-          <p style="margin:0;font-size:12px;color:#6B7280;line-height:1.55;">${c.reasoning||''}</p>
-        </td>
-        <td style="padding:12px 16px;width:70px;vertical-align:top;text-align:right;">
-          <span style="font-size:18px;font-weight:700;color:${pct>=70?'#B45309':'#6B7280'};">${pct}<span style="font-size:10px;font-weight:400;">%</span></span>
-        </td>
-      </tr>`;
+      return `<tr style="background:${row};border-bottom:1px solid #E5E7EB;"><td style="padding:12px 16px;width:120px;vertical-align:top;"><span style="display:inline-flex;align-items:center;gap:5px;background:${vc.bg};color:${vc.fg};font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:3px 9px;border-radius:4px;"><span style="width:6px;height:6px;border-radius:50%;background:${vc.dot};flex-shrink:0;"></span>${c.verdict||'Pending'}</span></td><td style="padding:12px 16px;vertical-align:top;"><p style="margin:0 0 4px;font-size:13px;font-weight:600;color:#111827;line-height:1.5;">${c.claim||'—'}</p><p style="margin:0;font-size:12px;color:#6B7280;line-height:1.55;">${c.reasoning||''}</p></td><td style="padding:12px 16px;width:70px;vertical-align:top;text-align:right;"><span style="font-size:18px;font-weight:700;color:${pct>=70?'#B45309':'#6B7280'};">${pct}<span style="font-size:10px;font-weight:400;">%</span></span></td></tr>`;
     }).join('');
-
-    const aiSection = results.aiTextDetection ? `
-      <div style="display:flex;gap:16px;margin-bottom:28px;">
-        <div style="flex:1;background:#F9FAFB;border:1px solid #E5E7EB;border-radius:10px;padding:18px 20px;">
-          <p style="margin:0 0 6px;font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#9CA3AF;">AI Text Probability</p>
-          <p style="margin:0;font-size:30px;font-weight:700;color:#111827;line-height:1;">${results.aiTextDetection.score||0}<span style="font-size:14px;font-weight:400;color:#6B7280;">%</span></p>
-          <p style="margin:6px 0 0;font-size:12px;color:#6B7280;">${results.aiTextDetection.score>50?'Likely synthesized content':'Likely human-authored content'}</p>
-          ${results.aiTextDetection.explanation?`<p style="margin:8px 0 0;font-size:11px;color:#9CA3AF;line-height:1.5;">${results.aiTextDetection.explanation}</p>`:''}
-        </div>
-        ${results.aiMediaDetection?`
-        <div style="flex:1;background:#F9FAFB;border:1px solid #E5E7EB;border-radius:10px;padding:18px 20px;">
-          <p style="margin:0 0 6px;font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#9CA3AF;">Media Authentication</p>
-          <p style="margin:0;font-size:30px;font-weight:700;color:#111827;line-height:1;">${results.aiMediaDetection.verdict||'Clear'}</p>
-          ${results.aiMediaDetection.summary?`<p style="margin:8px 0 0;font-size:11px;color:#9CA3AF;line-height:1.5;">${results.aiMediaDetection.summary}</p>`:''}
-        </div>`:''}
-      </div>` : '';
-
-    const html = `
-    <div style="font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:13px;color:#111827;background:#fff;padding:0;margin:0;max-width:760px;box-sizing:border-box;">
-      <div style="background:#0D0D18;padding:28px 36px 24px;">
-        <table width="100%" cellpadding="0" cellspacing="0"><tr>
-          <td><span style="font-family:Georgia,'Times New Roman',serif;font-size:22px;font-weight:400;color:#C9A84C;letter-spacing:.04em;">TRUECAST</span>
-          <span style="display:block;font-size:9px;color:rgba(201,168,76,.55);letter-spacing:.18em;text-transform:uppercase;margin-top:3px;">Intelligence · Verification · Forensics</span></td>
-          <td style="text-align:right;vertical-align:top;"><span style="font-size:9px;color:rgba(255,255,255,.35);font-family:monospace;letter-spacing:.06em;text-transform:uppercase;line-height:1.8;">OFFICIAL AUDIT REPORT<br>${today}<br>REF: ${reportId}</span></td>
-        </tr></table>
-      </div>
-      <div style="height:3px;background:linear-gradient(90deg,#C9A84C 0%,#F0D080 50%,#C9A84C 100%);"></div>
-      <div style="padding:36px 36px 40px;">
-        <h1 style="font-family:Georgia,'Times New Roman',serif;font-size:26px;font-weight:400;color:#111827;margin:0 0 6px;letter-spacing:-.02em;">Forensic Fact-Check Report</h1>
-        <p style="margin:0 0 28px;font-size:13px;color:#6B7280;">Automated multi-source intelligence audit with confidence scoring.</p>
-        <div style="display:flex;align-items:stretch;gap:0;border:1px solid #E5E7EB;border-radius:12px;overflow:hidden;margin-bottom:28px;">
-          <div style="background:${scoreBg(sc)};padding:24px 28px;min-width:160px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;">
-            <span style="font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:${scoreColor(sc)};opacity:.7;margin-bottom:8px;">Truth Index</span>
-            <span style="font-family:Georgia,'Times New Roman',serif;font-size:52px;font-weight:400;color:${scoreColor(sc)};line-height:1;">${fmt(sc)}</span>
-            <span style="font-size:11px;color:${scoreColor(sc)};opacity:.7;">/100</span>
-            <span style="margin-top:10px;font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:${scoreColor(sc)};background:${scoreColor(sc)}18;padding:3px 10px;border-radius:4px;">${scoreLabel}</span>
-          </div>
-          <div style="flex:1;padding:22px 28px;border-left:1px solid #E5E7EB;">
-            <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;">
-              <tr><td style="padding:6px 0;font-size:11px;color:#9CA3AF;width:140px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;">Claims Reviewed</td><td style="padding:6px 0;font-size:13px;color:#111827;font-weight:600;">${results.claims?.length||0}</td></tr>
-              <tr><td style="padding:6px 0;font-size:11px;color:#9CA3AF;font-weight:600;text-transform:uppercase;letter-spacing:.06em;">Report Date</td><td style="padding:6px 0;font-size:13px;color:#111827;">${today}</td></tr>
-              <tr><td style="padding:6px 0;font-size:11px;color:#9CA3AF;font-weight:600;text-transform:uppercase;letter-spacing:.06em;">Report ID</td><td style="padding:6px 0;font-size:13px;color:#111827;font-family:monospace;">${reportId}</td></tr>
-              <tr><td style="padding:6px 0;font-size:11px;color:#9CA3AF;font-weight:600;text-transform:uppercase;letter-spacing:.06em;">Engine</td><td style="padding:6px 0;font-size:13px;color:#111827;">TrueCast Neural v4.2 · Multi-agent</td></tr>
-              ${exportName.trim()?`<tr><td style="padding:6px 0;font-size:11px;color:#9CA3AF;font-weight:600;text-transform:uppercase;letter-spacing:.06em;">Author</td><td style="padding:6px 0;font-size:13px;color:#111827;">${exportName.trim()}</td></tr>`:''}
-              <tr><td style="padding:6px 0 0;font-size:11px;color:#9CA3AF;font-weight:600;text-transform:uppercase;letter-spacing:.06em;vertical-align:top;">Assessment</td>
-              <td style="padding:6px 0 0;"><span style="font-size:13px;color:${scoreColor(sc)};font-weight:600;">${sc>=75?'✓ Largely verifiable and evidence-supported.':sc>=45?'⚠ Mixed or partially verifiable claims.':'✗ Significant inaccuracies detected.'}</span></td></tr>
-            </table>
-          </div>
-        </div>
-        <div style="border-top:1px solid #E5E7EB;margin:0 0 24px;"></div>
-        ${aiSection}
-        <h2 style="font-family:Georgia,'Times New Roman',serif;font-size:18px;font-weight:400;color:#111827;margin:0 0 14px;letter-spacing:-.01em;">Verified Assertions</h2>
-        <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;border:1px solid #E5E7EB;border-radius:10px;overflow:hidden;font-size:13px;">
-          <thead><tr style="background:#F3F4F6;border-bottom:2px solid #E5E7EB;">
-            <th style="padding:11px 16px;text-align:left;font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#6B7280;width:120px;">Verdict</th>
-            <th style="padding:11px 16px;text-align:left;font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#6B7280;">Claim &amp; Reasoning</th>
-            <th style="padding:11px 16px;text-align:right;font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#6B7280;width:70px;">Conf.</th>
-          </tr></thead>
-          <tbody>${claimsHTML||`<tr><td colspan="3" style="padding:24px 16px;text-align:center;color:#9CA3AF;">No claims extracted.</td></tr>`}</tbody>
-        </table>
-        <div style="margin-top:36px;padding:16px 20px;background:#FFFBEB;border:1px solid #FDE68A;border-radius:8px;border-left:4px solid #F59E0B;">
-          <p style="margin:0 0 4px;font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#92400E;">Disclaimer</p>
-          <p style="margin:0;font-size:11px;color:#78350F;line-height:1.6;">This report is generated by an automated AI system and is intended as a supplementary research aid only. Verdicts reflect algorithmic inference and may not capture all available context. TrueCast does not constitute legal, journalistic, or editorial authority.</p>
-        </div>
-      </div>
-      <div style="background:#F9FAFB;border-top:1px solid #E5E7EB;padding:16px 36px;display:flex;align-items:center;justify-content:space-between;">
-        <span style="font-family:Georgia,'Times New Roman',serif;font-size:12px;color:#C9A84C;letter-spacing:.06em;">TRUECAST</span>
-        <span style="font-size:10px;color:#9CA3AF;font-family:monospace;letter-spacing:.04em;">${today} · REF: ${reportId}</span>
-        <span style="font-size:10px;color:#9CA3AF;">truecast.ai</span>
-      </div>
-    </div>`;
-
+    const aiSection = results.aiTextDetection ? `<div style="display:flex;gap:16px;margin-bottom:28px;"><div style="flex:1;background:#F9FAFB;border:1px solid #E5E7EB;border-radius:10px;padding:18px 20px;"><p style="margin:0 0 6px;font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#9CA3AF;">AI Text Probability</p><p style="margin:0;font-size:30px;font-weight:700;color:#111827;line-height:1;">${results.aiTextDetection.score||0}<span style="font-size:14px;font-weight:400;color:#6B7280;">%</span></p><p style="margin:6px 0 0;font-size:12px;color:#6B7280;">${results.aiTextDetection.score>50?'Likely synthesized content':'Likely human-authored content'}</p>${results.aiTextDetection.explanation?`<p style="margin:8px 0 0;font-size:11px;color:#9CA3AF;line-height:1.5;">${results.aiTextDetection.explanation}</p>`:''}</div>${results.aiMediaDetection?`<div style="flex:1;background:#F9FAFB;border:1px solid #E5E7EB;border-radius:10px;padding:18px 20px;"><p style="margin:0 0 6px;font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#9CA3AF;">Media Authentication</p><p style="margin:0;font-size:30px;font-weight:700;color:#111827;line-height:1;">${results.aiMediaDetection.verdict||'Clear'}</p>${results.aiMediaDetection.summary?`<p style="margin:8px 0 0;font-size:11px;color:#9CA3AF;line-height:1.5;">${results.aiMediaDetection.summary}</p>`:''}</div>`:''}</div>` : '';
+    const html = `<div style="font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:13px;color:#111827;background:#fff;padding:0;margin:0;max-width:760px;box-sizing:border-box;"><div style="background:#0D0D18;padding:28px 36px 24px;"><table width="100%" cellpadding="0" cellspacing="0"><tr><td><span style="font-family:Georgia,'Times New Roman',serif;font-size:22px;font-weight:400;color:#C9A84C;letter-spacing:.04em;">TRUECAST</span><span style="display:block;font-size:9px;color:rgba(201,168,76,.55);letter-spacing:.18em;text-transform:uppercase;margin-top:3px;">Intelligence · Verification · Forensics</span></td><td style="text-align:right;vertical-align:top;"><span style="font-size:9px;color:rgba(255,255,255,.35);font-family:monospace;letter-spacing:.06em;text-transform:uppercase;line-height:1.8;">OFFICIAL AUDIT REPORT<br>${today}<br>REF: ${reportId}</span></td></tr></table></div><div style="height:3px;background:linear-gradient(90deg,#C9A84C 0%,#F0D080 50%,#C9A84C 100%);"></div><div style="padding:36px 36px 40px;"><h1 style="font-family:Georgia,'Times New Roman',serif;font-size:26px;font-weight:400;color:#111827;margin:0 0 6px;letter-spacing:-.02em;">Forensic Fact-Check Report</h1><p style="margin:0 0 28px;font-size:13px;color:#6B7280;">Automated multi-source intelligence audit with confidence scoring.</p><div style="display:flex;align-items:stretch;gap:0;border:1px solid #E5E7EB;border-radius:12px;overflow:hidden;margin-bottom:28px;"><div style="background:${scoreBg(sc)};padding:24px 28px;min-width:160px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;"><span style="font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:${scoreColor(sc)};opacity:.7;margin-bottom:8px;">Truth Index</span><span style="font-family:Georgia,'Times New Roman',serif;font-size:52px;font-weight:400;color:${scoreColor(sc)};line-height:1;">${fmt(sc)}</span><span style="font-size:11px;color:${scoreColor(sc)};opacity:.7;">/100</span><span style="margin-top:10px;font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:${scoreColor(sc)};background:${scoreColor(sc)}18;padding:3px 10px;border-radius:4px;">${scoreLabel}</span></div><div style="flex:1;padding:22px 28px;border-left:1px solid #E5E7EB;"><table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;"><tr><td style="padding:6px 0;font-size:11px;color:#9CA3AF;width:140px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;">Claims Reviewed</td><td style="padding:6px 0;font-size:13px;color:#111827;font-weight:600;">${results.claims?.length||0}</td></tr><tr><td style="padding:6px 0;font-size:11px;color:#9CA3AF;font-weight:600;text-transform:uppercase;letter-spacing:.06em;">Report Date</td><td style="padding:6px 0;font-size:13px;color:#111827;">${today}</td></tr><tr><td style="padding:6px 0;font-size:11px;color:#9CA3AF;font-weight:600;text-transform:uppercase;letter-spacing:.06em;">Report ID</td><td style="padding:6px 0;font-size:13px;color:#111827;font-family:monospace;">${reportId}</td></tr><tr><td style="padding:6px 0;font-size:11px;color:#9CA3AF;font-weight:600;text-transform:uppercase;letter-spacing:.06em;">Engine</td><td style="padding:6px 0;font-size:13px;color:#111827;">TrueCast Neural v4.2 · Multi-agent</td></tr>${exportName.trim()?`<tr><td style="padding:6px 0;font-size:11px;color:#9CA3AF;font-weight:600;text-transform:uppercase;letter-spacing:.06em;">Author</td><td style="padding:6px 0;font-size:13px;color:#111827;">${exportName.trim()}</td></tr>`:''}<tr><td style="padding:6px 0 0;font-size:11px;color:#9CA3AF;font-weight:600;text-transform:uppercase;letter-spacing:.06em;vertical-align:top;">Assessment</td><td style="padding:6px 0 0;"><span style="font-size:13px;color:${scoreColor(sc)};font-weight:600;">${sc>=75?'✓ Largely verifiable and evidence-supported.':sc>=45?'⚠ Mixed or partially verifiable claims.':'✗ Significant inaccuracies detected.'}</span></td></tr></table></div></div><div style="border-top:1px solid #E5E7EB;margin:0 0 24px;"></div>${aiSection}<h2 style="font-family:Georgia,'Times New Roman',serif;font-size:18px;font-weight:400;color:#111827;margin:0 0 14px;letter-spacing:-.01em;">Verified Assertions</h2><table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;border:1px solid #E5E7EB;border-radius:10px;overflow:hidden;font-size:13px;"><thead><tr style="background:#F3F4F6;border-bottom:2px solid #E5E7EB;"><th style="padding:11px 16px;text-align:left;font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#6B7280;width:120px;">Verdict</th><th style="padding:11px 16px;text-align:left;font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#6B7280;">Claim &amp; Reasoning</th><th style="padding:11px 16px;text-align:right;font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#6B7280;width:70px;">Conf.</th></tr></thead><tbody>${claimsHTML||`<tr><td colspan="3" style="padding:24px 16px;text-align:center;color:#9CA3AF;">No claims extracted.</td></tr>`}</tbody></table><div style="margin-top:36px;padding:16px 20px;background:#FFFBEB;border:1px solid #FDE68A;border-radius:8px;border-left:4px solid #F59E0B;"><p style="margin:0 0 4px;font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#92400E;">Disclaimer</p><p style="margin:0;font-size:11px;color:#78350F;line-height:1.6;">This report is generated by an automated AI system and is intended as a supplementary research aid only.</p></div></div><div style="background:#F9FAFB;border-top:1px solid #E5E7EB;padding:16px 36px;display:flex;align-items:center;justify-content:space-between;"><span style="font-family:Georgia,'Times New Roman',serif;font-size:12px;color:#C9A84C;letter-spacing:.06em;">TRUECAST</span><span style="font-size:10px;color:#9CA3AF;font-family:monospace;letter-spacing:.04em;">${today} · REF: ${reportId}</span><span style="font-size:10px;color:#9CA3AF;">truecast.ai</span></div></div>`;
     const wrapper = document.createElement('div');
     wrapper.style.cssText = 'position:fixed;left:-9999px;top:0;z-index:-1;pointer-events:none;background:#ffffff;color:#111827;';
     wrapper.innerHTML = html;
@@ -321,8 +236,7 @@ export default function Verify() {
     html2pdf().from(wrapper.firstElementChild).set({
       margin:0, filename:fileName,
       image:{ type:'jpeg', quality:0.97 },
-      html2canvas:{ scale:2.5, backgroundColor:'#ffffff', useCORS:true, logging:false, letterRendering:true,
-        ignoreElements:(el) => el.hasAttribute('data-html2canvas-ignore') || el.id==='pdf-watermark' },
+      html2canvas:{ scale:2.5, backgroundColor:'#ffffff', useCORS:true, logging:false, letterRendering:true, ignoreElements:(el) => el.hasAttribute('data-html2canvas-ignore') || el.id==='pdf-watermark' },
       jsPDF:{ unit:'mm', format:'a4', orientation:'portrait' },
       pagebreak:{ mode:['avoid-all','css','legacy'] },
     }).save().then(() => document.body.removeChild(wrapper)).catch(() => document.body.removeChild(wrapper));
@@ -393,6 +307,7 @@ export default function Verify() {
           50%    { box-shadow:0 0 0 6px rgba(236,72,153,.07),0 0 26px rgba(236,72,153,.35); }
         }
 
+        /* ── Mode card (DESKTOP) — unchanged ── */
         .vf-mode {
           background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08);
           border-radius:11px; padding:15px 16px; cursor:pointer;
@@ -410,7 +325,6 @@ export default function Verify() {
         }
         .vf-dos:hover { border-color:rgba(255,255,255,.13); background:rgba(255,255,255,.04); }
 
-        /* Claims table — full on desktop, stacked on mobile */
         .vf-claim {
           padding:20px 24px; border-bottom:1px solid rgba(255,255,255,.05);
           display:grid; grid-template-columns:130px 1fr 76px;
@@ -452,27 +366,13 @@ export default function Verify() {
         .vf-wave span:nth-child(5){ animation-delay:.05s }
         @keyframes ap-pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.4;transform:scale(1.3)} }
 
-        /* ═══════════ RESPONSIVE BREAKPOINTS ═══════════════════ */
-
-        /* Main content padding */
+        /* ══════════ LAYOUT CLASSES ══════════════════════════ */
         .vf-main { flex:1; max-width:1080px; margin:0 auto; padding:0 44px; width:100%; overflow-y:auto; overflow-x:hidden; }
-
-        /* Workbench two-column layout */
         .vf-wb-grid { display:grid; grid-template-columns:1fr 276px; gap:24px; }
-
-        /* Mode selector */
         .vf-modes-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; }
-
-        /* Results score header */
         .vf-score-header { display:flex; flex-wrap:wrap; align-items:center; gap:40px; padding:32px 36px; background:rgba(201,168,76,0.06); border:1px solid rgba(201,168,76,0.18); border-radius:16px; margin-bottom:36px; }
-
-        /* Claims table header */
         .vf-claim-header { display:grid; grid-template-columns:130px 1fr 76px; gap:18px; padding:10px 24px; border-bottom:1px solid ${LINE}; background:rgba(255,255,255,0.025); }
-
-        /* AI detection row */
         .vf-ai-row { margin-bottom:36px; display:flex; gap:20px; }
-
-        /* Forensic comparison grid */
         .vf-forensic-grid { display:grid; grid-template-columns:1fr 1fr; gap:20px; }
 
         /* ── Tablet ≤ 1024px ── */
@@ -481,36 +381,62 @@ export default function Verify() {
           .vf-wb-grid { grid-template-columns:1fr; }
         }
 
-        /* ── Mobile ≤ 768px ── */
+        /* ═══════════════════════════════════════════════════
+           MOBILE ≤ 768px
+           ═══════════════════════════════════════════════════ */
         @media (max-width:768px) {
           .vf-main { padding:0 16px; }
-          .vf-modes-grid { grid-template-columns:1fr 1fr; }
+          .vf-wb-header { text-align: center !important; }
+          .vf-wb-desc { margin: 0 auto !important; }
+          .vf-wb-mode-label { text-align: center !important; }
+
+          /* ── Mode selector: compact single-row pill checkboxes ── */
+          .vf-modes-grid {
+            grid-template-columns: repeat(3, 1fr) !important;
+            gap: 6px !important;
+          }
+          .vf-mode {
+            padding: 9px 10px !important;
+            gap: 7px !important;
+            border-radius: 8px !important;
+          }
+          .vf-mode-icon-box { display: none !important; }
+          .vf-mode-sub { display: none !important; }
+          .vf-mode-label {
+            font-size: 11px !important;
+            margin-bottom: 0 !important;
+            line-height: 1 !important;
+          }
+          .vf-mode.on .vf-mode-dot { opacity: 1 !important; }
+          .vf-mode-dot {
+            width: 5px; height: 5px; border-radius: 50%;
+            background: ${GOLD}; flex-shrink: 0;
+            opacity: 0; transition: opacity 0.2s;
+          }
+
+          /* Rest of mobile layout */
           .vf-ai-row { flex-direction:column; }
           .vf-forensic-grid { grid-template-columns:1fr; }
-          .vf-score-header { gap:20px; padding:24px 20px; }
+          .vf-score-header { gap:20px; padding:24px 20px; justify-content: center !important; text-align: center !important; }
           .vf-claim { grid-template-columns:100px 1fr 60px; gap:12px; padding:16px; }
           .vf-claim-header { grid-template-columns:100px 1fr 60px; gap:12px; padding:10px 16px; }
+          
+          .vf-area { min-height: 160px !important; }
+          .vf-wb-grid { gap: 40px !important; padding-bottom: 40px !important; }
         }
 
         /* ── Mobile-small ≤ 480px ── */
         @media (max-width:480px) {
           .vf-main { padding:0 12px; }
-          .vf-modes-grid { grid-template-columns:1fr; }
-          /* Stack claim rows vertically on very small screens */
           .vf-claim { grid-template-columns:1fr; gap:8px; padding:14px; }
           .vf-claim-header { display:none; }
-          .vf-score-header { flex-direction:column; align-items:flex-start; padding:20px; gap:16px; }
-          .vf-run { padding:12px 18px; font-size:13px; }
-          .vf-ghost { padding:12px 14px; font-size:13px; }
+          .vf-score-header { flex-direction:column; align-items:center !important; padding:20px; gap:16px; }
+          .vf-btn-row { flex-direction: column !important; align-items: stretch !important; }
+          .vf-run, .vf-ghost { width: 100% !important; justify-content: center !important; }
         }
       `}</style>
 
-      <Sidebar
-        data-html2canvas-ignore
-        activeFilter={activeFilter}
-        onFilterChange={setActiveFilter}
-        onExport={handleExportPDF}
-      />
+      <Sidebar data-html2canvas-ignore activeFilter={activeFilter} onFilterChange={setActiveFilter} onExport={handleExportPDF}/>
 
       <main className="vf-main">
         <AnimatePresence mode="wait">
@@ -520,39 +446,38 @@ export default function Verify() {
             <motion.div key="wb"
               initial={{ opacity:0, y:12 }} animate={{ opacity:1, y:0 }}
               exit={{ opacity:0, y:-8 }} transition={{ duration:.35, ease:[.4,0,.2,1] }}
-              style={{ paddingTop:6, paddingBottom:40 }}
+              style={{ paddingTop:12, paddingBottom:40 }}
             >
-              <header style={{ marginBottom:24 }}>
+              <header className="vf-wb-header" style={{ marginBottom:30 }}>
                 <h1 style={{ fontFamily:"'DM Serif Display',Georgia,serif", fontSize:'clamp(28px,4vw,54px)', fontWeight:400, color:TEXT, lineHeight:1.1, letterSpacing:'-0.022em', marginBottom:12 }}>
                   Initiate an Audit.
                 </h1>
-                <p style={{ fontSize:16, color:MUTED, lineHeight:1.7, maxWidth:650 }}>
+                <p className="vf-wb-desc" style={{ fontSize:16, color:MUTED, lineHeight:1.7, maxWidth:650 }}>
                   Cross-examine claims against verified archival data and live intelligence sources.
                 </p>
               </header>
 
-              {/* Mode selector */}
-              <div style={{ marginBottom:32 }}>
-                <p style={{ fontFamily:'DM Mono,monospace', fontSize:9, color:DIM, textTransform:'uppercase', letterSpacing:'0.14em', marginBottom:10 }}>Analysis depth</p>
+              <div style={{ marginBottom:36 }}>
+                <p className="vf-wb-mode-label" style={{ fontFamily:'DM Mono,monospace', fontSize:9, color:DIM, textTransform:'uppercase', letterSpacing:'0.14em', marginBottom:10 }}>Analysis depth</p>
                 <div className="vf-modes-grid">
                   {MODES.map(m => (
                     <button key={m.id} onClick={() => setMode(m.id)} className={`vf-mode ${mode===m.id?'on':''}`}>
-                      <div style={{ width:30, height:30, borderRadius:8, flexShrink:0, background:mode===m.id?GOLD_L:'rgba(255,255,255,0.05)', display:'flex', alignItems:'center', justifyContent:'center' }}>
+                      <div className="vf-mode-dot"/>
+                      <div className="vf-mode-icon-box" style={{ width:30, height:30, borderRadius:8, flexShrink:0, background:mode===m.id?GOLD_L:'rgba(255,255,255,0.05)', display:'flex', alignItems:'center', justifyContent:'center' }}>
                         <m.icon size={14} color={mode===m.id?GOLD:DIM}/>
                       </div>
                       <div>
-                        <div style={{ fontSize:13, fontWeight:500, color:mode===m.id?TEXT:MUTED, marginBottom:2 }}>{m.label}</div>
-                        <div style={{ fontSize:11, color:DIM }}>{m.sub}</div>
+                        <div className="vf-mode-label" style={{ fontSize:13, fontWeight:500, color:mode===m.id?TEXT:MUTED, marginBottom:2 }}>{m.label}</div>
+                        <div className="vf-mode-sub" style={{ fontSize:11, color:DIM }}>{m.sub}</div>
                       </div>
                     </button>
                   ))}
                 </div>
               </div>
 
-              {/* Two-column workbench */}
               <div className="vf-wb-grid">
                 {/* Left: inputs */}
-                <div style={{ display:'flex', flexDirection:'column', gap:16 }}>
+                <div style={{ display:'flex', flexDirection:'column', gap:16, minWidth:0 }}>
                   <div>
                     <label style={{ display:'block', fontFamily:'DM Mono,monospace', fontSize:9, color:DIM, textTransform:'uppercase', letterSpacing:'0.12em', marginBottom:8 }}>
                       Source URL
@@ -580,19 +505,15 @@ export default function Verify() {
                             <span style={{ fontFamily:'DM Mono,monospace', fontSize:9, color:MIC_C }}>Listening…</span>
                           </div>
                         )}
-                        <span style={{ fontFamily:'DM Mono,monospace', fontSize:10, color:DIM }}>
-                          {(text+interim).length}/8,000
-                        </span>
+                        <span style={{ fontFamily:'DM Mono,monospace', fontSize:10, color:DIM }}>{(text+interim).length}/8,000</span>
                       </div>
                     </div>
                     <div style={{ position:'relative' }}>
-                      <textarea
-                        value={text+(interim?(text?' ':'')+interim:'')}
+                      <textarea value={text+(interim?(text?' ':'')+interim:'')}
                         onChange={e => { if (!listening) setText(e.target.value); }}
                         readOnly={listening} maxLength={8000}
                         placeholder={voiceReady ? 'Type or paste text here. Click the mic to speak — say "analyze" to run automatically…' : 'Paste the claim or article for comprehensive cross-examination…'}
-                        className="vf-input vf-area"
-                      />
+                        className="vf-input vf-area"/>
                       {listening && interim && (
                         <div className="vf-transcript">
                           <span style={{ fontSize:10, opacity:0.5, marginTop:2 }}>[LIVE TRANSCRIPT]</span>
@@ -615,7 +536,7 @@ export default function Verify() {
                     )}
                   </div>
 
-                  <div style={{ display:'flex', flexWrap:'wrap', alignItems:'center', gap:10, paddingTop:4 }}>
+                  <div className="vf-btn-row" style={{ display:'flex', flexWrap:'wrap', alignItems:'center', gap:12, paddingTop:4 }}>
                     <button id="vfy-run-btn" className="vf-run" onClick={handleVerify} disabled={!canRun}>
                       <Gavel size={15}/> Run Verification
                     </button>
@@ -628,7 +549,7 @@ export default function Verify() {
                 </div>
 
                 {/* Right: engine + recent */}
-                <div style={{ display:'flex', flexDirection:'column', gap:20 }}>
+                <div style={{ display:'flex', flexDirection:'column', gap:20, minWidth:0 }}>
                   <div style={{ background:SURF, border:`1px solid ${LINE}`, borderRadius:12, padding:'18px 18px' }}>
                     <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:14, paddingBottom:12, borderBottom:`1px solid ${LINE}` }}>
                       <span style={{ fontFamily:'DM Mono,monospace', fontSize:9, color:DIM, letterSpacing:'0.12em', textTransform:'uppercase' }}>Engine</span>
@@ -646,9 +567,9 @@ export default function Verify() {
                   </div>
 
                   <div>
-                    <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:12, flexWrap:'wrap', gap:8 }}>
+                    <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:12, flexWrap:'wrap', gap:10 }}>
                       <span style={{ fontFamily:'DM Mono,monospace', fontSize:9, color:DIM, letterSpacing:'0.12em', textTransform:'uppercase' }}>Recent</span>
-                      <div style={{ display:'flex', gap:2 }}>
+                      <div style={{ display:'flex', gap:4, flexWrap:'wrap' }}>
                         {['All','Verified','Refuted'].map(f => (
                           <button key={f} onClick={() => setActiveFilter(f)} className={`vf-tab ${activeFilter===f?'on':''}`}>{f}</button>
                         ))}
@@ -698,7 +619,6 @@ export default function Verify() {
               initial={{ opacity:0, y:12 }} animate={{ opacity:1, y:0 }}
               style={{ paddingTop:40, paddingBottom:80, background:'#08080E' }}
             >
-              {/* Score header */}
               <div className="vf-score-header">
                 <div style={{ position:'relative', width:112, height:112, flexShrink:0, display:'flex', alignItems:'center', justifyContent:'center' }}>
                   <ScoreArc score={results.truthScore}/>
@@ -733,7 +653,6 @@ export default function Verify() {
                 </div>
               </div>
 
-              {/* AI Detection */}
               {results.aiTextDetection && (
                 <div className="vf-ai-row">
                   <div style={{ flex:1, padding:'20px 24px', background:SURF, border:`1px solid ${LINE}`, borderRadius:16 }}>
@@ -762,7 +681,6 @@ export default function Verify() {
                 </div>
               )}
 
-              {/* Forensic comparison */}
               {(results.forensicReference||results.aiMediaDetection?.results?.[0]?.url) && (
                 <div style={{ marginBottom:44 }}>
                   <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:20, paddingBottom:14, borderBottom:`1px solid ${GOLD_L}` }}>
@@ -794,7 +712,6 @@ export default function Verify() {
                 </div>
               )}
 
-              {/* Claims table */}
               <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:14, flexWrap:'wrap', gap:8 }}>
                 <h3 style={{ fontFamily:"'DM Serif Display',Georgia,serif", fontSize:'clamp(18px,2.5vw,24px)', fontWeight:400, color:TEXT, letterSpacing:'-0.01em' }}>
                   Verified Assertions
@@ -837,7 +754,6 @@ export default function Verify() {
         </AnimatePresence>
       </main>
 
-      {/* Export modal */}
       <AnimatePresence>
         {showExportModal && (
           <motion.div initial={{ opacity:0 }} animate={{ opacity:1 }} exit={{ opacity:0 }}
@@ -845,7 +761,7 @@ export default function Verify() {
             <motion.div initial={{ scale:0.95, y:10 }} animate={{ scale:1, y:0 }} exit={{ scale:0.95, y:10 }}
               style={{ background:'#111118', border:`1px solid ${LINE}`, borderRadius:16, width:'100%', maxWidth:400, padding:32 }}>
               <h3 style={{ fontFamily:"'DM Serif Display',serif", fontSize:24, color:TEXT, marginBottom:12 }}>Download Report</h3>
-              <p style={{ color:MUTED, fontSize:14, marginBottom:24, lineHeight:1.5 }}>Enter your name for the official forensic record. It will appear in the report and filename.</p>
+              <p style={{ color:MUTED, fontSize:14, marginBottom:24, lineHeight:1.5 }}>Enter your name for the official forensic record.</p>
               <div style={{ marginBottom:24 }}>
                 <label style={{ display:'block', fontSize:9, fontFamily:"'DM Mono',monospace", color:DIM, textTransform:'uppercase', letterSpacing:'0.1em', marginBottom:8 }}>Report Author</label>
                 <input type="text" value={exportName} onChange={e => setExportName(e.target.value)}

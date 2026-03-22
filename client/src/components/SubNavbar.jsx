@@ -212,23 +212,71 @@ export default function SubNavbar() {
         }
         .mob-search-input::placeholder { color: ${DIM}; }
 
+        /* ── Mobile top nav ── */
+        .mob-top-nav {
+          display: none;
+          position: sticky; top: 0; left: 0; right: 0;
+          height: 52px;
+          background: rgba(8,8,14,0.94);
+          backdrop-filter: blur(16px);
+          border-bottom: 1px solid ${LINE};
+          z-index: 210;
+          padding: 0 16px;
+          align-items: center; justify-content: space-between;
+          font-family: 'DM Sans', system-ui, sans-serif;
+        }
+
         /* Responsive breakpoints */
         @media (max-width: 768px) {
           .sn-nav        { display: none !important; }
           .mob-bar       { display: flex !important; }
-          /* Push page content above the bottom bar */
+          .mob-top-nav   { display: flex !important; }
+          /* Push page content between navs */
           body           { padding-bottom: 64px; }
         }
 
         @media (min-width: 769px) {
           .mob-bar       { display: none !important; }
+          .mob-top-nav   { display: none !important; }
           .sn-nav        { padding: 0 40px; }
         }
 
         @media (max-width: 480px) {
           .sn-nav        { padding: 0 16px; }
+          .mob-top-nav   { padding: 0 12px; }
         }
       `}</style>
+
+      {/* ══════════ MOBILE TOP NAV ══════════════════════════════ */}
+      <nav className="mob-top-nav">
+        <div onClick={() => navigate('/')} style={{ cursor:'pointer', display:'flex', alignItems:'center', gap:10 }}>
+          <div style={{ width:24, height:24, borderRadius:5, overflow:'hidden', border:`1px solid ${LINE}`, background:'rgba(255,255,255,0.03)' }}>
+            <img
+              src="https://lh3.googleusercontent.com/aida-public/AB6AXuDjUYtJ0yORs6yPNTdJwSZr__L9nULtru8NP22BYdhBdhZ6B0cJN-JsxA4LCxnq6j2pU2IQkS6GblpdOG0o3gysYwpbLCeQ83wt2WvMf9M92JJWiFzRi63m8paImUIBEq2ZIB6HMVlsxCVQqs_hzrEJdDm30tKnoUduOKeVbc4vgZja05-8yA0Tn7J8j7qmWg2O07LITQ_-vmFQCa81mJvkhJeIjTnQ5hhhHaygn5S9EWhmQX1yTF_Sx5nCPrNgu8416xaiMPc6aCo"
+              alt="Logo" style={{ width:'100%', height:'100%', objectFit:'cover' }}
+            />
+          </div>
+          <span style={{ fontFamily:"'DM Serif Display',Georgia,serif", fontSize:15, color:TEXT, fontWeight:400 }}>Truecast</span>
+        </div>
+
+        {user && (
+          <div style={{ display:'flex', alignItems:'center', gap:12 }}>
+            <p style={{ fontFamily:"'DM Mono',monospace", fontSize:9, color:DIM, textTransform:'uppercase', letterSpacing:'0.05em' }}>
+              {user.email.split('@')[0]}
+            </p>
+            <button
+              onClick={logout}
+              style={{
+                background:'rgba(244,63,94,0.1)', border:'1px solid rgba(244,63,94,0.2)',
+                borderRadius:6, padding:6, color:'#f43f5e',
+                display:'flex', alignItems:'center', justifyContent:'center'
+              }}
+            >
+              <LogOut size={13}/>
+            </button>
+          </div>
+        )}
+      </nav>
 
       {/* ══════════ DESKTOP NAVBAR ══════════════════════════════ */}
       <motion.nav
