@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ShieldCheck, Mail, Lock, LogIn, UserPlus, Eye, EyeOff, ArrowRight, Zap, Sparkles } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
@@ -149,16 +149,12 @@ const Auth = () => {
               <div className="h-px flex-1 bg-white/5" />
             </div>
 
-            <button 
-              type="button"
-              onClick={() => setIsLogin(!isLogin)}
-              className="text-xs font-bold text-text-muted hover:text-white transition-colors flex items-center gap-2 group/switch"
-            >
-              {isLogin ? "Need a new clearance level? " : "Already held valid credentials? "}
-              <span className="text-primary group-hover:underline">
-                {isLogin ? "Register Account" : "Sign In Now"}
-              </span>
-            </button>
+             <Link 
+               to="/signup"
+               className="text-xs font-bold text-text-muted hover:text-white transition-colors flex items-center gap-2 group/switch font-manrope uppercase tracking-widest"
+             >
+               Need a new clearance level? <span className="text-primary group-hover:underline">Register Account</span>
+             </Link>
           </div>
 
           {/* Bottom Security Badge */}

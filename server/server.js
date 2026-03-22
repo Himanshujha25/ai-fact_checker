@@ -24,14 +24,16 @@ async function performTavilySearch(query, depth = 'basic') {
       query: query,
       search_depth: depth,
       include_answer: true,
+      include_images: true,
       max_results: depth === 'advanced' ? 8 : 4
     }, { timeout: 15000 });
 
     const results = response.data;
-    console.log(`  [Tavily] Found ${results.results?.length || 0} sources.`);
+    console.log(`  [Tavily] Found ${results.results?.length || 0} sources and ${results.images?.length || 0} images.`);
     
     return {
       answer: results.answer,
+      images: results.images || [],
       sources: (results.results || []).map(r => ({
         title: r.title,
         url: r.url,
@@ -70,9 +72,12 @@ const PORT = process.env.PORT || 5000;
 let db = null;
 const initDB = async () => {
   try {
+    const connectionString = process.env.DATABASE_URL || 'postgresql://postgres:postgres@localhost:5432/factchecker';
+    const isRemote = connectionString.includes('neon.tech') || connectionString.includes('render.com');
     const pool = new Pool({
-      connectionString: process.env.DATABASE_URL || 'postgresql://postgres:postgres@localhost:5432/factchecker',
-      connectionTimeoutMillis: 3000
+      connectionString,
+      connectionTimeoutMillis: 3000,
+      ssl: isRemote ? { rejectUnauthorized: false } : false
     });
     // Test connection
     await pool.query('SELECT NOW()');
@@ -80,6 +85,8 @@ const initDB = async () => {
     await pool.query(`
       CREATE TABLE IF NOT EXISTS users (
         id SERIAL PRIMARY KEY,
+        full_name VARCHAR(255),
+        organization VARCHAR(255),
         email VARCHAR(255) UNIQUE NOT NULL,
         password VARCHAR(255) NOT NULL,
         created_at TIMESTAMP DEFAULT NOW()
@@ -94,12 +101,24 @@ const initDB = async () => {
         full_data JSONB NOT NULL,
         created_at TIMESTAMP DEFAULT NOW()
       );
+
+      -- Ensure columns exist in case table was created by an older script
+      DO $$ BEGIN
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='full_name') THEN
+          ALTER TABLE users ADD COLUMN full_name VARCHAR(255);
+        END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='users' AND column_name='organization') THEN
+          ALTER TABLE users ADD COLUMN organization VARCHAR(255);
+        END IF;
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='verifications' AND column_name='user_id') THEN
+          ALTER TABLE verifications ADD COLUMN user_id INTEGER REFERENCES users(id) ON DELETE CASCADE;
+        END IF;
+      END $$;
     `);
     db = pool;
-    console.log('✅ PostgreSQL connected & tables ready');
+    console.log('✅ PostgreSQL connected & protocol schema verified');
   } catch (err) {
-    console.warn('⚠️  PostgreSQL not available — using in-memory storage (data won\'t persist)');
-    console.warn('   To enable PG: set DATABASE_URL in .env and run: node db-setup.js');
+    console.error('❌ Database Initialization Error:', err.message);
     db = null;
   }
 };
@@ -251,7 +270,7 @@ app.use(express.json({ limit: '25mb' }));
 app.use(express.urlencoded({ extended: true, limit: '25mb' }));
 
 const apiLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, max: 20, standardHeaders: true, legacyHeaders: false,
+  windowMs: 15 * 60 * 1000, max: 100, standardHeaders: true, legacyHeaders: false,
   message: { error: 'Too many requests. Try again in 15 minutes.' }
 });
 app.use('/api/', apiLimiter);
@@ -353,7 +372,7 @@ const authenticate = (req, res, next) => {
 
 // ─── Auth Routes ───
 app.post('/api/auth/register', async (req, res) => {
-  const { email, password } = req.body;
+  const { email, password, fullName, organization } = req.body;
   if (!email || !password) return res.status(400).json({ error: 'Email and password required' });
 
   try {
@@ -363,12 +382,13 @@ app.post('/api/auth/register', async (req, res) => {
        return res.json({ message: 'User registered (Memory Mode)', userId: 1 });
     }
     const result = await db.query(
-      'INSERT INTO users (email, password) VALUES ($1, $2) RETURNING id',
-      [email, hashedPassword]
+      'INSERT INTO users (email, password, full_name, organization) VALUES ($1, $2, $3, $4) RETURNING id',
+      [email, hashedPassword, fullName, organization]
     );
     res.status(201).json({ message: 'User created', userId: result.rows[0].id });
   } catch (err) {
-    res.status(400).json({ error: err.message.includes('unique') ? 'Email already exists' : 'Registration failed' });
+    console.error('❌ Register Error:', err.message, err.stack);
+    res.status(400).json({ error: err.message.includes('unique') ? 'Email already exists' : 'Registration failed: ' + err.message });
   }
 });
 
@@ -390,7 +410,8 @@ app.post('/api/auth/login', async (req, res) => {
     const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET || 'vericheck_secret_key_2026', { expiresIn: '7d' });
     res.json({ token, userId: user.id, email: user.email });
   } catch (err) {
-    res.status(500).json({ error: 'Login failed' });
+    console.error('❌ Login Error:', err.message, err.stack);
+    res.status(500).json({ error: 'Login failed: ' + err.message });
   }
 });
 
@@ -618,20 +639,22 @@ async function retryWithBackoff(fn, retries = 3, baseDelay = 1000) {
 }
 
 // Core verification pipeline — Chain-of-Thought + Multi-Mode Research Agent
-// Core verification pipeline — Chain-of-Thought + Multi-Mode Research Agent
 async function runVerificationPipeline(contentToProcess, mode = 'normal') {
   const model = genAI.getGenerativeModel({ model: "gemini-2.5-pro" });
   const currentDate = new Date().toISOString().split('T')[0];
+  let claimLimit = mode === 'pro' ? 8 : (mode === 'deep' ? 5 : 3);
 
-  console.log(`🚀 Starting ${mode.toUpperCase()} Agentic Research Pipeline...`);
+  console.log(`🚀 Starting ${mode.toUpperCase()} Agentic Research Pipeline (Limit: ${claimLimit} claims)...`);
 
   // ─── PHASE 1: Claim Extraction ───
   console.log('  [Phase 1] Extracting claims...');
   const extractionPrompt = `You are a precision fact-extraction agent. Today's date is ${currentDate}.
-  TASK: Extract verifiable factual claims from the text. 
-  If the text is a question, extract the facts that need verification to ANSWER that question.
-  Return ONLY JSON array: [{"id": number, "claim": "string", "context": "string", "primaryEntity": "string or null"}]
-  TEXT: ${contentToProcess}`;
+  TASK: Extract AT MOST ${claimLimit} verifiable factual claims from the text. 
+  Focus on high-stakes, specific, and impactful statement fragments.
+  MODE: ${mode} audit depth requested.
+  
+  Return ONLY a JSON array: [{"id": 1, "claim": "string", "context": "string", "primaryEntity": "string"}].
+  Text: ${contentToProcess.substring(0, 5000)}`;
 
   const extractionResult = await retryWithBackoff(() => model.generateContent(extractionPrompt));
   let claims;
@@ -643,8 +666,8 @@ async function runVerificationPipeline(contentToProcess, mode = 'normal') {
   console.log(`  [Phase 2] Verifying ${claims.length} claims (Mode: ${mode})...`);
   const verificationResults = [];
   
-  // Limit claims to save speed (Normal: 4, Deep: 7, Pro: 10)
-  const claimLimit = mode === 'normal' ? 4 : (mode === 'deep' ? 7 : 10);
+  // Update claim limit for Phase 2 processing depth
+  claimLimit = mode === 'normal' ? 4 : (mode === 'deep' ? 7 : 10);
   
   for (const claim of claims.slice(0, claimLimit)) {
     try {
@@ -689,6 +712,7 @@ async function runVerificationPipeline(contentToProcess, mode = 'normal') {
     "verdict": "string", 
     "confidence": number, 
     "sourceType": "INTERNAL_KNOWLEDGE" | "WEB_RESEARCH",
+    "referenceImage": "URL string (pick best match from research images if relevant)",
     "identityCheck": "CONFIRMED" | "AMBIGUOUS" | "N/A",
     "persona": { "id": "string", "summary": "string", "isTarget": boolean },
     "reasoning": "multi-sentence explanation", 
@@ -734,6 +758,7 @@ async function runVerificationPipeline(contentToProcess, mode = 'normal') {
     claims: claims.slice(0, claimLimit).map(c => ({ ...c, ...verificationResults.find(v => v.claimId === c.id) })),
     aiTextDetection: aiDetection,
     truthScore,
+    forensicReference: verificationResults.find(v => v.referenceImage)?.referenceImage || null,
     pipelineMeta: { mode, totalClaims: claims.length, verifiedCount: successfulResults.length },
     timestamp: new Date().toISOString()
   };

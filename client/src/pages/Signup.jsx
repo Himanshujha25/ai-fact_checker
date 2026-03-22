@@ -1,0 +1,499 @@
+import React, { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
+import {
+  ShieldCheck, Gavel, Eye, EyeOff, ArrowRight,
+  Mail, Lock, User, Loader2, Building2
+} from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
+
+/* ─── Design tokens ───────────────────────────────────────────── */
+const GOLD  = '#C9A84C';
+const GOLD2 = 'rgba(201,168,76,0.10)';
+const LINE  = 'rgba(255,255,255,0.07)';
+const TEXT  = '#E8E4DC';
+const MUTED = 'rgba(232,228,220,0.38)';
+const DIM   = 'rgba(232,228,220,0.18)';
+
+export default function Signup() {
+  const [name,         setName]         = useState('');
+  const [email,        setEmail]        = useState('');
+  const [password,     setPassword]     = useState('');
+  const [confirm,      setConfirm]      = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirm,  setShowConfirm]  = useState(false);
+  const [loading,      setLoading]      = useState(false);
+  const [error,        setError]        = useState('');
+  const [success,      setSuccess]      = useState('');
+
+  const { register } = useAuth();
+  const navigate     = useNavigate();
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError(''); setSuccess('');
+
+    if (password !== confirm) {
+      setError('Passwords do not match.');
+      return;
+    }
+    if (password.length < 8) {
+      setError('Password must be at least 8 characters.');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      await register(name, email, password);
+      setSuccess('Account created. Redirecting…');
+      setTimeout(() => navigate('/verify'), 1200);
+    } catch (err) {
+      setError(err.response?.data?.error || 'Registration failed. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  /* ── password strength ── */
+  const strength = (() => {
+    if (!password) return 0;
+    let s = 0;
+    if (password.length >= 8)              s++;
+    if (/[A-Z]/.test(password))           s++;
+    if (/[0-9]/.test(password))           s++;
+    if (/[^A-Za-z0-9]/.test(password))   s++;
+    return s;
+  })();
+  const strengthColor = ['transparent', '#f87171', '#fbbf24', GOLD, '#4ade80'][strength];
+  const strengthLabel = ['', 'Weak', 'Fair', 'Good', 'Strong'][strength];
+
+  return (
+    <div style={{
+      minHeight: '100vh',
+      background: '#08080E',
+      color: TEXT,
+      fontFamily: "'DM Sans', system-ui, sans-serif",
+      display: 'flex',
+      flexDirection: 'column',
+    }}>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600&family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@400;500&display=swap');
+
+        .su-input {
+          width: 100%; box-sizing: border-box;
+          background: rgba(255,255,255,0.03);
+          border: 1px solid rgba(255,255,255,0.08);
+          border-radius: 9px;
+          color: ${TEXT};
+          font-family: 'DM Sans', system-ui, sans-serif;
+          font-size: 14px; font-weight: 400;
+          outline: none;
+          transition: border-color 0.2s, background 0.2s;
+          padding: 13px 14px 13px 42px;
+        }
+        .su-input::placeholder { color: rgba(232,228,220,0.18); }
+        .su-input:focus {
+          border-color: rgba(201,168,76,0.4);
+          background: rgba(201,168,76,0.03);
+        }
+        .su-input-r { padding-right: 42px; }
+
+        .su-btn-gold {
+          width: 100%; background: ${GOLD}; color: #08080E;
+          border: none; border-radius: 9px;
+          padding: 14px; cursor: pointer;
+          font-family: 'DM Sans', system-ui, sans-serif;
+          font-weight: 600; font-size: 14px;
+          letter-spacing: 0.02em;
+          display: flex; align-items: center; justify-content: center; gap: 8px;
+          transition: opacity 0.2s, transform 0.15s;
+        }
+        .su-btn-gold:hover:not(:disabled) { opacity: 0.85; transform: translateY(-1px); }
+        .su-btn-gold:active:not(:disabled) { transform: none; }
+        .su-btn-gold:disabled { opacity: 0.35; cursor: default; }
+
+        .su-oauth {
+          flex: 1; background: rgba(255,255,255,0.03);
+          border: 1px solid rgba(255,255,255,0.07);
+          border-radius: 9px; height: 46px;
+          display: flex; align-items: center; justify-content: center; gap: 8px;
+          cursor: pointer;
+          font-family: 'DM Sans', system-ui, sans-serif;
+          font-size: 13px; font-weight: 500; color: ${MUTED};
+          transition: border-color 0.2s, color 0.2s;
+        }
+        .su-oauth:hover { border-color: rgba(255,255,255,0.15); color: ${TEXT}; }
+
+        .su-link {
+          color: ${GOLD}; text-decoration: none; font-weight: 500;
+          transition: opacity 0.2s;
+        }
+        .su-link:hover { opacity: 0.75; }
+
+        .su-footer-link {
+          background: none; border: none; cursor: pointer; padding: 0;
+          font-family: 'DM Sans', system-ui, sans-serif;
+          font-size: 11px; font-weight: 500; color: ${DIM};
+          text-decoration: none; transition: color 0.2s;
+        }
+        .su-footer-link:hover { color: rgba(232,228,220,0.55); }
+
+        .su-eye-btn {
+          position: absolute; right: 14px; top: 50%; transform: translateY(-50%);
+          background: none; border: none; cursor: pointer; padding: 0;
+          color: ${DIM}; display: flex; align-items: center;
+          transition: color 0.2s;
+        }
+        .su-eye-btn:hover { color: ${GOLD}; }
+
+        @keyframes su-spin { to { transform: rotate(360deg); } }
+        .su-spin { animation: su-spin 0.9s linear infinite; }
+      `}</style>
+
+      {/* ── Nav ──────────────────────────────────────────────────── */}
+      <header style={{
+        position: 'fixed', top: 0, left: 0, right: 0, zIndex: 100,
+        background: 'rgba(8,8,14,0.88)', backdropFilter: 'blur(16px)',
+        borderBottom: `1px solid ${LINE}`,
+        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+        padding: '16px 48px',
+      }}>
+        <Link to="/" style={{ textDecoration: 'none' }}>
+          <span style={{
+            fontFamily: "'DM Serif Display', Georgia, serif",
+            fontSize: 18, fontWeight: 400, color: TEXT,
+            letterSpacing: '-0.01em',
+          }}>
+            The Verified Editorial
+          </span>
+        </Link>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
+          <span style={{ fontSize: 11, color: DIM }}>Already have an account?</span>
+          <Link to="/auth" style={{ textDecoration: 'none' }}>
+            <span style={{
+              fontFamily: "'DM Mono', monospace",
+              fontSize: 11, fontWeight: 500,
+              color: GOLD, letterSpacing: '0.06em',
+              display: 'flex', alignItems: 'center', gap: 5,
+            }}>
+              Sign in <ArrowRight size={12} />
+            </span>
+          </Link>
+        </div>
+      </header>
+
+      {/* ── Main ─────────────────────────────────────────────────── */}
+      <main style={{
+        flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center',
+        padding: '12px 24px 80px',
+        position: 'relative', overflow: 'hidden',
+      }}>
+        {/* Ambient glow */}
+        <div style={{
+          position: 'absolute', top: '40%', left: '50%',
+          transform: 'translate(-50%, -50%)',
+          width: 700, height: 700, borderRadius: '50%',
+          background: `radial-gradient(circle, rgba(201,168,76,0.04) 0%, transparent 70%)`,
+          pointerEvents: 'none',
+        }} />
+
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, ease: [0.4, 0, 0.2, 1] }}
+          style={{ width: '100%', maxWidth: 440, position: 'relative', zIndex: 1 }}
+        >
+          {/* Card */}
+          <div style={{
+            background: 'rgba(12,12,20,0.95)',
+            border: `1px solid rgba(255,255,255,0.09)`,
+            borderRadius: 18,
+            padding: '40px 40px',
+            boxShadow: '0 40px 80px rgba(0,0,0,0.5)',
+          }}>
+            {/* Brand lockup */}
+            <div style={{ marginBottom: 32 }}>
+              <div style={{
+                width: 38, height: 38, borderRadius: 10,
+                background: GOLD2, border: `1px solid rgba(201,168,76,0.25)`,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                marginBottom: 22,
+              }}>
+                <Gavel size={18} color={GOLD} />
+              </div>
+              <h1 style={{
+                fontFamily: "'DM Serif Display', Georgia, serif",
+                fontSize: 30, fontWeight: 400, letterSpacing: '-0.02em',
+                color: TEXT, marginBottom: 8,
+              }}>
+                Create an account.
+              </h1>
+              <p style={{ fontSize: 13, color: MUTED, lineHeight: 1.6 }}>
+                Join the network of researchers and editors using the Digital Jurist Protocol.
+              </p>
+            </div>
+
+            {/* Feedback banners */}
+            <AnimatePresence>
+              {error && (
+                <motion.div
+                  key="err"
+                  initial={{ opacity: 0, height: 0, marginBottom: 0 }}
+                  animate={{ opacity: 1, height: 'auto', marginBottom: 20 }}
+                  exit={{ opacity: 0, height: 0, marginBottom: 0 }}
+                  style={{
+                    background: 'rgba(248,113,113,0.07)',
+                    border: '1px solid rgba(248,113,113,0.2)',
+                    borderRadius: 8, padding: '10px 14px',
+                    fontSize: 12, color: '#f87171',
+                    display: 'flex', alignItems: 'center', gap: 8,
+                    overflow: 'hidden',
+                  }}
+                >
+                  <ShieldCheck size={13} /> {error}
+                </motion.div>
+              )}
+              {success && (
+                <motion.div
+                  key="ok"
+                  initial={{ opacity: 0, height: 0, marginBottom: 0 }}
+                  animate={{ opacity: 1, height: 'auto', marginBottom: 20 }}
+                  exit={{ opacity: 0, height: 0, marginBottom: 0 }}
+                  style={{
+                    background: 'rgba(74,222,128,0.07)',
+                    border: '1px solid rgba(74,222,128,0.2)',
+                    borderRadius: 8, padding: '10px 14px',
+                    fontSize: 12, color: '#4ade80',
+                    display: 'flex', alignItems: 'center', gap: 8,
+                    overflow: 'hidden',
+                  }}
+                >
+                  <ShieldCheck size={13} /> {success}
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            {/* Form */}
+            <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+
+              {/* Full name */}
+              <div>
+                <label style={{
+                  display: 'block', marginBottom: 7,
+                  fontFamily: "'DM Mono', monospace",
+                  fontSize: 10, fontWeight: 500, letterSpacing: '0.1em',
+                  color: DIM, textTransform: 'uppercase',
+                }}>
+                  Full Name
+                </label>
+                <div style={{ position: 'relative' }}>
+                  <User size={13} color={DIM} style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
+                  <input
+                    className="su-input"
+                    type="text" required
+                    placeholder="Jane Smith"
+                    value={name}
+                    onChange={e => setName(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              {/* Email */}
+              <div>
+                <label style={{
+                  display: 'block', marginBottom: 7,
+                  fontFamily: "'DM Mono', monospace",
+                  fontSize: 10, fontWeight: 500, letterSpacing: '0.1em',
+                  color: DIM, textTransform: 'uppercase',
+                }}>
+                  Email
+                </label>
+                <div style={{ position: 'relative' }}>
+                  <Mail size={13} color={DIM} style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
+                  <input
+                    className="su-input"
+                    type="email" required
+                    placeholder="name@organization.com"
+                    value={email}
+                    onChange={e => setEmail(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              {/* Password */}
+              <div>
+                <label style={{
+                  display: 'block', marginBottom: 7,
+                  fontFamily: "'DM Mono', monospace",
+                  fontSize: 10, fontWeight: 500, letterSpacing: '0.1em',
+                  color: DIM, textTransform: 'uppercase',
+                }}>
+                  Password
+                </label>
+                <div style={{ position: 'relative' }}>
+                  <Lock size={13} color={DIM} style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
+                  <input
+                    className={`su-input su-input-r`}
+                    type={showPassword ? 'text' : 'password'}
+                    required
+                    placeholder="Min. 8 characters"
+                    value={password}
+                    onChange={e => setPassword(e.target.value)}
+                  />
+                  <button type="button" className="su-eye-btn" onClick={() => setShowPassword(v => !v)}>
+                    {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
+                  </button>
+                </div>
+
+                {/* Strength meter */}
+                {password.length > 0 && (
+                  <div style={{ marginTop: 8 }}>
+                    <div style={{
+                      height: 2, background: 'rgba(255,255,255,0.06)',
+                      borderRadius: 4, overflow: 'hidden',
+                    }}>
+                      <div style={{
+                        height: '100%',
+                        width: `${(strength / 4) * 100}%`,
+                        background: strengthColor,
+                        borderRadius: 4,
+                        transition: 'width 0.3s ease, background 0.3s ease',
+                      }} />
+                    </div>
+                    <div style={{
+                      display: 'flex', justifyContent: 'flex-end',
+                      marginTop: 5,
+                      fontFamily: "'DM Mono', monospace",
+                      fontSize: 9, color: strengthColor,
+                      letterSpacing: '0.08em', textTransform: 'uppercase',
+                      opacity: 0.8,
+                    }}>
+                      {strengthLabel}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Confirm password */}
+              <div>
+                <label style={{
+                  display: 'block', marginBottom: 7,
+                  fontFamily: "'DM Mono', monospace",
+                  fontSize: 10, fontWeight: 500, letterSpacing: '0.1em',
+                  color: DIM, textTransform: 'uppercase',
+                }}>
+                  Confirm Password
+                </label>
+                <div style={{ position: 'relative' }}>
+                  <Lock size={13} color={DIM} style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
+                  <input
+                    className={`su-input su-input-r`}
+                    type={showConfirm ? 'text' : 'password'}
+                    required
+                    placeholder="Repeat your password"
+                    value={confirm}
+                    onChange={e => setConfirm(e.target.value)}
+                    style={{
+                      borderColor: confirm && confirm !== password
+                        ? 'rgba(248,113,113,0.4)'
+                        : confirm && confirm === password
+                        ? 'rgba(74,222,128,0.3)'
+                        : undefined,
+                    }}
+                  />
+                  <button type="button" className="su-eye-btn" onClick={() => setShowConfirm(v => !v)}>
+                    {showConfirm ? <EyeOff size={15} /> : <Eye size={15} />}
+                  </button>
+                </div>
+              </div>
+
+              {/* Terms note */}
+              <p style={{ fontSize: 11, color: DIM, lineHeight: 1.6, marginTop: 2 }}>
+                By creating an account you agree to our{' '}
+                <Link to="/legal" className="su-link" style={{ fontSize: 11 }}>Terms</Link>
+                {' '}and{' '}
+                <Link to="/privacy" className="su-link" style={{ fontSize: 11 }}>Privacy Policy</Link>.
+              </p>
+
+              {/* Submit */}
+              <button className="su-btn-gold" disabled={loading} style={{ marginTop: 4 }}>
+                {loading
+                  ? <Loader2 size={16} className="su-spin" />
+                  : <><span>Create Account</span><ArrowRight size={15} /></>
+                }
+              </button>
+            </form>
+
+            {/* Divider */}
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: 14,
+              margin: '24px 0',
+            }}>
+              <div style={{ flex: 1, height: 1, background: LINE }} />
+              <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 10, color: DIM, letterSpacing: '0.08em' }}>
+                or sign up with
+              </span>
+              <div style={{ flex: 1, height: 1, background: LINE }} />
+            </div>
+
+            {/* OAuth */}
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button className="su-oauth">
+                <img
+                  alt="Google"
+                  style={{ width: 15, height: 15, opacity: 0.6 }}
+                  src="https://lh3.googleusercontent.com/aida-public/AB6AXuD1t0EeMQwi9cqqW9ISSZfIRISsnoo6vyJ7T6706zNymeYABiESU9xCarQGrSXwQnyRLGrzR1iSN2b0CM8D_sggMrIFKzyD9TKUHsZTVo34YR3AG29ZaeXkDdBDuu_qbnbEtLUdlBRaWn5OjJd57yWXXomAJFJNVhmGigmWoQRw0kXdLLgR4epBM_yxVZyPrM0fIqeQsnR_S-VgWPL2nBOtvW3snuhJblUnTL5jlW0JLSjr-hQMegJK6SdvHK7UX4hdixtId5OwnGs"
+                />
+                Google
+              </button>
+              <button className="su-oauth">
+                <img
+                  alt="Microsoft"
+                  style={{ width: 15, height: 15, opacity: 0.6 }}
+                  src="https://lh3.googleusercontent.com/aida-public/AB6AXuAeOFJTtcbKtUDEI-LbEGkraJHn-JwAJz9TRgeM8pp_uBtEg0bzrSfjj2ZC-V9lrI9vJKOL6WauOmz1CdveM09xq6W9mYHmoeWj6Qh-V-m8e6H8JqfdqJl4NyMkBFUC3-GpKS6WP78cgVN5fzqfBocN3sWz4LgJqjx1xVSo4JK5-5MNvlcdonPB3CtdSZPafj7ue9-NMOiMlLJoVXNDv6uZWrdPc3U5UwAZInbXem-4RSgDpEPY7GGA5NfFBJ0TifCW_cxjzWrORvs"
+                />
+                Microsoft
+              </button>
+            </div>
+          </div>
+
+          {/* Trust line */}
+          <div style={{
+            marginTop: 24, display: 'flex', alignItems: 'center',
+            justifyContent: 'center', gap: 8,
+          }}>
+            <ShieldCheck size={12} color={DIM} />
+            <span style={{
+              fontFamily: "'DM Mono', monospace",
+              fontSize: 10, color: DIM, letterSpacing: '0.08em',
+            }}>
+              256-bit encrypted · SOC-2 attested
+            </span>
+          </div>
+        </motion.div>
+      </main>
+
+      {/* ── Footer ───────────────────────────────────────────────── */}
+      <footer style={{
+        borderTop: `1px solid ${LINE}`,
+        padding: '18px 48px',
+        display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+        background: 'rgba(8,8,14,0.95)',
+      }}>
+        <span style={{
+          fontFamily: "'DM Mono', monospace",
+          fontSize: 10, color: DIM, letterSpacing: '0.07em',
+        }}>
+          © 2026 The Verified Editorial
+        </span>
+        <div style={{ display: 'flex', gap: 24 }}>
+          {['Legal', 'Privacy', 'Methodology', 'Support'].map(item => (
+            <Link key={item} to={`/${item.toLowerCase()}`} className="su-footer-link">
+              {item}
+            </Link>
+          ))}
+        </div>
+      </footer>
+    </div>
+  );
+}

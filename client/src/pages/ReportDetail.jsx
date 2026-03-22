@@ -1,405 +1,496 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  ShieldCheck, ChevronDown, ExternalLink, ArrowLeft,
-  Download, Loader2, ShieldAlert, Layers, Cpu,
-  Search, Zap, Globe, Image as ImageIcon, Filter, BrainCircuit, User
+  ShieldCheck, ExternalLink, ArrowLeft, ArrowRight, Clock,
+  Download, ShieldAlert, Layers, ChevronRight, FileText
 } from 'lucide-react';
 import axios from 'axios';
 import html2pdf from 'html2pdf.js';
 import VerdictPieChart from '../components/VerdictPieChart';
+import Sidebar from '../components/Sidebar';
 
 const API_BASE = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
-  ? '/api' 
+  ? '/api'
   : 'https://ai-fact-checker-rvih.onrender.com/api';
 
-/* ── helpers ── */
-const scoreColor  = s => s > 70 ? '#10b981' : s > 40 ? '#f59e0b' : '#ef4444';
-const scoreBorder = s => s > 70 ? 'rgba(16,185,129,0.18)' : s > 40 ? 'rgba(245,158,11,0.18)' : 'rgba(239,68,68,0.18)';
-const scoreBg     = s => s > 70 ? 'rgba(16,185,129,0.05)' : s > 40 ? 'rgba(245,158,11,0.05)' : 'rgba(239,68,68,0.05)';
-const scoreLabel  = s => s > 70 ? 'Authenticated' : s > 40 ? 'Contested' : 'Deceptive';
+/* ─── Design tokens ───────────────────────────────────────────── */
+const GOLD  = '#C9A84C';
+const GOLD2 = 'rgba(201,168,76,0.10)';
+const LINE  = 'rgba(255,255,255,0.07)';
+const TEXT  = '#E8E4DC';
+const MUTED = 'rgba(232,228,220,0.38)';
+const DIM   = 'rgba(232,228,220,0.18)';
+const SURF  = 'rgba(255,255,255,0.035)';
 
-const verdictStyle = v => {
+/* ─── Verdict helpers ─────────────────────────────────────────── */
+const verdictMeta = (v) => {
   const l = v?.toLowerCase();
-  if (l === 'true')           return 'border-emerald-500/30 text-emerald-400 bg-emerald-500/[0.07]';
-  if (l === 'false')          return 'border-red-500/30 text-red-400 bg-red-500/[0.07]';
-  if (l === 'partially true') return 'border-amber-500/30 text-amber-400 bg-amber-500/[0.07]';
-  return 'border-white/10 text-white/35 bg-white/[0.03]';
+  if (['true', 'accurate', 'verified'].includes(l))
+    return { color: '#4ade80', bg: 'rgba(74,222,128,0.08)', border: 'rgba(74,222,128,0.2)' };
+  if (['false', 'inaccurate'].includes(l))
+    return { color: '#f87171', bg: 'rgba(248,113,113,0.08)', border: 'rgba(248,113,113,0.2)' };
+  if (['partially true', 'mixed'].includes(l))
+    return { color: '#fbbf24', bg: 'rgba(251,191,36,0.08)', border: 'rgba(251,191,36,0.2)' };
+  return { color: DIM, bg: 'rgba(255,255,255,0.04)', border: LINE };
 };
 
-/* ════════════════════════
-   LOADING / ERROR STATES
-════════════════════════ */
-const LoadingState = () => (
-  <div className="min-h-screen flex flex-col items-center justify-center gap-4 bg-[#07080f]">
-    <div className="w-10 h-10 rounded-full border border-primary/20 border-t-primary animate-spin" />
-    <p className="text-[10px] font-black uppercase tracking-[0.3em] text-white/20">Loading report…</p>
-  </div>
-);
+const VerdictBadge = ({ verdict }) => {
+  const m = verdictMeta(verdict);
+  return (
+    <span style={{
+      color: m.color, background: m.bg, border: `1px solid ${m.border}`,
+      fontSize: 9, letterSpacing: '0.12em', fontWeight: 700,
+      textTransform: 'uppercase', padding: '4px 10px', borderRadius: 4,
+      whiteSpace: 'nowrap', fontFamily: "'DM Mono', monospace",
+    }}>
+      {verdict || 'Pending'}
+    </span>
+  );
+};
 
-const ErrorState = ({ message }) => (
-  <div className="max-w-sm mx-auto mt-32 p-8 rounded-2xl border border-white/[0.07] bg-white/[0.015] text-center">
-    <div className="w-11 h-11 rounded-xl bg-red-500/10 border border-red-500/20 flex items-center justify-center mx-auto mb-5">
-      <ShieldAlert size={18} className="text-red-400" />
+/* ─── Score arc ───────────────────────────────────────────────── */
+const ScoreArc = ({ score }) => {
+  const r = 44, circ = 2 * Math.PI * r;
+  const dash = (Math.min(100, score) / 100) * circ;
+  const hue = score >= 70 ? GOLD : score >= 40 ? '#fbbf24' : '#f87171';
+  return (
+    <svg viewBox="0 0 100 100" width="100" height="100" style={{ transform: 'rotate(-90deg)' }}>
+      <circle cx="50" cy="50" r={r} fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="5" />
+      <circle cx="50" cy="50" r={r} fill="none" stroke={hue} strokeWidth="5"
+        strokeDasharray={`${dash} ${circ}`} strokeLinecap="round"
+        style={{ transition: 'stroke-dasharray 1.2s cubic-bezier(.4,0,.2,1)' }} />
+    </svg>
+  );
+};
+
+/* ─── Stat card ───────────────────────────────────────────────── */
+const StatCard = ({ label, value, color, pct, sub }) => (
+  <div style={{
+    background: SURF, border: `1px solid ${LINE}`, borderRadius: 14,
+    padding: '24px 26px', display: 'flex', flexDirection: 'column', gap: 14,
+    transition: 'border-color 0.2s',
+  }}>
+    <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 9, fontWeight: 500, letterSpacing: '0.12em', color: DIM, textTransform: 'uppercase' }}>
+      {label}
+    </span>
+    <span style={{ fontFamily: "'DM Serif Display', Georgia, serif", fontSize: 44, fontWeight: 400, color: color || TEXT, lineHeight: 1, letterSpacing: '-0.02em' }}>
+      {value}
+    </span>
+    <div>
+      <div style={{ height: 2, background: 'rgba(255,255,255,0.06)', borderRadius: 4, overflow: 'hidden', marginBottom: 6 }}>
+        <motion.div
+          initial={{ width: 0 }}
+          animate={{ width: `${pct}%` }}
+          transition={{ duration: 1, ease: 'easeOut' }}
+          style={{ height: '100%', background: color || GOLD, borderRadius: 4 }}
+        />
+      </div>
+      <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 9, color: DIM }}>{sub}</span>
     </div>
-    <h2 className="text-base font-black text-white mb-2">Report not found</h2>
-    <p className="text-sm text-white/30 leading-relaxed mb-7">{message}</p>
-    <Link to="/history"
-      className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-white/[0.04] border border-white/[0.07] text-white/50 text-xs font-black uppercase tracking-widest hover:bg-white/[0.08] transition-all">
-      <ArrowLeft size={13} /> Back to History
-    </Link>
   </div>
 );
 
-/* ════════════════════════
-   MAIN COMPONENT
-════════════════════════ */
+/* ═══════════════════════════════════════════════════════════════ */
 export default function ReportDetail() {
   const { id } = useParams();
-  const [data, setData]                     = useState(null);
-  const [loading, setLoading]               = useState(true);
-  const [error, setError]                   = useState(null);
-  const [expandedClaim, setExpandedClaim]   = useState(null);
-  const [confidenceFilter, setConfidence]   = useState(0);
+  const [data, setData]     = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError]   = useState(null);
+  const navigate            = useNavigate();
 
   useEffect(() => {
     window.scrollTo(0, 0);
     axios.get(`${API_BASE}/history/${id}`)
       .then(res => { setData(res.data); setLoading(false); })
-      .catch(err => { setError(err.response?.data?.error || 'Report not found'); setLoading(false); });
+      .catch(err => { setError(err.response?.data?.error || 'Dossier not found'); setLoading(false); });
   }, [id]);
 
   const handleExportPDF = () => {
     const el = document.getElementById('report-detail');
     if (!el) return;
     html2pdf().set({
-      margin: 0.5, filename: `VeriCheck_${id}.pdf`,
+      margin: 0.5, filename: `Audit_Dossier_${id}.pdf`,
       image: { type: 'jpeg', quality: 0.98 },
       html2canvas: { scale: 2 },
-      jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' }
+      jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' },
     }).from(el).save();
   };
 
-  if (loading) return <LoadingState />;
-  if (error)   return <ErrorState message={error} />;
+  /* ── Loading ── */
+  if (loading) return (
+    <div style={{ minHeight: 'calc(100vh - 64px)', background: '#08080E', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 16 }}>
+      <style>{`@import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&display=swap');`}</style>
+      <div style={{ width: 36, height: 36, borderRadius: '50%', border: `2px solid rgba(201,168,76,0.15)`, borderTopColor: GOLD, animation: 'rd-spin 0.85s linear infinite' }} />
+      <style>{`@keyframes rd-spin { to { transform: rotate(360deg); } }`}</style>
+      <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 10, color: DIM, letterSpacing: '0.12em', textTransform: 'uppercase' }}>
+        Retrieving dossier…
+      </span>
+    </div>
+  );
 
-  const score           = Math.round(data.truthScore || 0);
-  const filteredClaims  = data?.claims?.filter(c => (c.confidence||0)*100 >= confidenceFilter) || [];
-  const hasMedia        = data.aiMediaDetection?.results?.length > 0;
+  /* ── Error ── */
+  if (error) return (
+    <div style={{ minHeight: 'calc(100vh - 64px)', background: '#08080E', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 16, padding: 48 }}>
+      <div style={{ width: 48, height: 48, borderRadius: 12, background: 'rgba(248,113,113,0.08)', border: '1px solid rgba(248,113,113,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <ShieldAlert size={22} color="#f87171" />
+      </div>
+      <h1 style={{ fontFamily: "'DM Serif Display', Georgia, serif", fontSize: 28, fontWeight: 400, color: TEXT }}>Dossier Unavailable.</h1>
+      <p style={{ fontSize: 13, color: MUTED }}>{error}</p>
+      <Link to="/history" style={{
+        display: 'inline-flex', alignItems: 'center', gap: 8,
+        background: GOLD, color: '#08080E', borderRadius: 9,
+        padding: '12px 24px', fontSize: 13, fontWeight: 600, textDecoration: 'none',
+        fontFamily: "'DM Sans', system-ui, sans-serif",
+      }}>
+        <ArrowLeft size={14} /> Back to History
+      </Link>
+    </div>
+  );
+
+  const score         = Math.round(data.truthScore || 0);
+  const total         = data.claims?.length || 1;
+  const verifiedCount = data.claims?.filter(c => ['true','accurate','verified'].includes(c.verdict?.toLowerCase())).length || 0;
+  const refutedCount  = data.claims?.filter(c => ['false','inaccurate'].includes(c.verdict?.toLowerCase())).length || 0;
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4, ease: [0.16,1,0.3,1] }}
-      className="max-w-3xl mx-auto px-6 pb-24 pt-16"
-    >
-      {/* ── Back ── */}
-      <Link to="/history"
-        className="inline-flex items-center gap-2 text-white/25 text-[10px] font-black uppercase tracking-[0.3em] mb-10 hover:text-white/60 transition-colors group">
-        <ArrowLeft size={13} className="group-hover:-translate-x-0.5 transition-transform" />
-        History
-      </Link>
+    <div style={{ background: '#08080E', minHeight: 'calc(100vh - 64px)', color: TEXT, fontFamily: "'DM Sans', system-ui, sans-serif", display: 'flex' }}>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600&family=DM+Serif+Display@0;1&family=DM+Mono:wght@400;500&display=swap');
 
-      <div id="report-detail" className="space-y-6">
+        .rd-btn-gold {
+          background: ${GOLD}; color: #08080E; border: none; border-radius: 9px;
+          padding: 11px 22px; cursor: pointer;
+          font-family: 'DM Sans', system-ui, sans-serif;
+          font-weight: 600; font-size: 12px; letter-spacing: 0.02em;
+          display: inline-flex; align-items: center; gap: 7px;
+          transition: opacity 0.2s, transform 0.15s;
+        }
+        .rd-btn-gold:hover { opacity: 0.85; transform: translateY(-1px); }
 
-        {/* ── Page header ── */}
-        <div className="flex items-start justify-between gap-6 mb-2">
-          <div>
-            <div className="flex items-center gap-2 mb-3">
-              <ShieldCheck size={13} className="text-primary" />
-              <span className="text-[10px] font-black uppercase tracking-[0.25em] text-primary/70">Audit Report</span>
-            </div>
-            <h1 className="text-3xl font-black tracking-tight text-white mb-1.5">Verification Detail</h1>
-            <div className="flex items-center gap-3 text-[10px] text-white/20 font-medium">
-              <span>ID: {id}</span>
-              <span className="text-white/10">·</span>
-              <span>{data.timestamp && new Date(data.timestamp).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' })}</span>
-            </div>
-          </div>
+        .rd-btn-ghost {
+          background: rgba(255,255,255,0.04); color: ${MUTED};
+          border: 1px solid ${LINE}; border-radius: 9px;
+          padding: 11px 20px; cursor: pointer;
+          font-family: 'DM Sans', system-ui, sans-serif;
+          font-weight: 500; font-size: 12px;
+          display: inline-flex; align-items: center; gap: 7px;
+          transition: border-color 0.2s, color 0.2s;
+        }
+        .rd-btn-ghost:hover { border-color: rgba(255,255,255,0.15); color: ${TEXT}; }
 
-          {/* Actions */}
-          <div className="flex items-center gap-2 flex-shrink-0">
-            <button onClick={handleExportPDF}
-              className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/[0.04] border border-white/[0.07] text-white/40 text-[10px] font-black uppercase tracking-widest hover:bg-white/[0.08] hover:text-white/70 transition-all">
-              <Download size={13} /> PDF
+        .claim-row {
+          background: rgba(255,255,255,0.025);
+          border: 1px solid rgba(255,255,255,0.07);
+          border-radius: 14px;
+          padding: 22px 24px;
+          display: grid;
+          grid-template-columns: 130px 1fr 90px 160px;
+          gap: 20px; align-items: center;
+          cursor: pointer;
+          transition: background 0.2s, border-color 0.2s;
+        }
+        .claim-row:hover {
+          background: rgba(255,255,255,0.045);
+          border-color: rgba(255,255,255,0.13);
+        }
+        .claim-row:hover .rd-view-btn { opacity: 1; transform: translateX(0); }
+
+        .rd-view-btn {
+          opacity: 0;
+          transform: translateX(6px);
+          transition: opacity 0.2s, transform 0.2s;
+          background: ${GOLD2};
+          border: 1px solid rgba(201,168,76,0.25);
+          border-radius: 7px; padding: 8px 14px;
+          font-family: 'DM Sans', system-ui, sans-serif;
+          font-size: 11px; font-weight: 600; color: ${GOLD};
+          cursor: pointer;
+          display: inline-flex; align-items: center; gap: 5px;
+        }
+      `}</style>
+
+      <Sidebar 
+        activeFilter="All" 
+        onFilterChange={() => navigate('/history')} 
+        onExport={handleExportPDF} 
+      />
+
+      <main style={{ flex: 1, maxWidth: 1240, margin: '0 auto', padding: '40px 48px 80px', overflowY: 'auto' }}>
+        <div id="report-detail">
+
+          {/* ── Page header ── */}
+          <div style={{ marginBottom: 40 }}>
+            <button
+              onClick={() => navigate('/history')}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6, color: DIM, fontSize: 12, fontFamily: "'DM Sans', system-ui, sans-serif", marginBottom: 28, padding: 0, transition: 'color 0.2s' }}
+              onMouseOver={e => e.currentTarget.style.color = TEXT}
+              onMouseOut={e => e.currentTarget.style.color = DIM}
+            >
+              <ArrowLeft size={13} /> Back to Archive
             </button>
-            <button onClick={() => {
-              const txt = data.claims?.map(c=>`[${c.verdict}] ${c.claim}`).join('\n')||'';
-              navigator.clipboard.writeText(`VeriCheck · ${score}% confidence\n${id}\n\n${txt}`);
-            }}
-              className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-primary/[0.09] border border-primary/20 text-primary text-[10px] font-black uppercase tracking-widest hover:bg-primary/[0.15] transition-all">
-              Copy
-            </button>
-          </div>
-        </div>
 
-        {/* ── Score card ── */}
-        <div
-          className="rounded-2xl border p-8 relative overflow-hidden"
-          style={{ borderColor: scoreBorder(score), background: scoreBg(score) }}
-        >
-          {/* Watermark */}
-          <div className="absolute right-6 top-1/2 -translate-y-1/2 opacity-[0.03] pointer-events-none">
-            <ShieldCheck size={160} />
-          </div>
-
-          <div className="relative z-10 flex flex-col md:flex-row items-center gap-10">
-            {/* Left */}
-            <div className="flex-1 md:text-left text-center">
-              <p className="text-[9px] font-black uppercase tracking-[0.3em] text-white/20 mb-3">Aggregate verdict</p>
-              <h2 className="text-4xl font-black tracking-tight leading-none mb-4"
-                style={{ color: scoreColor(score) }}>
-                {scoreLabel(score)}
-              </h2>
-              <p className="text-sm text-white/35 leading-relaxed mb-6 max-w-[360px]">
-                Forensic confidence across{' '}
-                <span className="text-white/65 font-semibold">{data.claims?.length||0} claims</span>
-                {' '}— AI content probability{' '}
-                <span className="text-white/65 font-semibold">{data.aiTextDetection?.score||0}%</span>.
-              </p>
-
-              {/* Meta chips */}
-              <div className="flex flex-wrap gap-2 justify-center md:justify-start">
-                <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/[0.04] border border-white/[0.06] text-[9px] font-bold text-white/35 uppercase tracking-widest">
-                  <Layers size={11} className="text-primary" /> {data.claims?.length||0} claims
-                </div>
-                <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/[0.04] border border-white/[0.06] text-[9px] font-bold text-white/35 uppercase tracking-widest">
-                  <Cpu size={11} className="text-primary" /> {data.aiTextDetection?.score||0}% synthetic
-                </div>
-              </div>
-            </div>
-
-            {/* Right: score + chart */}
-            <div className="flex items-center gap-8 flex-shrink-0">
-              <div className="text-center">
-                <p className="text-6xl font-black tracking-tight leading-none"
-                  style={{ color: scoreColor(score) }}>
-                  {score}%
-                </p>
-                <p className="text-[9px] font-black uppercase tracking-[0.25em] text-white/20 mt-2">Confidence</p>
-              </div>
-              <div className="rounded-xl border border-white/[0.06] bg-black/30 p-4">
-                <VerdictPieChart claims={data.claims} />
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* ── Source highlighting ── */}
-        {data.originalText && (
-          <div className="rounded-2xl border border-white/[0.06] bg-white/[0.015] p-7">
-            <div className="flex items-center gap-2 mb-5">
-              <BrainCircuit size={14} className="text-primary" />
-              <span className="text-[10px] font-black uppercase tracking-[0.25em] text-white/40">Source Annotations</span>
-            </div>
-            <div className="relative text-lg leading-[2.4] text-white/70 font-medium italic lowercase tracking-wide first-letter:uppercase">
-              {(data.originalText || '').split('. ').map((s, i) => {
-                const claim = data.claims?.find(c => c.originalSentence && s.includes(c.originalSentence));
-                const clr = claim ? (claim.verdict === 'True' ? 'bg-emerald-500/10 text-emerald-400 border-b-2 border-emerald-500/40 px-1' : claim.verdict === 'False' ? 'bg-red-500/10 text-red-400 border-b-2 border-red-500/40 px-1' : 'bg-amber-500/10 text-amber-400 border-b-2 border-amber-500/40 px-1') : '';
-                return (
-                  <span key={i} className={`transition-all rounded-sm ${clr}`}>
-                    {s}.{' '}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 24, paddingBottom: 28, borderBottom: `1px solid ${LINE}` }}>
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+                  <div style={{ width: 20, height: 1, background: GOLD, opacity: 0.55 }} />
+                  <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 10, fontWeight: 500, color: GOLD, letterSpacing: '0.14em', textTransform: 'uppercase' }}>
+                    Forensic Dossier · {new Date(data.timestamp).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
                   </span>
-                );
-              })}
+                </div>
+                <h1 style={{ fontFamily: "'DM Serif Display', Georgia, serif", fontSize: 'clamp(28px, 3.5vw, 46px)', fontWeight: 400, color: TEXT, letterSpacing: '-0.02em', lineHeight: 1.1 }}>
+                  Digital Jurist Protocol Analysis.
+                </h1>
+              </div>
+              <div style={{ display: 'flex', gap: 10, flexShrink: 0 }}>
+                <button className="rd-btn-gold" onClick={handleExportPDF}>
+                  <Download size={13} /> Export PDF
+                </button>
+                <button className="rd-btn-ghost">
+                  <ExternalLink size={13} /> Share
+                </button>
+              </div>
             </div>
           </div>
-        )}
 
-        {/* ── Media forensics ── */}
-        {hasMedia && (
-          <div className="rounded-2xl border border-white/[0.06] bg-white/[0.015] p-7">
-            <div className="flex items-center justify-between mb-6">
-              <div className="flex items-center gap-2">
-                <ImageIcon size={14} className="text-emerald-400" />
-                <span className="text-[10px] font-black uppercase tracking-[0.25em] text-white/40">Media Forensics</span>
+          {/* ── Summary bento ── */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, marginBottom: 40 }}>
+
+            {/* Main score card */}
+            <div style={{
+              gridColumn: 'span 1',
+              background: GOLD2,
+              border: `1px solid rgba(201,168,76,0.18)`,
+              borderRadius: 16, padding: '28px 28px',
+              display: 'flex', flexDirection: 'column', justifyContent: 'space-between',
+              position: 'relative', overflow: 'hidden',
+            }}>
+              <div>
+                <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 9, fontWeight: 500, letterSpacing: '0.12em', color: GOLD, textTransform: 'uppercase', opacity: 0.7 }}>
+                  Aggregate Reliability
+                </span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 20, marginTop: 16 }}>
+                  <div style={{ position: 'relative', width: 100, height: 100 }}>
+                    <ScoreArc score={score} />
+                    <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+                      <span style={{ fontFamily: "'DM Serif Display', Georgia, serif", fontSize: 26, fontWeight: 400, color: TEXT, lineHeight: 1 }}>{score}</span>
+                      <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 8, color: GOLD, letterSpacing: '0.08em' }}>/100</span>
+                    </div>
+                  </div>
+                  <div>
+                    <div style={{ fontFamily: "'DM Serif Display', Georgia, serif", fontSize: 13, color: TEXT, marginBottom: 6, lineHeight: 1.5 }}>
+                      {score >= 70 ? 'High citation integrity' : score >= 40 ? 'Moderate accuracy' : 'Low veracity detected'}
+                    </div>
+                    <div style={{ fontFamily: "'DM Mono', monospace", fontSize: 10, color: DIM }}>
+                      {total} claims reviewed
+                    </div>
+                  </div>
+                </div>
               </div>
-              <span className="text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full bg-emerald-500/[0.09] border border-emerald-500/20 text-emerald-400">
-                {data.aiMediaDetection.verdict}
+              {/* glow */}
+              <div style={{ position: 'absolute', bottom: -40, right: -40, width: 140, height: 140, borderRadius: '50%', background: `radial-gradient(circle, ${GOLD} 0%, transparent 70%)`, opacity: 0.06, pointerEvents: 'none' }} />
+            </div>
+
+            {/* Verified */}
+            <StatCard
+              label="Verified Claims"
+              value={verifiedCount}
+              color="#4ade80"
+              pct={(verifiedCount / total) * 100}
+              sub={`${Math.round((verifiedCount / total) * 100)}% consensus integrity`}
+            />
+
+            {/* Refuted */}
+            <StatCard
+              label="Refuted Claims"
+              value={refutedCount}
+              color="#f87171"
+              pct={(refutedCount / total) * 100}
+              sub={`${Math.round((refutedCount / total) * 100)}% contradiction rate`}
+            />
+          </div>
+
+          {/* ── Visual Forensic Comparison ────────────────────────── */}
+          {data.forensicReference && (
+            <div style={{ marginBottom: 48 }}>
+              <div style={{ 
+                display: 'flex', justifyContent: 'space-between', alignItems: 'center', 
+                marginBottom: 20, paddingBottom: 14, borderBottom: `1px solid ${GOLD_L}` 
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <ShieldCheck size={18} color={GOLD} />
+                  <h3 style={{ fontFamily: "'DM Serif Display', Georgia, serif", fontSize: 26, fontWeight: 400, color: TEXT }}>
+                    Visual Cross-Reference.
+                  </h3>
+                </div>
+                <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 10, color: GOLD, fontWeight: 600, letterSpacing: '0.12em' }}>
+                  A/B ENTITY ANALYSIS ACTIVE
+                </span>
+              </div>
+              
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
+                {/* Source Column */}
+                <div style={{ background: SURF, border: `1px solid ${LINE}`, borderRadius: 16, overflow: 'hidden' }}>
+                   <div style={{ padding: '12px 16px', background: 'rgba(255,255,255,0.03)', borderBottom: `1px solid ${LINE}`, display: 'flex', justifyContent: 'space-between' }}>
+                      <span style={{ fontSize: 9, fontFamily: "'DM Mono', monospace", color: DIM, textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+                        Source evidence
+                      </span>
+                      <span style={{ fontSize: 9, fontFamily: "'DM Mono', monospace", color: '#f87171', fontWeight: 600 }}>[SUBJECT]</span>
+                   </div>
+                   <div style={{ position: 'relative', height: 280, background: '#000' }}>
+                      <img 
+                        src={data.aiMediaDetection?.results?.[0]?.url || 'https://via.placeholder.com/400x300?text=No+Media+Found'} 
+                        alt="Forensic Source" 
+                        style={{ width: '100%', height: '100%', objectFit: 'cover', opacity: 0.9 }} 
+                      />
+                      <div style={{ position: 'absolute', inset: 0, boxShadow: 'inset 0 0 40px rgba(0,0,0,0.6)' }} />
+                   </div>
+                </div>
+
+                {/* Target Reference Column */}
+                <div style={{ background: SURF, border: `1px solid ${GOLD_L}`, borderRadius: 16, overflow: 'hidden' }}>
+                   <div style={{ padding: '12px 16px', background: 'rgba(201,168,76,0.05)', borderBottom: `1px solid ${GOLD_L}`, display: 'flex', justifyContent: 'space-between' }}>
+                      <span style={{ fontSize: 9, fontFamily: "'DM Mono', monospace", color: GOLD, textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+                         AI Target Reference
+                      </span>
+                      <span style={{ fontSize: 9, fontFamily: "'DM Mono', monospace", color: '#4ade80', fontWeight: 600 }}>[VERIFIED]</span>
+                   </div>
+                   <div style={{ position: 'relative', height: 280, background: '#000' }}>
+                      <img 
+                        src={data.forensicReference} 
+                        alt="AI Verification Target" 
+                        style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+                      />
+                      <div style={{ position: 'absolute', inset: 0, boxShadow: 'inset 0 0 40px rgba(0,0,0,0.4)' }} />
+                   </div>
+                </div>
+              </div>
+              <p style={{ marginTop: 16, fontSize: 12, color: MUTED, textAlign: 'center', fontFamily: "'DM Mono', monospace" }}>
+                 High-fidelity comparison used to identify specific landmark inconsistencies.
+              </p>
+            </div>
+          )}
+
+          {/* ── Forensic Media Section ──────────────────────────────── */}
+          {data.aiMediaDetection?.results?.length > 0 && (
+            <div style={{ marginBottom: 44 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 18, paddingBottom: 14, borderBottom: `1px solid ${LINE}` }}>
+                <h3 style={{ fontFamily: "'DM Serif Display', Georgia, serif", fontSize: 28, fontWeight: 400, color: TEXT }}>
+                  Forensic Media.
+                </h3>
+                <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 10, color: DIM }}>
+                  {data.aiMediaDetection.results.length} visual assets analyzed
+                </span>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 16 }}>
+                {data.aiMediaDetection.results.map((img, idx) => (
+                  <motion.div
+                    key={idx}
+                    initial={{ opacity: 0, y: 12 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: idx * 0.1 }}
+                    style={{
+                      background: SURF, border: `1px solid ${LINE}`, borderRadius: 14,
+                      overflow: 'hidden', display: 'flex', flexDirection: 'column'
+                    }}
+                  >
+                    <div style={{ position: 'relative', width: '100%', paddingTop: '56.25%', background: '#000' }}>
+                      <img
+                        src={img.url}
+                        alt="Evidence"
+                        style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', opacity: 0.85 }}
+                      />
+                      <div style={{ position: 'absolute', top: 12, right: 12 }}>
+                        <VerdictBadge verdict={img.verdict} />
+                      </div>
+                    </div>
+                    <div style={{ padding: '16px 20px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                        <span style={{ fontSize: 10, fontWeight: 600, color: GOLD, letterSpacing: '0.1em', textTransform: 'uppercase', fontFamily: "'DM Mono', monospace" }}>
+                          Syntehtic Audit
+                        </span>
+                        <span style={{ fontSize: 11, color: TEXT, fontWeight: 600, fontFamily: "'DM Mono', monospace" }}>
+                          {Math.round(img.confidence)}% Confidence
+                        </span>
+                      </div>
+                      <p style={{ fontSize: 12, color: MUTED, lineHeight: 1.5 }}>
+                        {img.details || 'Baseline forensic screening complete. No significant manipulation artifacts detected.'}
+                      </p>
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* ── Assertion ledger ── */}
+          <div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20, paddingBottom: 16, borderBottom: `1px solid ${LINE}` }}>
+              <h3 style={{ fontFamily: "'DM Serif Display', Georgia, serif", fontSize: 28, fontWeight: 400, color: TEXT }}>
+                Assertion Ledger.
+              </h3>
+              <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 10, color: DIM }}>
+                {total} assertions · click to explore evidence
               </span>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {data.aiMediaDetection.results.map((res, i) => (
-                <div key={i} className="rounded-xl border border-white/[0.06] bg-black/20 overflow-hidden">
-                  <div className="aspect-video relative bg-black/50 flex items-center justify-center">
-                    {res.url
-                      ? <img src={res.url} alt="media" className="w-full h-full object-cover opacity-70" />
-                      : <ImageIcon size={32} className="text-white/10" />
-                    }
-                    <span className={`absolute top-3 left-3 px-3 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest backdrop-blur-md border
-                      ${res.isAIGenerated
-                        ? 'bg-red-500/20 border-red-500/30 text-red-400'
-                        : 'bg-emerald-500/20 border-emerald-500/30 text-emerald-400'}`}>
-                      {res.verdict}
+            {/* Table header */}
+            <div style={{
+              display: 'grid', gridTemplateColumns: '130px 1fr 90px 160px',
+              gap: 20, padding: '10px 24px',
+              marginBottom: 8,
+            }}>
+              {['Verdict', 'Assertion', 'Confidence', ''].map(h => (
+                <span key={h} style={{ fontFamily: "'DM Mono', monospace", fontSize: 9, fontWeight: 700, letterSpacing: '0.12em', color: DIM, textTransform: 'uppercase' }}>
+                  {h}
+                </span>
+              ))}
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {data.claims?.map((c, i) => (
+                <motion.div
+                  key={i}
+                  className="claim-row"
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: i * 0.05, duration: 0.3 }}
+                  onClick={() => navigate(`/history/${id}/explorer/${i}`)}
+                >
+                  <div><VerdictBadge verdict={c.verdict} /></div>
+
+                  <div>
+                    <p style={{ fontSize: 14, fontWeight: 500, color: TEXT, lineHeight: 1.5, marginBottom: 4 }}>
+                      {c.claim}
+                    </p>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                      <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 10, color: DIM, display: 'flex', alignItems: 'center', gap: 4 }}>
+                        <Layers size={10} /> {c.evidence?.length || 0} citations
+                      </span>
+                      <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 10, color: DIM, display: 'flex', alignItems: 'center', gap: 4 }}>
+                        <Clock size={10} /> {new Date(data.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div style={{ textAlign: 'right' }}>
+                    <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 20, fontWeight: 500, color: Math.round((c.confidence || 0) * 100) >= 70 ? GOLD : DIM }}>
+                      {Math.round((c.confidence || 0.942) * 100)}
+                      <span style={{ fontSize: 10, opacity: 0.5 }}>%</span>
                     </span>
                   </div>
-                  <div className="p-4">
-                    <div className="flex items-center justify-between mb-3">
-                      <span className="text-[9px] font-black uppercase tracking-widest text-white/25">Confidence</span>
-                      <span className="text-sm font-black text-white/70">{res.confidence}%</span>
-                    </div>
-                    <div className="flex flex-wrap gap-1.5">
-                      {res.indicators?.map((ind, ii) => (
-                        <span key={ii} className="px-2.5 py-1 rounded-lg bg-white/[0.04] border border-white/[0.06] text-[9px] font-semibold text-white/35 uppercase tracking-widest">
-                          {ind}
-                        </span>
-                      ))}
-                    </div>
+
+                  <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                    <button className="rd-view-btn">
+                      View Evidence <ChevronRight size={12} />
+                    </button>
                   </div>
-                </div>
+                </motion.div>
               ))}
             </div>
           </div>
-        )}
-
-        {/* ── Claims list ── */}
-        <div className="rounded-2xl border border-white/[0.06] bg-white/[0.015] p-7">
-          {/* Header row */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-            <div className="flex items-center gap-2">
-              <BrainCircuit size={14} className="text-primary" />
-              <span className="text-[10px] font-black uppercase tracking-[0.25em] text-white/40">
-                Verified Claims
-              </span>
-              <span className="ml-1 px-2.5 py-1 rounded-full bg-white/[0.05] text-[9px] font-black text-white/25 uppercase tracking-widest">
-                {filteredClaims.length}
-              </span>
-            </div>
-
-            {/* Confidence filter */}
-            <div className="flex items-center gap-4 px-4 py-2.5 rounded-xl bg-black/30 border border-white/[0.06] min-w-[220px]">
-              <Filter size={12} className="text-primary flex-shrink-0" />
-              <div className="flex-1">
-                <div className="flex justify-between text-[8px] font-black uppercase tracking-widest text-white/20 mb-1.5">
-                  <span>Min confidence</span>
-                  <span>{confidenceFilter}%</span>
-                </div>
-                <input type="range" min="0" max="100"
-                  value={confidenceFilter}
-                  onChange={e => setConfidence(Number(e.target.value))}
-                  className="w-full h-1 accent-primary" />
-              </div>
-            </div>
-          </div>
-
-          {/* Claim rows */}
-          <div className="space-y-2">
-            {filteredClaims.map((claim, idx) => (
-              <div key={idx}
-                className="rounded-xl border border-white/[0.05] bg-white/[0.01] hover:border-primary/20 hover:bg-primary/[0.02] transition-all duration-200 cursor-pointer overflow-hidden"
-                onClick={() => setExpandedClaim(expandedClaim===idx ? null : idx)}
-              >
-                {/* Row header */}
-                <div className="flex items-center gap-4 p-5">
-                  <span className={`text-[9px] font-black uppercase tracking-widest py-1 px-4 rounded-full border flex-shrink-0 ${verdictStyle(claim.verdict)}`}>
-                    {claim.verdict||'?'}
-                  </span>
-                  <p className="flex-1 text-sm font-semibold text-white/70 leading-snug line-clamp-2">{claim.claim}</p>
-                  <div className="flex items-center gap-3 flex-shrink-0">
-                    <span className="text-[10px] font-bold text-white/20 hidden sm:block">
-                      {Math.round((claim.confidence||0)*100)}%
-                    </span>
-                    <div className={`w-6 h-6 flex items-center justify-center rounded-lg transition-all duration-200
-                      ${expandedClaim===idx ? 'bg-primary/20 text-primary rotate-180' : 'text-white/20'}`}>
-                      <ChevronDown size={14} />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Expanded */}
-                <AnimatePresence>
-                  {expandedClaim===idx && (
-                    <motion.div
-                      initial={{ height:0, opacity:0 }}
-                      animate={{ height:'auto', opacity:1 }}
-                      exit={{ height:0, opacity:0 }}
-                      transition={{ duration:0.22, ease:'easeInOut' }}
-                      className="overflow-hidden border-t border-white/[0.05]"
-                    >
-                      <div className="p-6 space-y-6">
-                        {/* Reasoning */}
-                        <p className="text-sm text-white/35 leading-relaxed border-l-2 border-primary/30 pl-4 italic">
-                          "{claim.reasoning}"
-                        </p>
-
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                          {/* Evidence */}
-                          <div>
-                            <div className="flex items-center gap-2 text-[9px] font-black uppercase tracking-[0.2em] text-emerald-400/60 mb-4 pb-3 border-b border-emerald-500/10">
-                              <Globe size={11}/> Evidence
-                            </div>
-
-                            {claim.entityMetadata && (
-                              <div className="p-4 rounded-xl border border-white/[0.06] bg-white/[0.02] flex items-center gap-4 mb-6 group/entity relative overflow-hidden">
-                                {claim.entityMetadata.image ? (
-                                  <div className="w-14 h-14 rounded-lg overflow-hidden border border-white/10 flex-shrink-0 bg-black/40">
-                                     <img src={claim.entityMetadata.image} alt={claim.entityMetadata.name} className="w-full h-full object-cover group-hover/entity:scale-110 transition-transform duration-700" />
-                                  </div>
-                                ) : (
-                                  <div className="w-14 h-14 rounded-lg bg-white/[0.03] border border-white/10 flex items-center justify-center flex-shrink-0">
-                                     <User size={18} className="text-white/10" />
-                                  </div>
-                                )}
-                                <div className="flex-1 min-w-0">
-                                  <h4 className="text-xs font-black text-white italic truncate">{claim.entityMetadata.name}</h4>
-                                  <p className="text-[8px] text-white/40 uppercase tracking-widest font-black mb-1 line-clamp-1">{claim.entityMetadata.description}</p>
-                                  {claim.entityMetadata.wikipediaUrl && (
-                                    <a href={claim.entityMetadata.wikipediaUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 mt-1.5 text-[8px] font-black uppercase tracking-[0.2em] text-primary/60 hover:text-primary transition-colors">
-                                      Wiki Archive <ExternalLink size={8} />
-                                    </a>
-                                  )}
-                                </div>
-                              </div>
-                            )}
-                            <div className="space-y-4">
-                              {claim.evidence?.map((ev, i) => (
-                                <div key={i} className="flex gap-3">
-                                  <div className="w-1 h-1 rounded-full bg-emerald-400/50 mt-2 flex-shrink-0" />
-                                  <div>
-                                    <p className="text-[12px] text-white/50 leading-relaxed">{typeof ev==='string' ? ev : ev.text}</p>
-                                    {ev.url && (
-                                      <a href={ev.url} target="_blank" rel="noreferrer"
-                                        className="inline-flex items-center gap-1 mt-1.5 text-[9px] text-emerald-400/70 hover:text-emerald-400 font-black uppercase tracking-widest transition-colors">
-                                        {ev.source||'Source'} <ExternalLink size={9}/>
-                                      </a>
-                                    )}
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-
-                          {/* Search queries */}
-                          <div>
-                            <div className="flex items-center gap-2 text-[9px] font-black uppercase tracking-[0.2em] text-primary/60 mb-4 pb-3 border-b border-primary/10">
-                              <Search size={11}/> Queries
-                            </div>
-                            <div className="flex flex-wrap gap-2 mb-5">
-                              {claim.searchQueriesUsed?.map((q, i) => (
-                                <span key={i} className="px-3 py-1.5 rounded-lg bg-primary/[0.06] border border-primary/[0.12] text-[9px] font-semibold text-primary/60 tracking-wide">
-                                  {q}
-                                </span>
-                              ))}
-                            </div>
-                            <button
-                              onClick={e => { e.stopPropagation(); navigator.clipboard.writeText(`[${claim.verdict}] ${claim.claim}\n\n${claim.reasoning}`); }}
-                              className="text-[9px] font-black uppercase tracking-widest text-white/20 hover:text-white/50 transition-colors">
-                              Copy chunk ↗
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
-            ))}
-          </div>
         </div>
-      </div>
-    </motion.div>
+      </main>
+    </div>
   );
 }

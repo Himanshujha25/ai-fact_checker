@@ -1,61 +1,104 @@
 @import "tailwindcss";
 
 @theme {
-  --color-primary: #8b5cf6;
-  --color-primary-hover: #7c3aed;
-  --color-accent: #10b981;
-  --color-warning: #f59e0b;
-  --color-danger: #ef4444;
-  --color-bg-deep: #0a0a0f;
-  --color-bg-card: rgba(17, 17, 24, 0.8);
-  --color-glass-border: rgba(255, 255, 255, 0.06);
-  --color-text-main: #ffffff;
-  --color-text-muted: #8a8a98;
+  /* Digital Jurist: The Verified Editorial Palette */
+  --color-primary: #003d9b;
+  --color-primary-container: #0052cc;
+  --color-secondary: #505f76;
+  --color-tertiary: #004e33;
+  --color-tertiary-fixed-dim: rgba(78, 222, 163, 0.2);
+  --color-error: #ba1a1a;
+  --color-error-container: rgba(255, 218, 214, 0.4);
+  
+  --color-surface: #f7f9fb;
+  --color-surface-bright: #f7f9fb;
+  --color-surface-container-lowest: #ffffff;
+  --color-surface-container-low: #f2f4f6;
+  --color-surface-container-highest: #e0e3e5;
+  --color-on-surface: #191c1e;
+  --color-on-surface-variant: #434654;
+  --color-outline-variant: rgba(195, 198, 214, 0.15);
+  
+  --font-display: 'Manrope', sans-serif;
+  --font-body: 'Inter', sans-serif;
 }
 
 @layer base {
+  @font-face {
+    font-family: 'Manrope';
+    src: url('https://fonts.googleapis.com/css2?family=Manrope:wght@200;300;400;500;600;700;800&display=swap');
+  }
+  @font-face {
+    font-family: 'Inter';
+    src: url('https://fonts.googleapis.com/css2?family=Inter:wght@100;200;300;400;500;600;700;800;900&display=swap');
+  }
+
   body {
-    @apply bg-bg-deep text-text-main font-sans antialiased selection:bg-primary/30;
-    font-family: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    @apply bg-surface text-on-surface font-body antialiased;
+    background-color: #f7f9fb;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-display font-semibold tracking-tight;
   }
 }
 
-/* Elite Workstation Components (Tailwind Powered) */
 @layer components {
-  /* 2.0 Capsule Navbar */
-  .navbar-capsule {
-    @apply fixed top-0 left-0 right-0 z-[100] flex items-center justify-between px-8 py-3.5 bg-bg-deep/80 backdrop-blur-2xl border-b border-glass-border;
+  /* Editorial Card - No borders, just tonal depth */
+  .editorial-card {
+    @apply bg-surface-container-lowest rounded-[0.75rem] transition-all duration-300;
   }
   
-  .nav-link-item {
-    @apply text-[10px] font-black tracking-[0.15em] uppercase text-text-muted no-underline transition-all duration-300 hover:text-white;
+  .editorial-card-hover:hover {
+    @apply bg-surface-container-low shadow-[0_12px_32px_rgba(25,28,30,0.06)];
+  }
+
+  /* Verdict Badges */
+  .badge-true {
+    @apply text-tertiary bg-tertiary-fixed-dim px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest;
   }
   
-  .nav-link-item.active {
-    @apply text-primary [text-shadow:0_0_20px_rgba(139,92,246,0.4)];
+  .badge-false {
+    @apply text-error bg-error-container px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest;
+  }
+  
+  .badge-partial {
+    @apply text-secondary bg-surface-container-low px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest;
   }
 
-  /* Integrated Command Hub */
-  .search-area {
-    @apply w-full bg-white/[0.012] border border-glass-border rounded-[32px] p-8 text-xl text-white outline-none focus:bg-primary/[0.01] focus:border-primary/40 transition-all duration-700 placeholder:text-text-muted/20 resize-none leading-relaxed;
+  /* Minimalist Inputs */
+  .minimal-input {
+    @apply bg-surface-container-highest rounded-[0.125rem] border-none outline-none px-4 py-3 text-sm transition-all duration-300;
+  }
+  
+  .minimal-input:focus {
+    @apply bg-surface-container-lowest ring-1 ring-primary/20;
   }
 
-  .btn-elite {
-    @apply inline-flex items-center justify-center gap-2 px-10 py-3 bg-primary text-white text-[11px] font-black uppercase tracking-[0.2em] rounded-full border border-white/10 shadow-[0_10px_40px_-10px_rgba(139,92,246,0.5)] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_15px_50px_-5px_rgba(139,92,246,0.6)] active:scale-95 disabled:opacity-20 disabled:pointer-events-none;
+  /* Action Buttons with Tactics Polish */
+  .btn-jurist {
+    @apply inline-flex items-center justify-center gap-2 px-8 py-3 bg-gradient-to-br from-primary to-primary-container text-white text-xs font-bold uppercase tracking-widest rounded-full shadow-lg transition-all duration-300 hover:-translate-y-0.5 active:scale-95;
+  }
+
+  /* Glass Effects */
+  .glass-jurist {
+    @apply bg-[#e0e3e5]/70 backdrop-blur-[20px];
+  }
+
+  /* Evidence Trail Line */
+  .evidence-trail {
+    @apply h-[2px] w-full bg-outline-variant relative overflow-hidden;
+  }
+  
+  .evidence-trail-active {
+    @apply absolute inset-0 bg-gradient-to-r from-primary to-tertiary transition-all duration-1000;
   }
 }
 
-/* Custom Tactical Scrollbar */
-::-webkit-scrollbar { @apply w-[4px]; }
-::-webkit-scrollbar-thumb { @apply bg-white/5 rounded-full hover:bg-primary/40 transition-colors; }
+/* Custom Scrollbar */
+::-webkit-scrollbar { @apply w-[6px]; }
+::-webkit-scrollbar-thumb { @apply bg-on-surface/5 rounded-full hover:bg-on-surface/10; }
 
-input[type="range"] {
-  @apply accent-primary cursor-pointer hover:accent-primary-hover transition-all;
-}
-
-.shadow-glow {
-  box-shadow: 0 0 30px rgba(139, 92, 246, 0.2);
-}
-
-.font-outfit { font-family: 'Outfit', sans-serif; }
-.font-jakarta { font-family: 'Plus Jakarta Sans', sans-serif; }
+.font-manrope { font-family: 'Manrope', sans-serif; }
+.font-inter { font-family: 'Inter', sans-serif; }
+.font-serif-italic { font-family: 'Libre Baskerville', serif; font-style: italic; }

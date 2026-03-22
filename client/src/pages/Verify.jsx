@@ -1,663 +1,626 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import axios from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  ShieldCheck, ShieldAlert, FileText, Search, Loader2, ExternalLink,
-  BrainCircuit, Zap, ChevronRight, ChevronDown, Download,
-  Image, Film, X, Globe, Layers, Cpu, FileSearch, Sparkles, Plus, User
+  Gavel, Link as LinkIcon, FileText, Upload, ShieldCheck,
+  ChevronRight, Clock, Activity, Search, Mic, MicOff,
+  Sparkles, Zap
 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import Sidebar from '../components/Sidebar';
+import AnalysisProcessing from '../components/AnalysisProcessing';
 import confetti from 'canvas-confetti';
-import html2pdf from 'html2pdf.js';
-import VerdictPieChart from '../components/VerdictPieChart';
 
-const API_BASE = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
-  ? '/api' 
-  : 'https://ai-fact-checker-rvih.onrender.com/api';
+const API_BASE =
+  window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+    ? '/api'
+    : 'https://ai-fact-checker-rvih.onrender.com/api';
 
-/* ── tiny helpers ── */
-const scoreColor  = s => s > 70 ? 'text-emerald-400' : s > 40 ? 'text-amber-400' : 'text-red-400';
-const scoreBorder = s => s > 70 ? 'border-emerald-500/20' : s > 40 ? 'border-amber-500/20' : 'border-red-500/20';
-const scoreBg     = s => s > 70 ? 'bg-emerald-500/[0.04]' : s > 40 ? 'bg-amber-500/[0.04]' : 'bg-red-500/[0.04]';
-const scoreGlow   = s => s > 70
-  ? '0 0 80px rgba(16,185,129,0.15)'
-  : s > 40
-  ? '0 0 80px rgba(245,158,11,0.15)'
-  : '0 0 80px rgba(239,68,68,0.15)';
-const scoreLabel  = s => s > 80 ? 'AUTHENTICATED' : s > 60 ? 'LIKELY VALID' : s > 40 ? 'CONTESTED' : 'DECEPTIVE';
+/* ─── Tokens ──────────────────────────────────────────────────── */
+const GOLD   = '#C9A84C';
+const GOLD_L = 'rgba(201,168,76,0.12)';
+const LINE   = 'rgba(255,255,255,0.07)';
+const SURF   = 'rgba(255,255,255,0.04)';
+const TEXT   = '#E8E4DC';
+const MUTED  = 'rgba(232,228,220,0.42)';
+const DIM    = 'rgba(232,228,220,0.22)';
+const MIC_C  = '#EC4899';
 
-const verdictPill = v => {
+/* ─── Verdict badge ───────────────────────────────────────────── */
+const verdictStyle = v => {
   const l = v?.toLowerCase();
-  if (l === 'true')           return 'border-emerald-500/40 text-emerald-400 bg-emerald-500/[0.07]';
-  if (l === 'false')          return 'border-red-500/40 text-red-400 bg-red-500/[0.07]';
-  if (l === 'partially true') return 'border-amber-500/40 text-amber-400 bg-amber-500/[0.07]';
-  return 'border-white/10 text-white/40 bg-white/[0.03]';
+  if (['true','accurate','verified'].includes(l))  return { color:'#4ade80', bg:'rgba(74,222,128,0.08)',  border:'rgba(74,222,128,0.22)' };
+  if (['false','inaccurate'].includes(l))           return { color:'#f87171', bg:'rgba(248,113,113,0.08)', border:'rgba(248,113,113,0.22)' };
+  if (['partially true','mixed'].includes(l))       return { color:'#fbbf24', bg:'rgba(251,191,36,0.08)',  border:'rgba(251,191,36,0.22)' };
+  return { color: DIM, bg: SURF, border: LINE };
 };
 
-const BLANK_TAB = () => ({
-  id: Date.now(),
-  title: 'New Audit',
-  input: '', results: null, mode: 'normal',
-  step: 0, logs: [], elapsed: 0,
-  mediaFiles: [], mediaResults: null, error: null,
-  expandedClaim: null, confidenceFilter: 0,
-  loading: false, mediaLoading: false,
-});
+const VerdictBadge = ({ verdict }) => {
+  const s = verdictStyle(verdict);
+  return (
+    <span style={{ color:s.color, background:s.bg, border:`1px solid ${s.border}`, fontSize:9, letterSpacing:'0.12em', fontWeight:700, textTransform:'uppercase', padding:'4px 10px', borderRadius:4, whiteSpace:'nowrap', fontFamily:'DM Mono,monospace' }}>
+      {verdict || 'Pending'}
+    </span>
+  );
+};
 
+/* ─── Score arc ───────────────────────────────────────────────── */
+const ScoreArc = ({ score }) => {
+  const r = 50, circ = 2 * Math.PI * r;
+  const dash = (Math.min(100, score) / 100) * circ;
+  const color = score >= 70 ? GOLD : score >= 40 ? '#fbbf24' : '#f87171';
+  return (
+    <svg viewBox="0 0 112 112" width="112" height="112" style={{ transform:'rotate(-90deg)' }}>
+      <circle cx="56" cy="56" r={r} fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="5" />
+      <circle cx="56" cy="56" r={r} fill="none" stroke={color} strokeWidth="5"
+        strokeDasharray={`${dash} ${circ}`} strokeLinecap="round"
+        style={{ transition:'stroke-dasharray 1.2s cubic-bezier(.4,0,.2,1)' }} />
+    </svg>
+  );
+};
+
+/* ═══════════════════════════════════════════════════════════════ */
 export default function Verify() {
-  const [tabs, setTabs]           = useState([BLANK_TAB()]);
-  const [activeTabIdx, setActive] = useState(0);
-  const [dragOver, setDragOver]   = useState(false);
-  const fileInputRef              = useRef(null);
+  const [url,            setUrl]            = useState('');
+  const [text,           setText]           = useState('');
+  const [loading,        setLoading]        = useState(false);
+  const [results,        setResults]        = useState(null);
+  const [error,          setError]          = useState(null);
+  const [step,           setStep]           = useState(0);
+  const [logs,           setLogs]           = useState([]);
+  const [elapsed,        setElapsed]        = useState(0);
+  const [recentDossiers, setRecentDossiers] = useState([]);
+  const [activeFilter,   setActiveFilter]   = useState('All');
+  const [mode,           setMode]           = useState('normal');
+  const [listening,      setListening]      = useState(false);
+  const [voiceReady,     setVoiceReady]     = useState(false);
+  const [interim,        setInterim]        = useState('');
 
-  const activeTab = tabs[activeTabIdx];
-  const update    = (patch) => setTabs(p => p.map((t,i) => i === activeTabIdx ? { ...t, ...patch } : t));
+  const recRef     = useRef(null);
+  const abortRef   = useRef(null);
+  const navigate   = useNavigate();
 
-  /* ── tab management ── */
-  const addTab = () => { setTabs(p => [...p, BLANK_TAB()]); setActive(tabs.length); };
-  const closeTab = (e, idx) => {
-    e.stopPropagation();
-    if (tabs.length === 1) { update(BLANK_TAB()); return; }
-    setTabs(p => p.filter((_,i) => i !== idx));
-    setActive(Math.max(0, idx - 1));
-  };
+  /* ── Voice ── */
+  useEffect(() => {
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (SR) setVoiceReady(true);
+  }, []);
 
-  const modes = [
-    { id: 'normal', label: 'Express',    icon: <Zap size={13} />,         desc: '~1 min' },
-    { id: 'deep',   label: 'Deep',       icon: <Search size={13} />,       desc: '~2 min' },
-    { id: 'pro',    label: 'Pro Agent',  icon: <BrainCircuit size={13} />, desc: '~3 min' },
-  ];
+  const toggleVoice = useCallback(() => {
+    if (listening) {
+      recRef.current?.stop();
+      setListening(false);
+      setInterim('');
+      return;
+    }
 
-  const pipeline = [
-    { title: 'Extract',  icon: <FileText size={16} /> },
-    { title: 'Research', icon: <Search size={16} />   },
-    { title: 'Audit',    icon: <BrainCircuit size={16} /> },
-    { title: 'Report',   icon: <ShieldCheck size={16} /> },
-  ];
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SR) return;
 
-  /* ── verify ── */
-  const handleVerify = async () => {
-    if (!activeTab.input.trim()) return;
-    update({
-      loading: true, results: null, error: null, step: 1, elapsed: 0,
-      logs: [{ msg: `Initializing ${activeTab.mode.toUpperCase()} pipeline…`, id: Date.now() }],
-      title: activeTab.input.slice(0, 18) + (activeTab.input.length > 18 ? '…' : ''),
-    });
+    const rec = new SR();
+    rec.continuous = true;
+    rec.interimResults = true;
+    rec.lang = 'en-US';
+
+    rec.onresult = (e) => {
+      let fin = '', tmp = '';
+      for (let i = e.resultIndex; i < e.results.length; i++) {
+        const t = e.results[i][0].transcript;
+        if (e.results[i].isFinal) fin += t; else tmp += t;
+      }
+      setInterim(tmp);
+
+      if (fin) {
+        const lowerFinal = fin.toLowerCase();
+        const triggers = ['analyze', 'analyse', 'verify', 'run verification', 'audit now', 'start audit'];
+        const foundTrigger = triggers.find(t => lowerFinal.includes(t));
+
+        if (foundTrigger) {
+          const content = fin.trim();
+          const triggerIdx = content.toLowerCase().indexOf(foundTrigger);
+          const prefix = content.substring(0, triggerIdx).trim();
+          if (prefix) setText(p => p ? `${p.trimEnd()} ${prefix}` : prefix);
+          
+          setInterim('');
+          rec.stop();
+          setListening(false);
+          setTimeout(() => {
+             const btn = document.getElementById('vfy-run-btn');
+             if (btn && !btn.disabled) btn.click();
+          }, 400); 
+        } else {
+          setText(p => p ? `${p.trimEnd()} ${fin.trim()}` : fin.trim());
+          setInterim('');
+        }
+      }
+    };
+
+    rec.onerror = () => { setListening(false); setInterim(''); };
+    rec.onend = () => { setListening(false); setInterim(''); };
+
     try {
-      const isUrl    = /^https?:\/\/[^\s$.?#].[^\s]*$/gm.test(activeTab.input);
-      const payload  = isUrl ? { url: activeTab.input, mode: activeTab.mode } : { text: activeTab.input, mode: activeTab.mode };
-      const thoughts = [
-        'Decomposing semantic structure…',
-        'Extracting atomic factual claims…',
-        'Ranking claims by verifiability…',
-        'Generating targeted search queries…',
-        'Cross-referencing primary sources…',
-        'Resolving conflicting evidence…',
-        'Applying Chain-of-Thought verification…',
-      ];
-      const clock   = setInterval(() => setTabs(p => p.map((t,i) => i===activeTabIdx ? {...t,elapsed:(t.elapsed||0)+1} : t)), 1000);
-      const stepper = setInterval(() => setTabs(p => p.map((t,i) => i===activeTabIdx ? {...t,step:Math.min(t.step+1,4)} : t)), 5000);
-      const logger  = setInterval(() => setTabs(p => p.map((t,i) => i===activeTabIdx ? {...t,logs:[...(t.logs||[]).slice(-5),{msg:thoughts[Math.floor(Math.random()*thoughts.length)],id:Date.now()}]} : t)), 2500);
-
-      const res = await axios.post(`${API_BASE}/verify`, payload);
-      [clock, stepper, logger].forEach(clearInterval);
-
-      const emoji = res.data.truthScore >= 80 ? '✓ ' : res.data.truthScore > 40 ? '~ ' : '✗ ';
-      update({ step:4, results:res.data, loading:false,
-        logs:[...(activeTab.logs||[]),{msg:'Verification complete.',id:Date.now()}],
-        title: emoji + activeTab.title });
-      if (res.data.truthScore >= 80) confetti({ particleCount:120, spread:70, origin:{y:0.6} });
+      rec.start();
+      recRef.current = rec;
+      setListening(true);
     } catch (err) {
-      update({ error: err.response?.data?.error || 'Verification failed.', step:0, loading:false });
+      console.error('SR Start failed:', err);
+    }
+  }, [listening]);
+
+  /* ── History ── */
+  useEffect(() => {
+    axios.get(`${API_BASE}/history?limit=10`).then(r => setRecentDossiers(r.data)).catch(() => {});
+  }, []);
+
+  const filteredDossiers = (activeFilter === 'All' ? recentDossiers : recentDossiers.filter(d => {
+    const v = (d.topClaims?.[0]?.verdict || d.claims?.[0]?.verdict || '').toLowerCase();
+    if (activeFilter === 'Verified')     return ['true','accurate','verified'].includes(v);
+    if (activeFilter === 'Refuted')      return ['false','inaccurate'].includes(v);
+    if (activeFilter === 'Inconclusive') return ['partially true','mixed','inconclusive'].includes(v);
+    return true;
+  })).slice(0, 3);
+
+  /* ── Run analysis ── */
+  const handleVerify = useCallback(async () => {
+    const input = url.trim() || text.trim();
+    if (!input) return;
+    if (listening) { recRef.current?.stop(); setListening(false); setInterim(''); }
+
+    setLoading(true); setResults(null); setError(null);
+    setStep(1); setElapsed(0);
+    setLogs([{ msg: 'Initializing analysis pipeline…', id: Date.now() }]);
+
+    const controller = new AbortController();
+    abortRef.current = controller;
+
+    try {
+      const payload = url.trim() ? { url: url.trim(), mode } : { text: text.trim(), mode };
+      const thoughts = [
+        'Deconstructing source narrative…','Extracting verifiable assertions…',
+        'Cross-referencing fact indices…', 'Querying live OSINT streams…',
+        'Semantic integrity analysis…',    'Consensus aggregation — 3 agents…',
+        'Validating academic provenance…', 'Assembling forensic dossier…',
+      ];
+      const clock   = setInterval(() => setElapsed(e => e + 1), 1000);
+      const stepper = setInterval(() => setStep(s => Math.min(s + 1, 3)), 4000);
+      const logger  = setInterval(() => setLogs(l => [...l.slice(-8), { msg: thoughts[Math.floor(Math.random() * thoughts.length)], id: Date.now() }]), 2000);
+      
+      const res = await axios.post(`${API_BASE}/verify`, payload, { signal: controller.signal });
+      
+      [clock, stepper, logger].forEach(clearInterval);
+      setStep(4); setResults(res.data); setLoading(false);
+      if (res.data.truthScore >= 80) confetti({ particleCount: 40, spread: 55, origin: { y: 0.7 }, colors: [GOLD, '#fff'] });
+    } catch (err) {
+      if (!axios.isCancel(err)) {
+        setError('Analysis interrupted or connection lost.');
+      }
+      setStep(0); setLoading(false);
+    }
+  }, [url, text, mode, listening]);
+
+  const handleCancel = () => {
+    if (abortRef.current) {
+      abortRef.current.abort();
+      setLoading(false);
+      setStep(0);
+      setLogs([]);
     }
   };
 
-  const handleReset = () => update({ ...BLANK_TAB(), id: activeTab.id });
+  const canRun = !!(url.trim() || text.trim() || interim.trim());
 
-  const handleFileSelect = (files) => {
-    const valid = Array.from(files).filter(f => f.type.startsWith('image/') || f.type.startsWith('video/')).slice(0,5);
-    update({ mediaFiles: [...(activeTab.mediaFiles||[]), ...valid].slice(0,5) });
-  };
-  const handleDrop = (e) => { e.preventDefault(); setDragOver(false); handleFileSelect(e.dataTransfer.files); };
-  const removeFile = (idx) => update({ mediaFiles: activeTab.mediaFiles.filter((_,i)=>i!==idx), mediaResults:null });
+  const MODES = [
+    { id:'normal', label:'Standard',      sub:'Fast consensus',         icon:Activity  },
+    { id:'deep',   label:'Deep Research', sub:'Exhaustive OSINT',       icon:Search    },
+    { id:'pro',    label:'Pro Forensic',  sub:'Multi-agent academic',   icon:ShieldCheck },
+  ];
 
-  const handleAnalyzeMedia = async () => {
-    if (!activeTab.mediaFiles.length) return;
-    update({ mediaResults:null, mediaLoading:true });
-    try {
-      const fd = new FormData();
-      activeTab.mediaFiles.forEach(f => fd.append('media', f));
-      const res = await axios.post(`${API_BASE}/analyze-media`, fd, { headers:{'Content-Type':'multipart/form-data'} });
-      update({ mediaResults:res.data, mediaLoading:false });
-    } catch(err) { update({ error:err.response?.data?.error||'Media analysis failed.', mediaLoading:false }); }
-  };
-
-  const handleExportPDF = () => {
-    const el = document.getElementById('report-section');
-    if (!el) return;
-    html2pdf().set({ margin:0.5, filename:'VeriCheck_Report.pdf', image:{type:'jpeg',quality:0.98},
-      html2canvas:{scale:2}, jsPDF:{unit:'in',format:'a4',orientation:'portrait'} }).from(el).save();
-  };
-
-  /* ════════════════════════════════
-     RENDER
-  ════════════════════════════════ */
+  /* ────────────────────────────── render ────────────────────────── */
   return (
-    <motion.div
-      initial={{ opacity:0 }} animate={{ opacity:1 }}
-      className="flex flex-col min-h-screen bg-[#07080f] select-none"
-    >
-      {/* ── Tab Bar ── */}
-      <div className="flex items-end gap-0.5 px-6 border-b border-white/[0.06] bg-black/60 backdrop-blur-xl pt-20 overflow-x-auto no-scrollbar">
-        {tabs.map((t,i) => (
-          <div key={t.id} onClick={() => setActive(i)}
-            className={`group flex items-center gap-2.5 px-5 py-3 cursor-pointer min-w-[130px] max-w-[190px] rounded-t-lg border-t border-x transition-all duration-200
-              ${i===activeTabIdx
-                ? 'bg-white/[0.05] border-white/[0.08] text-white'
-                : 'bg-transparent border-transparent text-white/30 hover:text-white/60 hover:bg-white/[0.02]'}`}
-          >
-            <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${i===activeTabIdx ? 'bg-primary' : 'bg-white/20'}`} />
-            <span className="text-[10px] font-bold uppercase tracking-widest truncate flex-1">{t.title}</span>
-            <button onClick={(e)=>closeTab(e,i)}
-              className="opacity-0 group-hover:opacity-100 w-4 h-4 flex items-center justify-center rounded hover:bg-red-500/20 hover:text-red-400 transition-all flex-shrink-0">
-              <X size={9} />
-            </button>
-          </div>
-        ))}
-        <button onClick={addTab}
-          className="flex items-center gap-1.5 px-4 py-3 mb-0 text-white/30 hover:text-primary transition-all rounded-t-lg hover:bg-primary/10 text-[10px] font-bold uppercase tracking-widest flex-shrink-0">
-          <Plus size={12} /> New
-        </button>
-      </div>
+    <div style={{ minHeight:'calc(100vh - 60px)', background:'#08080E', color:TEXT, fontFamily:"'DM Sans',system-ui,sans-serif", display:'flex', paddingBottom:64 }}>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600&family=DM+Serif+Display@0;1&family=DM+Mono:wght@400;500&display=swap');
 
-      {/* ── Main ── */}
-      <main className="max-w-3xl mx-auto px-6 py-16 w-full flex-1 flex flex-col">
+        /* ── inputs ── */
+        .vf-input {
+          width:100%; box-sizing:border-box;
+          background:rgba(255,255,255,0.04);
+          border:1px solid rgba(255,255,255,0.09);
+          border-radius:10px; color:${TEXT};
+          font-family:'DM Sans',system-ui,sans-serif;
+          font-size:14px; outline:none;
+          transition:border-color .2s,background .2s,box-shadow .2s;
+        }
+        .vf-input::placeholder { color:${DIM}; }
+        .vf-input:focus {
+          border-color:rgba(201,168,76,.5);
+          background:rgba(201,168,76,.035);
+          box-shadow:0 0 0 3px rgba(201,168,76,.08);
+        }
+        .vf-url  { padding:13px 16px 13px 42px; }
+        .vf-area { padding:16px 52px 16px 16px; resize:none; min-height:200px; line-height:1.75; }
 
-        {/* ════ IDLE STATE ════ */}
+        /* ── primary CTA ── */
+        .vf-run {
+          background:${GOLD}; color:#08080E; border:none; border-radius:9px;
+          padding:13px 28px; font-family:'DM Sans',system-ui,sans-serif;
+          font-weight:600; font-size:14px; cursor:pointer;
+          display:inline-flex; align-items:center; gap:8px;
+          box-shadow:0 4px 20px rgba(201,168,76,.28);
+          transition:opacity .18s,transform .15s,box-shadow .18s;
+        }
+        .vf-run:hover:not(:disabled) { opacity:.88; transform:translateY(-1px); box-shadow:0 6px 28px rgba(201,168,76,.42); }
+        .vf-run:active:not(:disabled){ transform:none; }
+        .vf-run:disabled { opacity:.28; cursor:default; box-shadow:none; }
+
+        /* ── ghost button ── */
+        .vf-ghost {
+          background:rgba(255,255,255,0.04); color:${MUTED};
+          border:1px solid rgba(255,255,255,0.09); border-radius:9px;
+          padding:13px 20px; font-family:'DM Sans',system-ui,sans-serif;
+          font-weight:500; font-size:14px; cursor:pointer;
+          display:inline-flex; align-items:center; gap:7px;
+          transition:border-color .2s,color .2s;
+        }
+        .vf-ghost:hover { border-color:rgba(255,255,255,.16); color:${TEXT}; }
+
+        /* ── mic ── */
+        .vf-mic {
+          position:absolute; bottom:12px; right:12px;
+          width:34px; height:34px; border-radius:50%; border:none;
+          background:rgba(255,255,255,0.06);
+          display:flex; align-items:center; justify-content:center;
+          cursor:pointer; transition:background .2s,box-shadow .2s;
+          flex-shrink:0;
+        }
+        .vf-mic:hover { background:rgba(236,72,153,.14); }
+        .vf-mic.on {
+          background:rgba(236,72,153,.15);
+          box-shadow:0 0 0 3px rgba(236,72,153,.15), 0 0 18px rgba(236,72,153,.25);
+          animation:mic-pulse 1.5s ease-in-out infinite;
+        }
+        @keyframes mic-pulse {
+          0%,100%{ box-shadow:0 0 0 3px rgba(236,72,153,.15),0 0 18px rgba(236,72,153,.25); }
+          50%    { box-shadow:0 0 0 6px rgba(236,72,153,.07),0 0 26px rgba(236,72,153,.35); }
+        }
+
+        /* ── mode cards ── */
+        .vf-mode {
+          background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08);
+          border-radius:11px; padding:15px 16px; cursor:pointer;
+          display:flex; align-items:center; gap:12px; text-align:left;
+          transition:border-color .2s,background .2s;
+        }
+        .vf-mode:hover:not(.on){ border-color:rgba(255,255,255,.14); }
+        .vf-mode.on { border-color:rgba(201,168,76,.5); background:rgba(201,168,76,.07); }
+
+        /* ── dossier rows ── */
+        .vf-dos {
+          padding:13px 15px; border-radius:10px;
+          border:1px solid rgba(255,255,255,0.06);
+          background:rgba(255,255,255,0.02);
+          cursor:pointer; display:flex; gap:10px; align-items:flex-start;
+          transition:border-color .18s,background .18s;
+        }
+        .vf-dos:hover { border-color:rgba(255,255,255,.13); background:rgba(255,255,255,.04); }
+
+        /* ── claim rows ── */
+        .vf-claim {
+          padding:20px 24px; border-bottom:1px solid rgba(255,255,255,.05);
+          display:grid; grid-template-columns:130px 1fr 76px;
+          gap:18px; align-items:start; transition:background .15s;
+        }
+        .vf-claim:last-child { border-bottom:none; }
+        .vf-claim:hover { background:rgba(255,255,255,.02); }
+
+        /* ── filter tabs ── */
+        .vf-tab {
+          background:none; border:none; cursor:pointer;
+          font-family:'DM Sans',system-ui,sans-serif;
+          font-size:11px; font-weight:500; padding:4px 10px;
+          border-radius:1000px; color:${DIM}; transition:background .18s,color .18s;
+        }
+        .vf-tab.on { background:rgba(201,168,76,.13); color:${GOLD}; }
+        .vf-tab:hover:not(.on){ color:${MUTED}; }
+        
+        .vf-transcript {
+          position: absolute; bottom: 55px; left: 16px; right: 55px;
+          background: rgba(8,8,14,0.95); border: 1px solid ${GOLD_L};
+          border-radius: 8px; padding: 12px 14px;
+          font-family: 'DM Mono', monospace; font-size: 11px; color: ${GOLD};
+          box-shadow: 0 4px 25px rgba(0,0,0,0.4);
+          z-index: 10; pointer-events: none;
+          display: flex; gap: 10px; align-items: flex-start;
+        }
+
+        /* ── misc ── */
+        .vf-chip { display:flex; align-items:center; gap:4px; font-size:10px; color:${DIM}; font-family:'DM Mono',monospace; }
+        .vf-link { background:none; border:none; cursor:pointer; font-family:'DM Sans',system-ui,sans-serif; font-size:11px; color:${DIM}; text-decoration:underline; text-decoration-color:transparent; transition:color .2s,text-decoration-color .2s; padding:0; }
+        .vf-link:hover { color:${GOLD}; text-decoration-color:${GOLD}; }
+        .ft-btn { background:none; border:none; cursor:pointer; font-size:11px; color:${DIM}; padding:0; transition:color .2s; font-family:'DM Sans',system-ui,sans-serif; }
+        .ft-btn:hover { color:${MUTED}; }
+        
+        /* ── voice waveform ── */
+        @keyframes vwave { 0%,100%{height:3px} 50%{height:13px} }
+        .vf-wave span { display:inline-block; width:3px; border-radius:3px; background:${MIC_C}; margin:0 1.5px; animation:vwave .75s ease-in-out infinite; }
+        .vf-wave span:nth-child(2){ animation-delay:.1s }
+        .vf-wave span:nth-child(3){ animation-delay:.2s }
+        .vf-wave span:nth-child(4){ animation-delay:.12s }
+        .vf-wave span:nth-child(5){ animation-delay:.05s }
+      `}</style>
+
+      <Sidebar activeFilter={activeFilter} onFilterChange={setActiveFilter} />
+
+      <main style={{ flex:1, maxWidth:1080, margin:'0 auto', padding:'0 44px', width:'100%', overflowY:'auto' }}>
         <AnimatePresence mode="wait">
-        {!activeTab.results && !activeTab.loading && (
-          <motion.div key="idle"
-            initial={{opacity:0,y:16}} animate={{opacity:1,y:0}} exit={{opacity:0,y:-8}}
-            className="flex flex-col flex-1 justify-center gap-10"
-          >
-            {/* Wordmark */}
-            <div className="text-center">
-              <div className="inline-flex items-center gap-3 mb-3">
-                <div className="w-9 h-9 rounded-xl bg-primary/20 border border-primary/30 flex items-center justify-center">
-                  <FileSearch size={18} className="text-primary" />
+
+          {/* ═══ WORKBENCH ═══ */}
+          {!loading && !results && (
+            <motion.div key="wb"
+              initial={{ opacity:0, y:12 }} animate={{ opacity:1, y:0 }}
+              exit={{ opacity:0, y:-8 }} transition={{ duration:.35, ease:[.4,0,.2,1] }}
+              style={{ paddingTop:6, paddingBottom:40 }}
+            >
+              <header style={{ marginBottom:1 }}>
+                <h1 style={{ fontFamily:"'DM Serif Display',Georgia,serif", fontSize:'clamp(34px,4vw,54px)', fontWeight:400, color:TEXT, lineHeight:1.1, letterSpacing:'-0.022em', marginBottom:12 }}>
+                  Initiate an Audit.
+                </h1>
+                <p style={{ fontSize:17, color:MUTED, lineHeight:1.7, maxWidth:650 }}>
+                  Cross-examine claims against verified archival data and live intelligence sources.
+                </p>
+              </header>
+
+              <div style={{ marginBottom:32 }}>
+                <p style={{ fontFamily:'DM Mono,monospace', fontSize:9, color:DIM, textTransform:'uppercase', letterSpacing:'0.14em', marginBottom:10 }}>Analysis depth</p>
+                <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:8 }}>
+                  {MODES.map(m => (
+                    <button key={m.id} onClick={() => setMode(m.id)} className={`vf-mode ${mode===m.id?'on':''}`}>
+                      <div style={{ width:30, height:30, borderRadius:8, flexShrink:0, background:mode===m.id ? GOLD_L : 'rgba(255,255,255,0.05)', display:'flex', alignItems:'center', justifyContent:'center' }}>
+                        <m.icon size={14} color={mode===m.id ? GOLD : DIM} />
+                      </div>
+                      <div>
+                        <div style={{ fontSize:13, fontWeight:500, color:mode===m.id ? TEXT : MUTED, marginBottom:2 }}>{m.label}</div>
+                        <div style={{ fontSize:11, color:DIM }}>{m.sub}</div>
+                      </div>
+                    </button>
+                  ))}
                 </div>
-                <span className="text-sm font-black uppercase tracking-[0.25em] text-white/80">VeriCheck</span>
               </div>
-              <p className="text-white/25 text-xs font-medium tracking-widest uppercase">Forensic Intelligence Engine</p>
-            </div>
 
-            {/* Command Box */}
-            <div className="relative group">
-              {/* glow halo */}
-              <div className="absolute -inset-px rounded-2xl bg-gradient-to-r from-primary/30 via-transparent to-primary/20 opacity-0 group-focus-within:opacity-100 transition-opacity duration-700 blur-sm" />
+              <div style={{ display:'grid', gridTemplateColumns:'1fr 276px', gap:24 }}>
+                <div style={{ display:'flex', flexDirection:'column', gap:16 }}>
+                  <div>
+                    <label style={{ display:'block', fontFamily:'DM Mono,monospace', fontSize:9, color:DIM, textTransform:'uppercase', letterSpacing:'0.12em', marginBottom:8 }}>
+                      Source URL
+                    </label>
+                    <div style={{ position:'relative' }}>
+                      <LinkIcon size={14} color={DIM} style={{ position:'absolute', left:13, top:'50%', transform:'translateY(-50%)', pointerEvents:'none' }} />
+                      <input type="text" value={url} onChange={e=>setUrl(e.target.value)}
+                        placeholder="https://example.com/article"
+                        className="vf-input vf-url" />
+                    </div>
+                  </div>
 
-              <div className="relative rounded-2xl border border-white/[0.07] bg-[#0d0e18] overflow-hidden shadow-[0_24px_60px_rgba(0,0,0,0.6)] group-focus-within:border-primary/30 transition-colors duration-300">
-                {/* textarea */}
-                <textarea
-                  value={activeTab.input}
-                  onChange={e => update({ input:e.target.value })}
-                  onKeyDown={e => { if(e.key==='Enter' && e.metaKey) handleVerify(); }}
-                  placeholder="Paste a claim, article URL, or narrative to audit…"
-                  className="w-full bg-transparent px-7 pt-7 pb-20 text-[15px] text-white/90 outline-none placeholder:text-white/15 resize-none min-h-[200px] leading-[1.75] font-medium"
-                />
+                  <div style={{ display:'flex', alignItems:'center', gap:12 }}>
+                    <div style={{ flex:1, height:1, background:LINE }} />
+                    <span style={{ fontSize:11, color:DIM }}>or paste text</span>
+                    <div style={{ flex:1, height:1, background:LINE }} />
+                  </div>
 
-                {/* bottom toolbar */}
-                <div className="absolute bottom-0 inset-x-0 flex items-center justify-between px-4 py-3 border-t border-white/[0.05] bg-black/30 backdrop-blur-md">
-                  {/* mode pills */}
-                  <div className="flex items-center gap-1">
-                    {modes.map(m => (
-                      <button key={m.id} onClick={() => update({ mode:m.id })}
-                        className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all duration-300
-                          ${activeTab.mode===m.id
-                            ? 'bg-primary/20 text-primary border border-primary/30'
-                            : 'text-white/30 hover:text-white/60 hover:bg-white/[0.04] border border-transparent'}`}>
-                        {React.cloneElement(m.icon,{size:11})}
-                        <span className="hidden sm:inline">{m.label}</span>
-                        <span className="text-[9px] opacity-50 hidden md:inline">{m.desc}</span>
-                      </button>
+                  <div>
+                    <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:8 }}>
+                      <label style={{ fontFamily:'DM Mono,monospace', fontSize:9, color:DIM, textTransform:'uppercase', letterSpacing:'0.12em' }}>
+                        Claim or article text
+                      </label>
+                      <div style={{ display:'flex', alignItems:'center', gap:10 }}>
+                        {listening && (
+                          <div style={{ display:'flex', alignItems:'center', gap:7 }}>
+                            <div className="vf-wave"><span/><span/><span/><span/><span/></div>
+                            <span style={{ fontFamily:'DM Mono,monospace', fontSize:9, color:MIC_C }}>Listening…</span>
+                          </div>
+                        )}
+                        <span style={{ fontFamily:'DM Mono,monospace', fontSize:10, color:DIM }}>
+                          {(text + interim).length}/8,000
+                        </span>
+                      </div>
+                    </div>
+
+                    <div style={{ position:'relative' }}>
+                      <textarea
+                        value={text + (interim ? (text ? ' ' : '') + interim : '')}
+                        onChange={e => { if (!listening) setText(e.target.value); }}
+                        readOnly={listening}
+                        maxLength={8000}
+                        placeholder={voiceReady
+                          ? 'Type or paste text here. Click the mic to speak — say "analyze" to run automatically…'
+                          : 'Paste the claim or article for comprehensive cross-examination…'
+                        }
+                        className="vf-input vf-area"
+                      />
+                      
+                      {listening && interim && (
+                        <div className="vf-transcript">
+                          <span style={{ fontSize: 10, opacity: 0.5, marginTop: 2 }}>[LIVE TRANSCRIPT]</span>
+                          <span style={{ lineHeight: 1.4 }}>{interim}</span>
+                        </div>
+                      )}
+                      
+                      {voiceReady && (
+                        <button onClick={toggleVoice} className={`vf-mic ${listening?'on':''}`}
+                          title={listening ? 'Stop recording' : 'Start voice input'}>
+                          {listening ? <MicOff size={14} color={MIC_C}/> : <Mic size={14} color={DIM}/>}
+                        </button>
+                      )}
+                    </div>
+
+                    {voiceReady && (
+                      <div style={{ display:'flex', alignItems:'center', gap:6, marginTop:8 }}>
+                        <Zap size={11} color={DIM} />
+                        <span style={{ fontSize:11, color:DIM }}>
+                          {listening
+                            ? <>Say <strong style={{ color:MIC_C }}>"analyze"</strong> to trigger verification hands-free</>
+                            : <>Click mic to dictate · say <strong style={{ color:GOLD }}>"analyze"</strong> to run automatically</>
+                          }
+                        </span>
+                      </div>
+                    )}
+                  </div>
+
+                  <div style={{ display:'flex', alignItems:'center', gap:10, paddingTop:4 }}>
+                    <button id="vfy-run-btn" className="vf-run" onClick={handleVerify} disabled={!canRun}>
+                      <Gavel size={15} /> Run Verification
+                    </button>
+                    <button className="vf-ghost">
+                      <Upload size={13} /> Import File
+                    </button>
+                    {error && <span style={{ fontSize:12, color:'#f87171', marginLeft:4 }}>{error}</span>}
+                  </div>
+                </div>
+
+                <div style={{ display:'flex', flexDirection:'column', gap:20 }}>
+                  <div style={{ background:SURF, border:`1px solid ${LINE}`, borderRadius:12, padding:'18px 18px' }}>
+                    <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:14, paddingBottom:12, borderBottom:`1px solid ${LINE}` }}>
+                      <span style={{ fontFamily:'DM Mono,monospace', fontSize:9, color:DIM, letterSpacing:'0.12em', textTransform:'uppercase' }}>Engine</span>
+                      <span style={{ fontFamily:'DM Mono,monospace', fontSize:9, color:'#4ade80', fontWeight:500 }}>● Operational</span>
+                    </div>
+                    {[['Neural Engine','v4.2'],['Fact Index','4m ago'],['Latency','24 ms']].map(([k,v],i) => (
+                      <div key={i} style={{ display:'flex', justifyContent:'space-between', marginBottom:i<2?10:0 }}>
+                        <span style={{ fontSize:12, color:MUTED }}>{k}</span>
+                        <span style={{ fontFamily:'DM Mono,monospace', fontSize:11, color:DIM }}>{v}</span>
+                      </div>
                     ))}
                   </div>
 
-                  {/* Analyze button */}
-                  <button onClick={handleVerify}
-                    disabled={!activeTab.input.trim()}
-                    className="flex items-center gap-2 px-6 py-2 bg-primary hover:bg-primary-hover disabled:opacity-20 disabled:pointer-events-none text-white text-[11px] font-black uppercase tracking-[0.18em] rounded-lg border border-white/10 shadow-glow transition-all active:scale-95">
-                    Analyze <ChevronRight size={13} className="opacity-70"/>
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            {/* Feature hints */}
-            <div className="flex items-center justify-center gap-8 flex-wrap">
-              {[
-                { icon:<Globe size={12}/>,  label:'Live Web Research'  },
-                { icon:<Layers size={12}/>, label:'Multi-Source Audit'  },
-                { icon:<Cpu size={12}/>,    label:'Bias Synthesis'      },
-              ].map((f,i) => (
-                <div key={i} className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-widest text-white/20">
-                  <span className="text-primary/40">{f.icon}</span>{f.label}
-                </div>
-              ))}
-            </div>
-
-            {/* Error banner */}
-            {activeTab.error && (
-              <div className="flex items-center gap-3 px-5 py-3.5 rounded-xl bg-red-500/[0.08] border border-red-500/20 text-red-400 text-sm font-semibold">
-                <ShieldAlert size={16} className="flex-shrink-0" />
-                {activeTab.error}
-              </div>
-            )}
-
-            {/* ── Media Upload ── */}
-            <div className="pt-10 border-t border-white/[0.05]">
-              <div className="flex items-center gap-2.5 mb-6">
-                <Sparkles size={12} className="text-emerald-400" />
-                <span className="text-[10px] font-black uppercase tracking-[0.25em] text-emerald-400/70">Neural Forensics Engine</span>
-              </div>
-
-              <div
-                onDragOver={e=>{e.preventDefault();setDragOver(true)}}
-                onDragLeave={()=>setDragOver(false)}
-                onDrop={handleDrop}
-                onClick={()=>fileInputRef.current?.click()}
-                className={`relative rounded-2xl border-2 border-dashed p-12 text-center cursor-pointer transition-all duration-500
-                  ${dragOver
-                    ? 'border-emerald-500/50 bg-emerald-500/[0.04]'
-                    : 'border-white/[0.06] hover:border-white/[0.12] bg-white/[0.01] hover:bg-white/[0.02]'}`}>
-                <input ref={fileInputRef} type="file" multiple accept="image/*,video/*" className="hidden"
-                  onChange={e=>handleFileSelect(e.target.files)} />
-                <div className="flex items-center justify-center gap-8 mb-5 opacity-25 hover:opacity-60 transition-opacity">
-                  <Image size={28} className="text-emerald-400" />
-                  <Film  size={28} className="text-emerald-400" />
-                </div>
-                <p className="text-sm font-bold text-white/50 mb-1">Drop media files to scan for deepfakes</p>
-                <p className="text-[10px] uppercase tracking-widest text-white/20 font-semibold">Images & Video · Up to 5 files</p>
-              </div>
-
-              {/* File chips */}
-              {activeTab.mediaFiles?.length > 0 && (
-                <div className="mt-4 flex flex-wrap gap-2">
-                  {activeTab.mediaFiles.map((f,i) => (
-                    <div key={i} className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white/[0.05] border border-white/[0.08] text-[11px] font-semibold text-white/60">
-                      {f.type.startsWith('image/') ? <Image size={12}/> : <Film size={12}/>}
-                      <span className="max-w-[120px] truncate">{f.name}</span>
-                      <button onClick={()=>removeFile(i)} className="text-white/30 hover:text-red-400 transition-colors"><X size={10}/></button>
-                    </div>
-                  ))}
-                  <button onClick={handleAnalyzeMedia}
-                    className="flex items-center gap-1.5 px-4 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/25 text-emerald-400 text-[11px] font-black uppercase tracking-widest hover:bg-emerald-500/20 transition-all">
-                    <Sparkles size={11}/> Scan Media
-                  </button>
-                </div>
-              )}
-            </div>
-          </motion.div>
-        )}
-
-        {/* ════ LOADING STATE ════ */}
-        {activeTab.loading && (
-          <motion.div key="loading"
-            initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}}
-            className="flex flex-col items-center justify-center flex-1 py-16 gap-12"
-          >
-            {/* Spinner */}
-            <div className="relative">
-              <div className="w-20 h-20 rounded-full border border-primary/15 border-t-primary animate-spin" />
-              <div className="w-20 h-20 rounded-full border border-primary/5 border-b-primary/40 animate-spin absolute inset-0" style={{animationDuration:'3s',animationDirection:'reverse'}} />
-              <div className="absolute inset-0 flex items-center justify-center text-primary">
-                <BrainCircuit size={28} className="animate-pulse" />
-              </div>
-            </div>
-
-            <div className="text-center">
-              <p className="text-2xl font-black tracking-tight text-white mb-1">Reasoning Grid Active</p>
-              <p className="text-[10px] font-black uppercase tracking-[0.3em] text-white/20">{activeTab.elapsed||0}s elapsed</p>
-            </div>
-
-            {/* Pipeline steps */}
-            <div className="w-full grid grid-cols-4 gap-3">
-              {pipeline.map((p,i) => {
-                const state = activeTab.step === i+1 ? 'active' : activeTab.step > i+1 ? 'done' : 'idle';
-                return (
-                  <div key={i}
-                    className={`p-5 rounded-xl border transition-all duration-500
-                      ${state==='active' ? 'border-primary/40 bg-primary/[0.06] shadow-glow'
-                      : state==='done'   ? 'border-white/[0.08] bg-white/[0.02] opacity-60'
-                      :                    'border-white/[0.04] opacity-20'}`}>
-                    <div className={`mb-3 ${state==='active'?'text-primary':state==='done'?'text-white/50':'text-white/20'}`}>{p.icon}</div>
-                    <div className="text-[9px] font-black uppercase tracking-widest text-white/50 mb-2">{p.title}</div>
-                    <div className="h-0.5 w-full bg-white/[0.05] rounded-full overflow-hidden">
-                      <motion.div className="h-full bg-primary rounded-full"
-                        initial={{width:0}}
-                        animate={{width: state==='done'?'100%' : state==='active'?'65%' : '0%'}}
-                        transition={{duration:0.6,ease:'easeOut'}} />
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-
-            {/* Log terminal */}
-            <div className="w-full rounded-xl border border-white/[0.05] bg-black/50 p-5 font-mono text-[11px] h-[160px] overflow-hidden space-y-1.5">
-              <AnimatePresence>
-                {activeTab.logs.slice(-6).map(log => (
-                  <motion.div key={log.id}
-                    initial={{opacity:0,x:-8}} animate={{opacity:1,x:0}} exit={{opacity:0}}
-                    className="flex gap-3 items-start">
-                    <span className="text-white/15 flex-shrink-0">{new Date(log.id).toLocaleTimeString()}</span>
-                    <span className="text-primary/70 font-black uppercase text-[9px] tracking-widest flex-shrink-0 pt-0.5">SYS</span>
-                    <span className="text-white/50">{log.msg}</span>
-                  </motion.div>
-                ))}
-              </AnimatePresence>
-            </div>
-          </motion.div>
-        )}
-
-        {/* ════ RESULTS STATE ════ */}
-        {activeTab.results && !activeTab.loading && (
-          <motion.div key="results" id="report-section"
-            initial={{opacity:0,y:16}} animate={{opacity:1,y:0}}
-            className="mt-8 space-y-6"
-          >
-            {/* ── Hero Score Card ── */}
-            <div
-              className={`relative rounded-2xl border p-8 ${scoreBorder(activeTab.results.truthScore)} ${scoreBg(activeTab.results.truthScore)}`}
-              style={{boxShadow: scoreGlow(activeTab.results.truthScore)}}
-            >
-              {/* Watermark — clipped inside its own contained div, not the card */}
-              <div className="absolute inset-0 rounded-2xl overflow-hidden pointer-events-none">
-                <ShieldCheck
-                  size={220}
-                  className="absolute right-[-20px] top-1/2 -translate-y-1/2 opacity-[0.035]"
-                  style={{ color: scoreColor(activeTab.results.truthScore) }}
-                />
-              </div>
-
-              <div className="relative z-10 flex flex-col md:flex-row items-start md:items-center gap-8">
-
-                {/* ── Score tile — fixed size, always visible ── */}
-                <div
-                  className="flex-shrink-0 w-32 h-32 rounded-2xl flex flex-col items-center justify-center gap-1.5"
-                  style={{
-                    background: scoreBg(activeTab.results.truthScore),
-                    border: `1.5px solid ${scoreBorder(activeTab.results.truthScore)}`,
-                    boxShadow: scoreGlow(activeTab.results.truthScore),
-                  }}
-                >
-                  <span
-                    className="font-black leading-none tabular-nums"
-                    style={{
-                      color: scoreColor(activeTab.results.truthScore),
-                      fontSize: Math.round(activeTab.results.truthScore) === 100 ? '1.85rem' : '2.4rem',
-                      letterSpacing: '-0.04em',
-                    }}
-                  >
-                    {Math.round(activeTab.results.truthScore)}%
-                  </span>
-                  <span className="text-[8px] font-black uppercase tracking-[0.22em] text-white/30">Confidence</span>
-                </div>
-
-                {/* ── Verdict + meta — fills remaining space ── */}
-                <div className="flex-1 min-w-0">
-                  <p className="text-[9px] font-black uppercase tracking-[0.3em] text-white/20 mb-2">Verdict</p>
-                  <h2
-                    className="font-black tracking-tight leading-none mb-4"
-                    style={{ color: scoreColor(activeTab.results.truthScore), fontSize: 'clamp(1.6rem, 4vw, 2.5rem)' }}
-                  >
-                    {scoreLabel(activeTab.results.truthScore)}
-                  </h2>
-                  <p className="text-sm text-white/40 leading-relaxed mb-6">
-                    <span className="text-white/65 font-semibold">{activeTab.results.claims?.length||0} claims</span>
-                    {' '}audited ·{' '}
-                    <span className="text-white/65 font-semibold">{Math.round(activeTab.results.truthScore)}% confidence</span>
-                    {' '}across primary sources.
-                  </p>
-
-                  {/* Actions */}
-                  <div className="flex items-center gap-2.5 flex-wrap">
-                    <button onClick={handleExportPDF}
-                      className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white/[0.05] border border-white/[0.08] text-white/50 text-[10px] font-black uppercase tracking-widest hover:bg-white/[0.09] hover:text-white/80 transition-all">
-                      <Download size={12}/> PDF
-                    </button>
-                    <button onClick={handleReset}
-                      className="flex items-center gap-2 px-4 py-2 rounded-lg bg-red-500/[0.07] border border-red-500/20 text-red-400/80 text-[10px] font-black uppercase tracking-widest hover:bg-red-500/[0.12] transition-all">
-                      <Zap size={12}/> New Audit
-                    </button>
-                    <button onClick={() => {
-                      const txt = activeTab.results.claims?.map(c=>`[${c.verdict}] ${c.claim}`).join('\n')||'';
-                      navigator.clipboard.writeText(`VeriCheck · ${Math.round(activeTab.results.truthScore)}% confidence\n\n${txt}`);
-                    }} className="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary/[0.08] border border-primary/20 text-primary text-[10px] font-black uppercase tracking-widest hover:bg-primary/[0.14] transition-all">
-                      Copy Summary
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* ── Stats row ── */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-
-              {/* Verdict Distribution — left, full height, chart + breakdown */}
-              <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-6 hover:border-white/[0.08] transition-colors flex flex-col gap-5">
-                <p className="text-[9px] font-black uppercase tracking-[0.25em] text-white/25">Verdict Distribution</p>
-
-                {/* Chart centred with good breathing room */}
-                <div className="flex justify-center py-3">
-                  <VerdictPieChart claims={activeTab.results.claims} />
-                </div>
-
-                {/* Verdict count chips */}
-                <div className="grid grid-cols-2 gap-2 pt-1 border-t border-white/[0.05]">
-                  {[
-                    { label: 'Verified',  key: ['true','accurate','verified'],        color: '#10b981', bg: 'rgba(16,185,129,0.07)',   border: 'rgba(16,185,129,0.2)'  },
-                    { label: 'False',     key: ['false','inaccurate'],                color: '#ef4444', bg: 'rgba(239,68,68,0.07)',    border: 'rgba(239,68,68,0.2)'   },
-                    { label: 'Partial',   key: ['partially true','mixed'],            color: '#f59e0b', bg: 'rgba(245,158,11,0.07)',   border: 'rgba(245,158,11,0.2)'  },
-                    { label: 'Unknown',   key: [],                                    color: '#64748b', bg: 'rgba(100,116,139,0.07)',  border: 'rgba(100,116,139,0.2)' },
-                  ].map((v,i) => {
-                    const claims = activeTab.results.claims || [];
-                    const n = i < 3
-                      ? claims.filter(c => v.key.includes((c.verdict||'').toLowerCase())).length
-                      : claims.filter(c => !['true','accurate','verified','false','inaccurate','partially true','mixed'].includes((c.verdict||'').toLowerCase())).length;
-                    return (
-                      <div key={i} className="flex items-center justify-between px-3 py-2 rounded-lg"
-                        style={{ background: v.bg, border: `1px solid ${v.border}` }}>
-                        <span className="text-[9px] font-black uppercase tracking-widest" style={{ color: v.color }}>{v.label}</span>
-                        <span className="text-sm font-black" style={{ color: v.color }}>{n}</span>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* AI Detection — right, compact, no overflow */}
-              <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-6 hover:border-white/[0.08] transition-colors flex flex-col gap-5">
-                <p className="text-[9px] font-black uppercase tracking-[0.25em] text-white/25">AI-Generated Probability</p>
-
-                {/* Big number */}
-                <div className="flex items-end gap-2">
-                  <span className="text-5xl font-black tracking-tight text-white/85 leading-none tabular-nums">
-                    {activeTab.results.aiTextDetection?.score||0}
-                  </span>
-                  <span className="text-xl font-black text-white/30 mb-1">%</span>
-                </div>
-
-                {/* Visual bar */}
-                <div className="w-full h-1.5 rounded-full bg-white/[0.06] overflow-hidden">
-                  <div
-                    className="h-full rounded-full transition-all duration-700"
-                    style={{
-                      width: `${activeTab.results.aiTextDetection?.score||0}%`,
-                      background: (activeTab.results.aiTextDetection?.score||0) > 60
-                        ? '#ef4444'
-                        : (activeTab.results.aiTextDetection?.score||0) > 30
-                        ? '#f59e0b'
-                        : '#10b981',
-                    }}
-                  />
-                </div>
-
-                {/* Status label */}
-                <div className="flex items-center gap-2">
-                  <div
-                    className="w-1.5 h-1.5 rounded-full"
-                    style={{
-                      background: (activeTab.results.aiTextDetection?.score||0) > 60 ? '#ef4444'
-                        : (activeTab.results.aiTextDetection?.score||0) > 30 ? '#f59e0b' : '#10b981'
-                    }}
-                  />
-                  <span className="text-[10px] font-black uppercase tracking-widest text-white/35">
-                    {(activeTab.results.aiTextDetection?.score||0) > 60 ? 'Likely AI-generated'
-                      : (activeTab.results.aiTextDetection?.score||0) > 30 ? 'Possibly AI-generated'
-                      : 'Likely human-written'}
-                  </span>
-                </div>
-
-                {/* Explanation — capped height, no overflow */}
-                <div className="rounded-lg bg-black/25 border border-white/[0.05] p-4 flex-1">
-                  <p className="text-[11px] text-white/35 leading-relaxed line-clamp-[8]">
-                    {activeTab.results.aiTextDetection?.explanation || 'No synthetic patterns detected in the submitted text.'}
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {/* ── Claims ── */}
-            <div>
-              <div className="flex items-center gap-3 mb-5 pt-2">
-                <BrainCircuit size={18} className="text-primary" />
-                <h3 className="text-base font-black uppercase tracking-widest text-white/70">
-                  Verified Claims <span className="text-white/25 font-semibold ml-1">({activeTab.results.claims?.length||0})</span>
-                </h3>
-              </div>
-
-              <div className="space-y-3">
-                {activeTab.results.claims?.map((c,i) => (
-                  <div key={i}
-                    className="rounded-xl border border-white/[0.06] bg-white/[0.015] hover:border-primary/25 hover:bg-primary/[0.02] transition-all duration-300 cursor-pointer overflow-hidden"
-                    onClick={() => update({ expandedClaim: activeTab.expandedClaim===i ? null : i })}>
-
-                    {/* Claim row */}
-                    <div className="flex items-center gap-5 p-5">
-                      <span className={`text-[9px] font-black uppercase tracking-widest py-1 px-4 rounded-full border flex-shrink-0 ${verdictPill(c.verdict)}`}>
-                        {c.verdict||'?'}
-                      </span>
-                      <p className="flex-1 text-sm font-semibold text-white/75 leading-snug">{c.claim}</p>
-                      <div className="flex items-center gap-4 flex-shrink-0">
-                        <span className="text-[10px] font-bold text-white/20 hidden md:block">
-                          {Math.round((c.confidence||0)*100)}%
-                        </span>
-                        <div className={`w-5 h-5 flex items-center justify-center rounded-md transition-all ${activeTab.expandedClaim===i ? 'bg-primary/20 text-primary' : 'text-white/20'}`}>
-                          {activeTab.expandedClaim===i ? <ChevronDown size={14}/> : <ChevronRight size={14}/>}
-                        </div>
+                  <div>
+                    <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:12 }}>
+                      <span style={{ fontFamily:'DM Mono,monospace', fontSize:9, color:DIM, letterSpacing:'0.12em', textTransform:'uppercase' }}>Recent</span>
+                      <div style={{ display:'flex', gap:2 }}>
+                        {['All','Verified','Refuted'].map(f => (
+                          <button key={f} onClick={() => setActiveFilter(f)} className={`vf-tab ${activeFilter===f?'on':''}`}>{f}</button>
+                        ))}
                       </div>
                     </div>
 
-                    {/* Expanded detail */}
-                    <AnimatePresence>
-                      {activeTab.expandedClaim===i && (
-                        <motion.div
-                          initial={{height:0,opacity:0}} animate={{height:'auto',opacity:1}} exit={{height:0,opacity:0}}
-                          transition={{duration:0.25,ease:'easeInOut'}}
-                          className="overflow-hidden border-t border-white/[0.05]">
-                          <div className="p-6 space-y-6">
-                            {/* Reasoning */}
-                            <p className="text-sm text-white/40 leading-relaxed italic border-l-2 border-primary/30 pl-4">
-                              "{c.reasoning}"
-                            </p>
-
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                              {/* Evidence */}
-                              <div>
-                                <div className="flex items-center gap-2 text-[9px] font-black uppercase tracking-[0.2em] text-emerald-400/60 mb-4 pb-3 border-b border-emerald-500/10">
-                                  <ExternalLink size={12}/> Evidence
-                                </div>
-
-                                {/* ── Entity / person card ── */}
-                                {c.entityMetadata && (
-                                  <div className="flex items-center gap-4 p-4 rounded-xl border border-white/[0.07] bg-white/[0.03] mb-4 group/ent">
-                                    {c.entityMetadata.image ? (
-                                      <div className="w-14 h-14 rounded-xl overflow-hidden border border-white/10 flex-shrink-0 bg-black/40">
-                                        <img
-                                          src={c.entityMetadata.image}
-                                          alt={c.entityMetadata.name}
-                                          className="w-full h-full object-cover group-hover/ent:scale-110 transition-transform duration-500"
-                                        />
-                                      </div>
-                                    ) : (
-                                      <div className="w-14 h-14 rounded-xl bg-white/[0.04] border border-white/[0.07] flex items-center justify-center flex-shrink-0">
-                                        <User size={20} className="text-white/20" />
-                                      </div>
-                                    )}
-                                    <div className="flex-1 min-w-0">
-                                      <p className="text-sm font-black text-white/80 truncate leading-tight">{c.entityMetadata.name}</p>
-                                      <p className="text-[9px] font-bold text-white/30 uppercase tracking-widest mt-0.5 mb-1">{c.entityMetadata.description}</p>
-                                      <p className="text-[11px] text-white/25 line-clamp-2 leading-relaxed">{c.entityMetadata.extract}</p>
-                                      {c.entityMetadata.wikipediaUrl && (
-                                        <a href={c.entityMetadata.wikipediaUrl} target="_blank" rel="noreferrer"
-                                          className="inline-flex items-center gap-1 mt-1.5 text-[9px] font-black uppercase tracking-widest text-primary/50 hover:text-primary transition-colors">
-                                          Wikipedia <ExternalLink size={8}/>
-                                        </a>
-                                      )}
-                                    </div>
-                                  </div>
-                                )}
-                                <div className="space-y-3">
-                                  {c.evidence?.map((ev,ei) => (
-                                    <div key={ei} className="flex gap-3">
-                                      <div className="w-1 h-1 rounded-full bg-emerald-400/60 mt-2 flex-shrink-0" />
-                                      <div>
-                                        <p className="text-[12px] text-white/55 leading-relaxed">{ev.text||ev}</p>
-                                        {ev.url && (
-                                          <a href={ev.url} target="_blank" rel="noreferrer"
-                                            className="inline-flex items-center gap-1 mt-1 text-[9px] text-emerald-400/70 hover:text-emerald-400 font-black uppercase tracking-widest transition-colors">
-                                            {ev.source||'Source'} <ExternalLink size={9}/>
-                                          </a>
-                                        )}
-                                      </div>
-                                    </div>
-                                  ))}
-                                </div>
-                              </div>
-
-                              {/* Search queries */}
-                              <div>
-                                <div className="flex items-center gap-2 text-[9px] font-black uppercase tracking-[0.2em] text-primary/60 mb-4 pb-3 border-b border-primary/10">
-                                  <Search size={12}/> Queries Used
-                                </div>
-                                <div className="flex flex-wrap gap-2">
-                                  {c.searchQueriesUsed?.map((q,qi) => (
-                                    <span key={qi}
-                                      className="px-3 py-1 rounded-lg bg-primary/[0.07] border border-primary/[0.12] text-[10px] font-semibold text-primary/70 tracking-wide">
-                                      {q}
-                                    </span>
-                                  ))}
-                                </div>
+                    <div style={{ display:'flex', flexDirection:'column', gap:7 }}>
+                      {filteredDossiers.map((h, i) => {
+                        const v = h.topClaims?.[0]?.verdict || h.claims?.[0]?.verdict || '';
+                        return (
+                          <div key={i} className="vf-dos" onClick={() => navigate(`/history/${h.id}`)}>
+                            <div style={{ flex:1, minWidth:0 }}>
+                              <div style={{ marginBottom:5 }}><VerdictBadge verdict={v} /></div>
+                              <p style={{ fontSize:12, color:MUTED, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis', marginBottom:5 }}>
+                                {h.input || 'Redacted'}
+                              </p>
+                              <div style={{ display:'flex', gap:10 }}>
+                                <span className="vf-chip"><FileText size={9}/> {h.claims?.length||0} claims</span>
+                                <span className="vf-chip"><ShieldCheck size={9}/> {Math.round(h.truthScore)}%</span>
+                                <span className="vf-chip"><Clock size={9}/> {new Date(h.timestamp).toLocaleDateString()}</span>
                               </div>
                             </div>
-
-                            <button
-                              onClick={e => { e.stopPropagation(); navigator.clipboard.writeText(`[${c.verdict}] ${c.claim}\n\n${c.reasoning}`); }}
-                              className="text-[9px] font-black uppercase tracking-widest text-white/20 hover:text-white/50 transition-colors">
-                              Copy chunk ↗
-                            </button>
+                            <ChevronRight size={12} color={DIM} style={{ flexShrink:0, marginTop:3 }} />
                           </div>
-                        </motion.div>
+                        );
+                      })}
+                      {filteredDossiers.length === 0 && (
+                        <div style={{ padding:'20px 12px', textAlign:'center', border:'1px dashed rgba(255,255,255,.07)', borderRadius:10, fontSize:12, color:DIM }}>
+                          No {activeFilter==='All' ? '' : activeFilter.toLowerCase()} dossiers yet.
+                        </div>
                       )}
-                    </AnimatePresence>
+                    </div>
+                    <button className="vf-link" onClick={() => navigate('/history')} style={{ marginTop:10, display:'block' }}>
+                      View full history →
+                    </button>
                   </div>
+                </div>
+              </div>
+            </motion.div>
+          )}
+
+          {loading && (
+            <motion.div key="load" initial={{ opacity:0 }} animate={{ opacity:1 }} exit={{ opacity:0 }} style={{ width:'100%' }}>
+              <AnalysisProcessing 
+                elapsed={elapsed} 
+                step={step} 
+                logs={logs} 
+                inputTitle={url || text.substring(0,100)} 
+                onCancel={handleCancel}
+              />
+            </motion.div>
+          )}
+
+          {results && !loading && (
+            <motion.div key="res"
+              initial={{ opacity:0, y:12 }} animate={{ opacity:1, y:0 }}
+              transition={{ duration:.38, ease:[.4,0,.2,1] }}
+              style={{ paddingTop:48, paddingBottom:80 }}
+            >
+              <div style={{ display:'flex', alignItems:'center', gap:40, padding:'32px 36px', background:'rgba(201,168,76,0.06)', border:'1px solid rgba(201,168,76,0.18)', borderRadius:16, marginBottom:36 }}>
+                <div style={{ position:'relative', width:112, height:112, flexShrink:0, display:'flex', alignItems:'center', justifyContent:'center' }}>
+                  <ScoreArc score={results.truthScore} />
+                  <div style={{ position:'absolute', display:'flex', flexDirection:'column', alignItems:'center' }}>
+                    <span style={{ fontFamily:"'DM Serif Display',Georgia,serif", fontSize:28, fontWeight:400, color:TEXT, lineHeight:1 }}>{Math.round(results.truthScore)}</span>
+                    <span style={{ fontFamily:'DM Mono,monospace', fontSize:8, color:GOLD, letterSpacing:'0.08em' }}>/100</span>
+                  </div>
+                </div>
+
+                <div style={{ flex:1 }}>
+                  <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:10 }}>
+                    <Sparkles size={13} color={GOLD} />
+                    <span style={{ fontFamily:'DM Mono,monospace', fontSize:10, color:GOLD, letterSpacing:'0.12em', textTransform:'uppercase' }}>Forensic Summary</span>
+                  </div>
+                  <h2 style={{ fontFamily:"'DM Serif Display',Georgia,serif", fontSize:30, fontWeight:400, color:TEXT, letterSpacing:'-0.018em', marginBottom:8, lineHeight:1.15 }}>
+                    Audit Complete.
+                  </h2>
+                  <p style={{ fontSize:14, color:MUTED, lineHeight:1.65 }}>
+                    Confidence index of <strong style={{ color:TEXT }}>{Math.round(results.truthScore)}%</strong> derived from {results.claims?.length} verified assertions.
+                  </p>
+                </div>
+
+                <div style={{ display:'flex', flexDirection:'column', gap:8, flexShrink:0 }}>
+                  <button className="vf-run" onClick={() => navigate(`/history/${results.reportId}`)} style={{ justifyContent:'center' }}>
+                    Open Dossier <ChevronRight size={14}/>
+                  </button>
+                  <button className="vf-link" style={{ textAlign:'center' }}
+                    onClick={() => { setResults(null); setUrl(''); setText(''); }}>
+                    Start new audit
+                  </button>
+                </div>
+              </div>
+
+              <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:14 }}>
+                <h3 style={{ fontFamily:"'DM Serif Display',Georgia,serif", fontSize:24, fontWeight:400, color:TEXT, letterSpacing:'-0.01em' }}>
+                  Verified Assertions
+                </h3>
+                <span style={{ fontFamily:'DM Mono,monospace', fontSize:10, color:DIM }}>{results.claims?.length} claims reviewed</span>
+              </div>
+
+              <div style={{ background:'rgba(255,255,255,0.02)', border:`1px solid ${LINE}`, borderRadius:14, overflow:'hidden' }}>
+                <div style={{ display:'grid', gridTemplateColumns:'130px 1fr 76px', gap:18, padding:'10px 24px', borderBottom:`1px solid ${LINE}`, background:'rgba(255,255,255,0.025)' }}>
+                  {['Verdict','Assertion & Reasoning','Confidence'].map(h => (
+                    <span key={h} style={{ fontFamily:'DM Mono,monospace', fontSize:9, fontWeight:700, letterSpacing:'0.12em', color:DIM, textTransform:'uppercase' }}>{h}</span>
+                  ))}
+                </div>
+                {results.claims?.map((c, i) => (
+                  <motion.div key={i} className="vf-claim"
+                    initial={{ opacity:0, x:-8 }} animate={{ opacity:1, x:0 }}
+                    transition={{ delay:i * .05, duration:.28 }}>
+                    <div style={{ paddingTop:2 }}><VerdictBadge verdict={c.verdict} /></div>
+                    <div>
+                      <p style={{ fontSize:14, fontWeight:500, color:TEXT, lineHeight:1.55, marginBottom:5 }}>{c.claim}</p>
+                      <p style={{ fontSize:12, color:DIM, lineHeight:1.55 }}>{c.reasoning}</p>
+                    </div>
+                    <div style={{ textAlign:'right' }}>
+                      <span style={{ fontFamily:'DM Mono,monospace', fontSize:18, fontWeight:500, color:Math.round((c.confidence||0)*100) >= 70 ? GOLD : DIM }}>
+                        {Math.round((c.confidence||0)*100)}<span style={{ fontSize:10, opacity:.5 }}>%</span>
+                      </span>
+                    </div>
+                  </motion.div>
                 ))}
               </div>
-            </div>
-          </motion.div>
-        )}
+            </motion.div>
+          )}
         </AnimatePresence>
       </main>
-    </motion.div>
+    </div>
   );
 }

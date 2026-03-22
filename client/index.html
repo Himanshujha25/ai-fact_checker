@@ -1,18 +1,30 @@
-
 <!doctype html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <link rel="icon" type="image/png" href="https://lh3.googleusercontent.com/aida-public/AB6AXuDjUYtJ0yORs6yPNTdJwSZr__L9nULtru8NP22BYdhBdhZ6B0cJN-JsxA4LCxnq6j2pU2IQkS6GblpdOG0o3gysYwpbLCeQ83wt2WvMf9M92JJWiFzRi63m8paImUIBEq2ZIB6HMVlsxCVQqs_hzrEJdDm30tKnoUduOKeVbc4vgZja05-8yA0Tn7J8j7qmWg2O07LITQ_-vmFQCa81mJvkhJeIjTnQ5hhhHaygn5S9EWhmQX1yTF_Sx5nCPrNgu8416xaiMPc6aCo" />
+    <link rel="apple-touch-icon" href="https://lh3.googleusercontent.com/aida-public/AB6AXuDjUYtJ0yORs6yPNTdJwSZr__L9nULtru8NP22BYdhBdhZ6B0cJN-JsxA4LCxnq6j2pU2IQkS6GblpdOG0o3gysYwpbLCeQ83wt2WvMf9M92JJWiFzRi63m8paImUIBEq2ZIB6HMVlsxCVQqs_hzrEJdDm30tKnoUduOKeVbc4vgZja05-8yA0Tn7J8j7qmWg2O07LITQ_-vmFQCa81mJvkhJeIjTnQ5hhhHaygn5S9EWhmQX1yTF_Sx5nCPrNgu8416xaiMPc6aCo" />
+    <link rel="manifest" href="/manifest.json" />
+    <meta name="theme-color" content="#003d9b" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>VeriCheck | AI Fact & Claim Verification</title>
-    <!-- Google Fonts for premium typography -->
+    <title>The Verified Editorial | Digital Jurist Protocol</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@200;400;600;800&family=Inter:wght@100;400;700;900&family=Libre+Baskerville:ital,wght@0,400;1,400&display=swap" rel="stylesheet">
   </head>
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sw.js')
+            .then(reg => console.log('SW registered'))
+            .catch(err => console.log('SW registration failed', err));
+        });
+      }
+    </script>
   </body>
 </html>

@@ -1,177 +1,60 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Clock, ChevronRight, Trash2, ShieldAlert,
-  Database, Fingerprint, Plus, ArrowUpRight
+  Clock, Trash2, ShieldAlert, Plus,
+  Layers, History as HistoryIcon, ArrowUpRight, Loader2
 } from 'lucide-react';
 import axios from 'axios';
+import Sidebar from '../components/Sidebar';
 
 const API_BASE = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
-  ? '/api' 
+  ? '/api'
   : 'https://ai-fact-checker-rvih.onrender.com/api';
 
-/* ── score helpers ── */
-const scoreColor = s => s > 70 ? '#10b981' : s > 40 ? '#f59e0b' : '#ef4444';
-const scoreBg    = s => s > 70 ? 'rgba(16,185,129,0.06)' : s > 40 ? 'rgba(245,158,11,0.06)' : 'rgba(239,68,68,0.06)';
-const scoreBorder= s => s > 70 ? 'rgba(16,185,129,0.18)' : s > 40 ? 'rgba(245,158,11,0.18)' : 'rgba(239,68,68,0.18)';
-const scoreLabel = s => s > 70 ? 'Verified' : s > 40 ? 'Mixed' : 'False';
+/* ─── Design tokens ───────────────────────────────────────────── */
+const GOLD  = '#C9A84C';
+const GOLD2 = 'rgba(201,168,76,0.10)';
+const LINE  = 'rgba(255,255,255,0.07)';
+const TEXT  = '#E8E4DC';
+const MUTED = 'rgba(232,228,220,0.38)';
+const DIM   = 'rgba(232,228,220,0.18)';
+const SURF  = 'rgba(255,255,255,0.035)';
 
-/* ── mini bar chart (verdict distribution) ── */
-const VerdictBar = ({ claims = [] }) => {
-  const total = claims.length || 1;
-  const t = claims.filter(c => ['true','accurate','verified'].includes((c.verdict||'').toLowerCase())).length;
-  const f = claims.filter(c => ['false','inaccurate'].includes((c.verdict||'').toLowerCase())).length;
-  const p = claims.filter(c => ['partially true','mixed'].includes((c.verdict||'').toLowerCase())).length;
-  const u = total - t - f - p;
-  const segs = [
-    { n: t, color: '#10b981' },
-    { n: p, color: '#f59e0b' },
-    { n: f, color: '#ef4444' },
-    { n: u, color: 'rgba(255,255,255,0.1)' },
-  ].filter(s => s.n > 0);
+/* ─── Verdict helpers ─────────────────────────────────────────── */
+const verdictMeta = (v) => {
+  const l = v?.toLowerCase();
+  if (['true', 'accurate', 'verified'].includes(l))
+    return { color: '#4ade80', bg: 'rgba(74,222,128,0.08)', border: 'rgba(74,222,128,0.2)' };
+  if (['false', 'inaccurate'].includes(l))
+    return { color: '#f87171', bg: 'rgba(248,113,113,0.08)', border: 'rgba(248,113,113,0.2)' };
+  if (['partially true', 'mixed'].includes(l))
+    return { color: '#fbbf24', bg: 'rgba(251,191,36,0.08)', border: 'rgba(251,191,36,0.2)' };
+  return { color: DIM, bg: SURF, border: LINE };
+};
+
+const VerdictBadge = ({ verdict }) => {
+  const m = verdictMeta(verdict);
   return (
-    <div className="flex h-1 w-full rounded-full overflow-hidden gap-px">
-      {segs.map((s, i) => (
-        <div key={i} style={{ flex: s.n, background: s.color }} />
-      ))}
-    </div>
+    <span style={{
+      color: m.color, background: m.bg, border: `1px solid ${m.border}`,
+      fontSize: 9, letterSpacing: '0.12em', fontWeight: 700,
+      textTransform: 'uppercase', padding: '4px 10px', borderRadius: 4,
+      whiteSpace: 'nowrap', fontFamily: "'DM Mono', monospace",
+    }}>
+      {verdict || 'Processed'}
+    </span>
   );
 };
 
-/* ════════════════════════
-   CONFIRM MODAL
-════════════════════════ */
-const DeleteModal = ({ isOpen, onClose, onConfirm }) => (
-  <AnimatePresence>
-    {isOpen && (
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-6">
-        <motion.div
-          initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-          className="absolute inset-0 bg-black/70 backdrop-blur-sm"
-          onClick={onClose}
-        />
-        <motion.div
-          initial={{ scale: 0.96, opacity: 0, y: 12 }}
-          animate={{ scale: 1,    opacity: 1, y: 0  }}
-          exit={{    scale: 0.96, opacity: 0, y: 12 }}
-          transition={{ duration: 0.2, ease: [0.16,1,0.3,1] }}
-          className="relative w-full max-w-sm bg-[#0d0e18] border border-white/[0.08] rounded-2xl p-8 shadow-[0_32px_80px_rgba(0,0,0,0.7)]"
-        >
-          {/* Icon */}
-          <div className="w-11 h-11 rounded-xl bg-red-500/10 border border-red-500/20 flex items-center justify-center mb-6">
-            <Trash2 size={18} className="text-red-400" />
-          </div>
-
-          <h3 className="text-lg font-black tracking-tight text-white mb-2">Delete all records?</h3>
-          <p className="text-sm text-white/35 leading-relaxed mb-7">
-            All verification reports will be permanently removed. This cannot be undone.
-          </p>
-
-          <div className="flex gap-3">
-            <button onClick={onClose}
-              className="flex-1 py-3 rounded-xl bg-white/[0.04] border border-white/[0.07] text-white/50 text-xs font-bold uppercase tracking-widest hover:bg-white/[0.08] transition-all">
-              Cancel
-            </button>
-            <button onClick={onConfirm}
-              className="flex-1 py-3 rounded-xl bg-red-500 text-white text-xs font-black uppercase tracking-widest hover:bg-red-600 transition-all shadow-[0_4px_20px_rgba(239,68,68,0.3)]">
-              Delete All
-            </button>
-          </div>
-        </motion.div>
-      </div>
-    )}
-  </AnimatePresence>
-);
-
-/* ════════════════════════
-   HISTORY ROW
-════════════════════════ */
-const HistoryRow = ({ h, index }) => {
-  const score  = Math.round(h.truthScore || 0);
-  const date   = new Date(h.timestamp);
-  const claims = h.claims || h.topClaims || [];
-
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: index * 0.05, duration: 0.35, ease: [0.16,1,0.3,1] }}
-    >
-      <Link to={`/history/${h.id}`}
-        className="group flex items-center gap-6 px-6 py-5 rounded-xl border border-white/[0.05] bg-white/[0.015]
-          hover:border-white/[0.1] hover:bg-white/[0.03] transition-all duration-200 relative overflow-hidden"
-      >
-        {/* Score pill & Thumbnail */}
-        <div className="relative flex-shrink-0 group-hover:scale-[1.02] transition-transform duration-500">
-          <div
-            className="w-16 h-16 rounded-xl flex flex-col items-center justify-center gap-0.5 relative z-10 overflow-hidden"
-            style={{ background: scoreBg(score), border: `1px solid ${scoreBorder(score)}` }}
-          >
-            {h.thumbnail && (
-              <img src={h.thumbnail} alt="" className="absolute inset-0 w-full h-full object-cover opacity-[0.08] mix-blend-overlay group-hover:opacity-[0.15] transition-opacity" />
-            )}
-            <span className="text-xl font-black leading-none tracking-tight" style={{ color: scoreColor(score) }}>
-              {score}%
-            </span>
-            <span className="text-[8px] font-black uppercase tracking-widest" style={{ color: scoreColor(score), opacity: 0.6 }}>
-              {scoreLabel(score)}
-            </span>
-          </div>
-          {/* Subtle glow for Verified */}
-          {score > 70 && (
-             <div className="absolute inset-0 bg-emerald-500/20 blur-xl rounded-full -z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-          )}
-        </div>
-
-        {/* Main content */}
-        <div className="flex-1 min-w-0">
-          <p className="text-sm font-semibold text-white/80 group-hover:text-white transition-colors truncate mb-2">
-            {h.input || 'Untitled Report'}
-          </p>
-
-          {/* Verdict bar */}
-          {claims.length > 0 && (
-            <div className="mb-2.5">
-              <VerdictBar claims={claims} />
-            </div>
-          )}
-
-          {/* Meta row */}
-          <div className="flex items-center gap-4">
-            <span className="text-[10px] text-white/20 font-medium">
-              {date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-            </span>
-            <span className="text-white/10">·</span>
-            <span className="text-[10px] text-white/20 font-medium">
-              {claims.length} claim{claims.length !== 1 ? 's' : ''}
-            </span>
-            {h.mode && (
-              <>
-                <span className="text-white/10">·</span>
-                <span className="text-[10px] text-white/20 font-medium capitalize">{h.mode} mode</span>
-              </>
-            )}
-          </div>
-        </div>
-
-        {/* Arrow */}
-        <ArrowUpRight
-          size={16}
-          className="flex-shrink-0 text-white/15 group-hover:text-white/50 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all duration-200"
-        />
-      </Link>
-    </motion.div>
-  );
-};
-
-/* ════════════════════════
-   MAIN COMPONENT
-════════════════════════ */
+/* ═══════════════════════════════════════════════════════════════ */
 export default function History() {
-  const [history, setHistory]           = useState([]);
-  const [loading, setLoading]           = useState(true);
-  const [showDeleteModal, setShowDelete] = useState(false);
+  const [history, setHistory]             = useState([]);
+  const [loading, setLoading]             = useState(true);
+  const [showDeleteModal, setShowDelete]  = useState(false);
+  const [activeFilter, setActiveFilter]   = useState('All');
+  const [activeTab, setActiveTab]         = useState('All Records');
+  const navigate = useNavigate();
 
   useEffect(() => {
     axios.get(`${API_BASE}/history`)
@@ -179,107 +62,326 @@ export default function History() {
       .catch(() => setLoading(false));
   }, []);
 
+  const filteredHistory = activeFilter === 'All'
+    ? history
+    : history.filter(h => {
+        const v = (h.topClaims?.[0]?.verdict || h.claims?.[0]?.verdict || '').toLowerCase();
+        if (activeFilter === 'Verified')    return ['true', 'accurate', 'verified'].includes(v);
+        if (activeFilter === 'Refuted')     return ['false', 'inaccurate'].includes(v);
+        if (activeFilter === 'Inconclusive') return ['partially true', 'mixed', 'inconclusive'].includes(v);
+        return true;
+      });
+
   const handleDeleteAll = async () => {
     try {
       await axios.delete(`${API_BASE}/history`);
-      setHistory([]);
-      setShowDelete(false);
+      setHistory([]); setShowDelete(false);
     } catch (err) {
       alert('Failed to clear history: ' + err.message);
     }
   };
 
-  /* aggregate stats */
-  const avg     = history.length ? Math.round(history.reduce((a,h)=>a+(h.truthScore||0),0)/history.length) : 0;
-  const highest = history.length ? Math.round(Math.max(...history.map(h=>h.truthScore||0))) : 0;
+  const avg = history.length
+    ? Math.round(history.reduce((a, h) => a + (h.truthScore || 0), 0) / history.length)
+    : 0;
+
+  const tabs = ['All Records', 'Priority', 'Redundant'];
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4, ease: [0.16,1,0.3,1] }}
-      className="max-w-3xl mx-auto px-6 pb-24 pt-16"
-    >
-      <DeleteModal
-        isOpen={showDeleteModal}
-        onClose={() => setShowDelete(false)}
-        onConfirm={handleDeleteAll}
-      />
+    <div style={{ background: '#08080E', minHeight: 'calc(100vh - 64px)', color: TEXT, fontFamily: "'DM Sans', system-ui, sans-serif", display: 'flex' }}>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600&family=DM+Serif+Display@0;1&family=DM+Mono:wght@400;500&display=swap');
 
-      {/* ── Header ── */}
-      <div className="flex items-start justify-between gap-6 mb-10">
-        <div>
-          <div className="flex items-center gap-2 mb-3">
-            <Database size={13} className="text-primary" />
-            <span className="text-[10px] font-black uppercase tracking-[0.25em] text-primary/70">Audit History</span>
+        .hy-row {
+          display: grid;
+          grid-template-columns: 72px 1fr 140px 120px;
+          gap: 24px; align-items: center;
+          padding: 18px 24px;
+          border-bottom: 1px solid ${LINE};
+          text-decoration: none; color: inherit;
+          transition: background 0.18s;
+        }
+        .hy-row:last-child { border-bottom: none; }
+        .hy-row:hover { background: rgba(255,255,255,0.03); }
+        .hy-row:hover .hy-arrow { color: ${GOLD}; transform: translate(2px, -2px); }
+
+        .hy-arrow {
+          display: flex; align-items: center; gap: 5px;
+          font-family: 'DM Mono', monospace;
+          font-size: 10px; color: ${DIM};
+          transition: color 0.2s, transform 0.2s;
+          justify-content: flex-end;
+        }
+
+        .hy-tab {
+          background: none; border: none; cursor: pointer; padding: 0 0 10px;
+          font-family: 'DM Mono', monospace;
+          font-size: 10px; font-weight: 500; letter-spacing: '0.08em';
+          color: ${DIM}; transition: color 0.2s; text-transform: uppercase;
+          letter-spacing: 0.08em;
+          border-bottom: 1.5px solid transparent;
+        }
+        .hy-tab.active { color: ${TEXT}; border-bottom-color: ${GOLD}; }
+        .hy-tab:hover:not(.active) { color: ${MUTED}; }
+
+        .hy-btn-danger {
+          background: rgba(248,113,113,0.07);
+          border: 1px solid rgba(248,113,113,0.18);
+          border-radius: 8px; padding: 9px 16px;
+          font-family: 'DM Sans', system-ui, sans-serif;
+          font-size: 12px; font-weight: 500; color: #f87171;
+          cursor: pointer; display: inline-flex; align-items: center; gap: 6px;
+          transition: background 0.2s;
+        }
+        .hy-btn-danger:hover { background: rgba(248,113,113,0.12); }
+
+        .hy-btn-gold {
+          background: ${GOLD}; color: #08080E; border: none; border-radius: 9px;
+          padding: 12px 22px; cursor: pointer;
+          font-family: 'DM Sans', system-ui, sans-serif;
+          font-weight: 600; font-size: 13px;
+          display: inline-flex; align-items: center; gap: 7px;
+          transition: opacity 0.2s;
+        }
+        .hy-btn-gold:hover { opacity: 0.85; }
+      `}</style>
+
+      <Sidebar activeFilter={activeFilter} onFilterChange={setActiveFilter} />
+
+      <main style={{ flex: 1, maxWidth: 1240, margin: '0 auto', padding: '4px 48px 80px', overflowY: 'auto', width: '100%' }}>
+
+        {/* ── Header ── */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 48, paddingBottom: 32, borderBottom: `1px solid ${LINE}` }}>
+          <div>
+            {/* <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
+              <div style={{ width: 20, height: 1, background: GOLD, opacity: 0.55 }} />
+              <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 10, fontWeight: 500, color: GOLD, letterSpacing: '0.14em', textTransform: 'uppercase' }}>
+                Audit Repository
+              </span>
+            </div> */}
+            <h1 style={{ fontFamily: "'DM Serif Display', Georgia, serif", fontSize: 'clamp(34px, 4vw, 54px)', fontWeight: 400, color: TEXT, letterSpacing: '-0.02em', marginBottom: 12 }}>
+              History.
+            </h1>
+            <p style={{ fontSize: 14, color: MUTED, lineHeight: 1.6, maxWidth: 480 }}>
+              A historical registry of all forensic investigations, verified by the Digital Jurist Protocol.
+            </p>
           </div>
-          <h1 className="text-3xl font-black tracking-tight text-white">
-            Reports
-          </h1>
-          <p className="text-sm text-white/30 mt-1.5">
-            {history.length > 0
-              ? `${history.length} verification record${history.length !== 1 ? 's' : ''} stored`
-              : 'No records yet'}
-          </p>
-        </div>
 
-        {history.length > 0 && (
-          <button
-            onClick={() => setShowDelete(true)}
-            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white/[0.03] border border-white/[0.06] text-white/30 text-[10px] font-black uppercase tracking-widest hover:bg-red-500/[0.07] hover:border-red-500/20 hover:text-red-400 transition-all"
-          >
-            <Trash2 size={12} /> Clear all
-          </button>
-        )}
-      </div>
-
-      {/* ── Stats strip (only when there's data) ── */}
-      {history.length > 0 && (
-        <div className="grid grid-cols-3 gap-3 mb-8">
-          {[
-            { label: 'Total Audits',   value: history.length },
-            { label: 'Avg. Score',     value: `${avg}%`      },
-            { label: 'Top Score',      value: `${highest}%`  },
-          ].map((s,i) => (
-            <div key={i} className="rounded-xl border border-white/[0.05] bg-white/[0.02] px-5 py-4">
-              <p className="text-xl font-black tracking-tight text-white/80 mb-0.5">{s.value}</p>
-              <p className="text-[9px] font-black uppercase tracking-widest text-white/25">{s.label}</p>
+          {/* Stats */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 32, flexShrink: 0 }}>
+            <div style={{ textAlign: 'right' }}>
+              <div style={{ fontFamily: "'DM Serif Display', Georgia, serif", fontSize: 40, fontWeight: 400, color: TEXT, lineHeight: 1 }}>
+                {history.length}
+              </div>
+              <div style={{ fontFamily: "'DM Mono', monospace", fontSize: 9, color: DIM, textTransform: 'uppercase', letterSpacing: '0.1em', marginTop: 4 }}>
+                Total Dossiers
+              </div>
             </div>
-          ))}
-        </div>
-      )}
-
-      {/* ── Content ── */}
-      {loading ? (
-        /* Loading skeleton */
-        <div className="space-y-3">
-          {[...Array(4)].map((_,i) => (
-            <div key={i} className="h-[88px] rounded-xl border border-white/[0.04] bg-white/[0.01] animate-pulse" />
-          ))}
-        </div>
-
-      ) : history.length === 0 ? (
-        /* Empty state */
-        <div className="flex flex-col items-center justify-center py-24 text-center">
-          <div className="w-14 h-14 rounded-2xl bg-white/[0.02] border border-white/[0.05] flex items-center justify-center mb-6 opacity-30">
-            <Fingerprint size={26} />
+            <div style={{ width: 1, height: 36, background: LINE }} />
+            <div style={{ textAlign: 'right' }}>
+              <div style={{ fontFamily: "'DM Serif Display', Georgia, serif", fontSize: 40, fontWeight: 400, color: GOLD, lineHeight: 1 }}>
+                {avg}%
+              </div>
+              <div style={{ fontFamily: "'DM Mono', monospace", fontSize: 9, color: DIM, textTransform: 'uppercase', letterSpacing: '0.1em', marginTop: 4 }}>
+                Avg Veracity
+              </div>
+            </div>
           </div>
-          <p className="text-base font-bold text-white/40 mb-1">No reports found</p>
-          <p className="text-sm text-white/20 mb-8">Start an audit to generate your first report.</p>
-          <Link to="/verify"
-            className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-primary text-white text-xs font-black uppercase tracking-widest shadow-glow hover:-translate-y-0.5 transition-all">
-            <Plus size={14} /> New Audit
-          </Link>
         </div>
 
-      ) : (
-        /* Report list */
-        <div className="space-y-2">
-          {history.map((h, i) => (
-            <HistoryRow key={h.id} h={h} index={i} />
-          ))}
+        {/* ── Toolbar ── */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+          <div style={{ display: 'flex', gap: 28 }}>
+            {tabs.map(t => (
+              <button
+                key={t}
+                className={`hy-tab ${activeTab === t ? 'active' : ''}`}
+                onClick={() => setActiveTab(t)}
+              >
+                {t}
+              </button>
+            ))}
+          </div>
+          <div style={{ display: 'flex', gap: 10 }}>
+            {history.length > 0 && (
+              <button className="hy-btn-danger" onClick={() => setShowDelete(true)}>
+                <Trash2 size={12} /> Purge records
+              </button>
+            )}
+          </div>
         </div>
-      )}
-    </motion.div>
+
+        {/* ── Table ── */}
+        <div style={{
+          background: SURF,
+          border: `1px solid ${LINE}`,
+          borderRadius: 14,
+          overflow: 'hidden',
+        }}>
+          {/* Column headers */}
+          <div style={{
+            display: 'grid', gridTemplateColumns: '72px 1fr 140px 120px',
+            gap: 24, padding: '11px 24px',
+            borderBottom: `1px solid ${LINE}`,
+            background: 'rgba(255,255,255,0.02)',
+          }}>
+            {['Score', 'Assertion', 'Date', ''].map(h => (
+              <span key={h} style={{ fontFamily: "'DM Mono', monospace", fontSize: 9, fontWeight: 700, letterSpacing: '0.12em', color: DIM, textTransform: 'uppercase' }}>
+                {h}
+              </span>
+            ))}
+          </div>
+
+          {loading ? (
+            <div style={{ padding: 80, textAlign: 'center' }}>
+              <Loader2 size={28} color={DIM} style={{ animation: 'rd-spin 0.85s linear infinite', margin: '0 auto' }} />
+              <style>{`@keyframes rd-spin { to { transform: rotate(360deg); } }`}</style>
+            </div>
+          ) : filteredHistory.length === 0 ? (
+            <div style={{ padding: '80px 40px', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16 }}>
+              <div style={{ width: 44, height: 44, borderRadius: 11, background: SURF, border: `1px solid ${LINE}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <HistoryIcon size={20} color={DIM} />
+              </div>
+              <p style={{ fontSize: 15, color: MUTED, fontWeight: 500 }}>
+                No {activeFilter === 'All' ? '' : activeFilter.toLowerCase()} dossiers found.
+              </p>
+              <p style={{ fontSize: 12, color: DIM }}>
+                Audit logs matching this filter will appear here.
+              </p>
+              <button className="hy-btn-gold" onClick={() => navigate('/verify')} style={{ marginTop: 8 }}>
+                <Plus size={14} /> Initiate Audit
+              </button>
+            </div>
+          ) : (
+            filteredHistory.map((h, i) => {
+              const verdict = h.topClaims?.[0]?.verdict || h.claims?.[0]?.verdict || '';
+              return (
+                <motion.div
+                  key={h.id}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: i * 0.04 }}
+                >
+                  <Link to={`/history/${h.id}`} className="hy-row">
+                    {/* Score */}
+                    <div style={{ fontFamily: "'DM Serif Display', Georgia, serif", fontSize: 22, fontWeight: 400, color: TEXT }}>
+                      {Math.round(h.truthScore)}
+                      <span style={{ fontSize: 12, opacity: 0.3 }}>%</span>
+                    </div>
+
+                    {/* Title + badge */}
+                    <div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
+                      {/* Thumbnail */}
+                      <div style={{
+                        width: 72, height: 44, borderRadius: 8, overflow: 'hidden',
+                        background: 'rgba(255,255,255,0.03)', border: `1px solid ${LINE}`,
+                        flexShrink: 0, position: 'relative'
+                      }}>
+                        {h.thumbnail ? (
+                          <img src={h.thumbnail} alt="Ref" style={{ width: '100%', height: '100%', objectFit: 'cover', opacity: 0.7 }} />
+                        ) : (
+                          <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <Layers size={14} color={DIM} />
+                          </div>
+                        )}
+                        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(rgba(0,0,0,0), rgba(0,0,0,0.3))' }} />
+                      </div>
+
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <p style={{ fontSize: 13, fontWeight: 500, color: TEXT, marginBottom: 5, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {h.input || 'Session Redacted'}
+                        </p>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                          <VerdictBadge verdict={verdict} />
+                          <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 9, color: DIM, display: 'flex', alignItems: 'center', gap: 4, opacity: 0.6 }}>
+                            <Layers size={9} /> {h.claimsCount || 0} claims
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Date */}
+                    <div style={{ fontFamily: "'DM Mono', monospace", fontSize: 11, color: DIM }}>
+                      {new Date(h.timestamp).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                    </div>
+
+                    {/* Arrow */}
+                    <div className="hy-arrow">
+                      Open <ArrowUpRight size={12} />
+                    </div>
+                  </Link>
+                </motion.div>
+              );
+            })
+          )}
+        </div>
+      </main>
+
+      {/* ── Delete modal ── */}
+      <AnimatePresence>
+        {showDeleteModal && (
+          <div style={{ position: 'fixed', inset: 0, zIndex: 300, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+            <motion.div
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              onClick={() => setShowDelete(false)}
+              style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(8px)' }}
+            />
+            <motion.div
+              initial={{ scale: 0.96, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.96, opacity: 0 }}
+              style={{
+                position: 'relative',
+                background: 'rgba(14,14,22,0.98)',
+                border: `1px solid rgba(255,255,255,0.1)`,
+                borderRadius: 18, padding: '40px',
+                maxWidth: 400, width: '100%',
+                boxShadow: '0 40px 80px rgba(0,0,0,0.6)',
+              }}
+            >
+              <div style={{ width: 40, height: 40, borderRadius: 10, background: 'rgba(248,113,113,0.08)', border: '1px solid rgba(248,113,113,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 20 }}>
+                <Trash2 size={18} color="#f87171" />
+              </div>
+              <h3 style={{ fontFamily: "'DM Serif Display', Georgia, serif", fontSize: 24, fontWeight: 400, color: TEXT, marginBottom: 10 }}>
+                Purge Registry?
+              </h3>
+              <p style={{ fontSize: 13, color: MUTED, lineHeight: 1.6, marginBottom: 28 }}>
+                This will permanently delete all stored forensic dossiers and audit trails. This action cannot be undone.
+              </p>
+              <div style={{ display: 'flex', gap: 10 }}>
+                <button
+                  onClick={() => setShowDelete(false)}
+                  style={{
+                    flex: 1, padding: '12px', background: SURF,
+                    border: `1px solid ${LINE}`, borderRadius: 9,
+                    fontFamily: "'DM Sans', system-ui, sans-serif",
+                    fontSize: 13, fontWeight: 500, color: MUTED, cursor: 'pointer',
+                    transition: 'border-color 0.2s',
+                  }}
+                  onMouseOver={e => e.currentTarget.style.borderColor = 'rgba(255,255,255,0.15)'}
+                  onMouseOut={e => e.currentTarget.style.borderColor = LINE}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleDeleteAll}
+                  style={{
+                    flex: 1, padding: '12px',
+                    background: '#f87171', border: 'none', borderRadius: 9,
+                    fontFamily: "'DM Sans', system-ui, sans-serif",
+                    fontSize: 13, fontWeight: 600, color: '#08080E', cursor: 'pointer',
+                    transition: 'opacity 0.2s',
+                  }}
+                  onMouseOver={e => e.currentTarget.style.opacity = '0.85'}
+                  onMouseOut={e => e.currentTarget.style.opacity = '1'}
+                >
+                  Confirm Purge
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+    </div>
   );
 }
