@@ -765,6 +765,14 @@ export default function Verify() {
         .vf-url  { padding:13px 16px 13px 42px; }
         .vf-area { padding:16px 52px 16px 16px; resize:none; min-height:140px; line-height:1.75; }
 
+        .vf-credits { 
+          position: absolute; top: 0; right: 0;
+          display: flex; align-items: center; gap: 8px; padding: 6px 14px;
+          background: ${GOLD_L}; border: 1px solid ${GOLD};
+          border-radius: 100px; box-shadow: 0 0 15px ${GOLD_L};
+          z-index: 5;
+        }
+
         .vf-run {
           background:${GOLD}; color:#08080E; border:none; border-radius:9px;
           padding:13px 28px; font-family:'DM Sans',system-ui,sans-serif;
@@ -928,6 +936,13 @@ export default function Verify() {
           .vf-area { min-height: 180px !important; }
           .vf-score-header, .vf-ai-row { margin-bottom: 24px !important; }
           .vf-wb-grid { padding-bottom: 20px !important; }
+          .vf-credits { 
+            position: relative !important; 
+            top: auto !important; 
+            right: auto !important; 
+            margin: 0 auto 20px !important; 
+            display: inline-flex !important;
+          }
         }
 
 
@@ -959,7 +974,7 @@ export default function Verify() {
             >
               <header className="vf-wb-header" style={{ marginBottom:16, position:'relative' }}>
                   {!user && (
-                    <div style={{ position:'absolute', top:0, right:0, display:'flex', alignItems:'center', gap:8, padding:'6px 14px', background:GOLD_L, border:`1px solid ${GOLD}`, borderRadius:100, boxShadow:`0 0 15px ${GOLD_L}` }}>
+                    <div className="vf-credits">
                       <Zap size={11} color={GOLD} fill={GOLD}/>
                       <span style={{ fontFamily:"'DM Mono',monospace", fontSize:9, fontWeight:600, color:GOLD, textTransform:'uppercase', letterSpacing:'0.1em' }}>
                         {credits} / 3 CREDITS
