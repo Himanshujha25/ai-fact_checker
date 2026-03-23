@@ -69,10 +69,7 @@ function createAuditButton(x, y, text) {
 
   btn.onclick = (e) => {
     e.stopPropagation();
-    // Use the dev URL
-    const baseUrl = "http://localhost:3000/verify";
-    const auditUrl = `${baseUrl}?text=${encodeURIComponent(text)}`;
-    window.open(auditUrl, '_blank');
+    chrome.runtime.sendMessage({ action: "openVerification", text: text });
     btn.remove();
   };
 

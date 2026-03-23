@@ -8,15 +8,13 @@ import {
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import Sidebar from '../components/Sidebar';
+import { API_BASE } from '../config';
 import AnalysisProcessing from '../components/AnalysisProcessing';
 import confetti from 'canvas-confetti';
 import html2pdf from 'html2pdf.js';
 import { useAuth } from '../context/AuthContext';
 
-const API_BASE =
-  window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
-    ? '/api'
-    : 'https://ai-fact-checker-rvih.onrender.com/api';
+
 
 const GOLD   = '#C9A84C';
 const GOLD_L = 'rgba(201,168,76,0.12)';

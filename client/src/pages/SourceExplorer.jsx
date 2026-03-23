@@ -7,10 +7,9 @@ import {
 import axios from 'axios';
 import { motion } from 'framer-motion';
 import Sidebar from '../components/Sidebar';
+import { API_BASE } from '../config';
 
-const API_BASE = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
-  ? '/api'
-  : 'https://ai-fact-checker-rvih.onrender.com/api';
+
 
 const GOLD  = '#C9A84C';
 const GOLD_L= 'rgba(201,168,76,0.12)';
@@ -81,7 +80,7 @@ export default function SourceExplorer() {
   return (
     <div style={{ background:'#08080E', minHeight:'calc(100vh - 64px)', color:TEXT, fontFamily:"'DM Sans',system-ui,sans-serif", display:'flex', paddingBottom:64, overflowX:'hidden' }}>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;0,600&family=DM+Serif+Display@0;1&family=DM+Mono:wght@400;500&display=swap');
+
 
         /* ── All original styles, unchanged ── */
         .se-btn-nav {

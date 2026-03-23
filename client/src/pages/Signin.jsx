@@ -45,7 +45,7 @@ export default function Signin() {
   return (
     <div style={{ minHeight:'100vh', background:'#08080E', color:TEXT, fontFamily:"'DM Sans',system-ui,sans-serif", display:'flex', flexDirection:'column' }}>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600&family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@400;500&display=swap');
+
 
         .si-input {
           width:100%; box-sizing:border-box;

@@ -7,10 +7,9 @@ import {
 } from 'lucide-react';
 import axios from 'axios';
 import Sidebar from '../components/Sidebar';
+import { API_BASE } from '../config';
 
-const API_BASE = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
-  ? '/api'
-  : 'https://ai-fact-checker-rvih.onrender.com/api';
+
 
 const GOLD  = '#C9A84C';
 const LINE  = 'rgba(255,255,255,0.07)';
@@ -95,7 +94,7 @@ export default function History() {
   return (
     <div style={{ background: '#08080E', minHeight: 'calc(100vh - 64px)', color: TEXT, fontFamily: "'DM Sans', system-ui, sans-serif", display: 'flex' }}>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;0,600&family=DM+Serif+Display&family=DM+Mono:wght@400;500&display=swap');
+
 
         /* ── Table row — desktop ── */
         .hy-row {

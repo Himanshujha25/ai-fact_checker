@@ -247,7 +247,7 @@ Rules:
   return (
     <div style={{ background: '#08080E', minHeight: 'calc(100vh - 64px)', color: TEXT, fontFamily: "'DM Sans', system-ui, sans-serif", display: 'flex', paddingBottom: 64 }}>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;0,600&family=DM+Serif+Display@0;1&family=DM+Mono:wght@400;500&display=swap');
+
 
         .arch-pipeline-card {
           background: rgba(255,255,255,0.03);

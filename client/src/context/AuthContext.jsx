@@ -4,10 +4,7 @@ import axios from 'axios';
 
 const AuthContext = createContext(null);
 
-const API_BASE = import.meta.env.VITE_API_URL 
-  || (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' 
-      ? '/api' 
-      : 'https://ai-fact-checker-rvih.onrender.com/api');
+import { API_BASE } from '../config';
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);

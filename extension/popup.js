@@ -1,9 +1,7 @@
 document.getElementById('auditBtn').addEventListener('click', () => {
   const text = document.getElementById('auditText').value.trim();
   if (text) {
-    const baseUrl = "http://localhost:3000/verify";
-    const auditUrl = `${baseUrl}?text=${encodeURIComponent(text)}`;
-    window.open(auditUrl, '_blank');
+    chrome.runtime.sendMessage({ action: "openVerification", text: text });
   }
 });
 
@@ -11,9 +9,7 @@ document.getElementById('urlAuditBtn').addEventListener('click', () => {
   chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
     const activeTab = tabs[0];
     if (activeTab && activeTab.url) {
-      const baseUrl = "http://localhost:3000/verify";
-      const auditUrl = `${baseUrl}?text=${encodeURIComponent(activeTab.url)}`;
-      window.open(auditUrl, '_blank');
+      chrome.runtime.sendMessage({ action: "openVerification", text: activeTab.url });
     }
   });
 });
