@@ -105,7 +105,7 @@ const AppFooter = () => {
         }
 
         @media (max-width: 768px) {
-          .app-footer { padding-top: 54px !important; padding-bottom: 100px !important; text-align: center; }
+          .app-footer { padding-top: 48px !important; padding-bottom: 80px !important; text-align: center; }
           .ft-grid    { display: flex !important; flex-direction: column !important; gap: 48px !important; align-items: center !important; }
           
           .ft-brand-sec { display: flex !important; flex-direction: column !important; align-items: center !important; text-align: center !important; }

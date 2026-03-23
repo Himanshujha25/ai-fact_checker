@@ -746,8 +746,13 @@ export default function Verify() {
   const t = UI_TEXT[lang] || UI_TEXT.en;
 
   return (
-    <div style={{ minHeight:'calc(100vh - 60px)', background:'#08080E', color:TEXT, fontFamily:"'DM Sans',system-ui,sans-serif", display:'flex', paddingBottom:64, overflowX:'hidden' }}>
+    <div className="vf-page-root" style={{ background:'#08080E', color:TEXT, fontFamily:"'DM Sans',system-ui,sans-serif", display:'flex', overflowX:'hidden' }}>
       <style>{`
+        .vf-page-root { min-height: calc(100vh - 60px); padding-bottom: 64px; }
+        @media (max-width: 768px) {
+          .vf-page-root { min-height: auto; padding-bottom: 40px; }
+        }
+
         .vf-input {
           width:100%; box-sizing:border-box;
           background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.09);
@@ -861,72 +866,83 @@ export default function Verify() {
 
         /* ══════════ LAYOUT CLASSES ══════════════════════════ */
         .vf-main { flex:1; max-width:1080px; margin:0 auto; padding:0 44px; width:100%; overflow-y:auto; overflow-x:hidden; }
-        .vf-wb-grid { display:grid; grid-template-columns:1fr 276px; gap:24px; }
+        .vf-wb-grid { display:grid; grid-template-columns:1fr 276px; gap:24px; padding-bottom: 60px; }
         .vf-modes-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; }
         .vf-score-header { display:flex; flex-wrap:wrap; align-items:center; gap:40px; padding:32px 36px; background:rgba(201,168,76,0.06); border:1px solid rgba(201,168,76,0.18); border-radius:16px; margin-bottom:36px; }
         .vf-claim-header { display:grid; grid-template-columns:130px 1fr 76px; gap:18px; padding:10px 24px; border-bottom:1px solid ${LINE}; background:rgba(255,255,255,0.025); }
         .vf-ai-row { margin-bottom:36px; display:flex; gap:20px; }
         .vf-forensic-grid { display:grid; grid-template-columns:1fr 1fr; gap:20px; }
+        .vf-input-wrap { display: flex; flex-direction: column; gap: 24px; }
+        .vf-wb-header-inner { display: flex; justify-content: space-between; align-items: flex-start; gap: 20px; margin-bottom: 32px; }
 
-        /* ── Tablet ≤ 1024px ── */
-        @media (max-width:1024px) {
-          .vf-main { padding:0 28px; }
-          .vf-wb-grid { grid-template-columns:1fr; }
+
+        /* ── Tablet/Mobile ≤ 860px ── */
+        @media (max-width:860px) {
+          .vf-main { padding:0 24px; }
+          .vf-wb-grid { grid-template-columns:1fr; gap: 48px; }
+          .vf-wb-header-inner { flex-direction: column-reverse; }
+          .vf-modes-parent { grid-template-columns: 1fr !important; gap: 24px !important; }
         }
 
         /* ═══════════════════════════════════════════════════
            MOBILE ≤ 768px
            ═══════════════════════════════════════════════════ */
         @media (max-width:768px) {
-          .vf-main { padding:0 16px; }
+          .vf-main { padding:0 16px 20px; }
           .vf-wb-header { text-align: center !important; }
           .vf-wb-desc { margin: 0 auto !important; }
           .vf-wb-mode-label { text-align: center !important; }
 
           /* ── Mode selector: compact single-row pill checkboxes ── */
           .vf-modes-grid {
-            grid-template-columns: repeat(4, 1fr) !important;
-            gap: 6px !important;
+            grid-template-columns: repeat(2, 1fr) !important;
+            gap: 10px !important;
           }
           .vf-mode {
-            padding: 9px 10px !important;
-            gap: 7px !important;
-            border-radius: 8px !important;
+            padding: 12px 14px !important;
+            gap: 10px !important;
+            border-radius: 12px !important;
           }
-          .vf-mode-icon-box { display: none !important; }
           .vf-mode-sub { display: none !important; }
           .vf-mode-label {
-            font-size: 11px !important;
+            font-size: 13px !important;
             margin-bottom: 0 !important;
-            line-height: 1 !important;
+            line-height: 1.2 !important;
           }
-          .vf-mode.on .vf-mode-dot { opacity: 1 !important; }
-          .vf-mode-dot {
-            width: 5px; height: 5px; border-radius: 50%;
-            background: ${GOLD}; flex-shrink: 0;
-            opacity: 0; transition: opacity 0.2s;
-          }
+          .vf-mode-icon-box { width: 28px !important; height: 28px !important; }
 
-          /* Rest of mobile layout */
-          .vf-ai-row { flex-direction:column; }
-          .vf-forensic-grid { grid-template-columns:1fr; }
-          .vf-score-header { gap:20px; padding:24px 20px; justify-content: center !important; text-align: center !important; }
-          .vf-claim { grid-template-columns:100px 1fr 60px; gap:12px; padding:16px; }
-          .vf-claim-header { grid-template-columns:100px 1fr 60px; gap:12px; padding:10px 16px; }
+          .vf-ai-row { flex-direction:column; gap: 16px; }
+          .vf-forensic-grid { grid-template-columns:1fr; gap: 16px; }
+          .vf-score-header { 
+            flex-direction: column;
+            gap:32px; padding:32px 24px; 
+            justify-content: center !important; text-align: center !important; 
+          }
+          .vf-score-actions { width: 100%; gap: 12px !important; }
+          .vf-score-actions button { width: 100%; justify-content: center; }
+
+          .vf-claim { grid-template-columns:1fr 50px; gap:8px 12px; padding:20px 16px; }
+          .vf-claim > div:first-child { grid-column: 1 / -1; margin-bottom: 4px; }
+          .vf-claim-header { display:none; }
           
-          .vf-area { min-height: 160px !important; }
-          .vf-wb-grid { gap: 40px !important; padding-bottom: 40px !important; }
+          .vf-area { min-height: 180px !important; }
+          .vf-score-header, .vf-ai-row { margin-bottom: 24px !important; }
+          .vf-wb-grid { padding-bottom: 20px !important; }
         }
+
 
         /* ── Mobile-small ≤ 480px ── */
         @media (max-width:480px) {
-          .vf-main { padding:0 12px; }
-          .vf-claim { grid-template-columns:1fr; gap:8px; padding:14px; }
-          .vf-claim-header { display:none; }
-          .vf-score-header { flex-direction:column; align-items:center !important; padding:20px; gap:16px; }
-          .vf-btn-row { flex-direction: column !important; align-items: stretch !important; }
+          .vf-main { padding:0 12px 32px; }
+          .vf-modes-grid { grid-template-columns: repeat(2, 1fr) !important; gap: 8px !important; }
+          .vf-mode { padding: 12px 10px !important; }
+          .vf-mode-label { font-size: 11px !important; }
+          .vf-claim { padding: 16px 12px; }
+          .vf-btn-row { flex-direction: column !important; align-items: stretch !important; gap: 12px !important; }
           .vf-run, .vf-ghost { width: 100% !important; justify-content: center !important; }
         }
+
+
       `}</style>
 
       <Sidebar data-html2canvas-ignore activeFilter={activeFilter} onFilterChange={setActiveFilter} onExport={handleExportPDF}/>
@@ -958,13 +974,12 @@ export default function Verify() {
                   </p>
                 </header>
 
-                <div style={{ marginBottom:20, display: 'grid', gridTemplateColumns: '1fr 200px', gap: 40 }}>
+                <div className="vf-modes-parent" style={{ marginBottom:32, display: 'grid', gridTemplateColumns: '1fr 200px', gap: 40 }}>
                   <div>
-                    <p className="vf-wb-mode-label" style={{ fontFamily:'DM Mono,monospace', fontSize:9, color:DIM, textTransform:'uppercase', letterSpacing:'0.14em', marginBottom:10 }}>{t.analysisDepth}</p>
+                    <p className="vf-wb-mode-label" style={{ fontFamily:'DM Mono,monospace', fontSize:9, color:DIM, textTransform:'uppercase', letterSpacing:'0.14em', marginBottom:12 }}>{t.analysisDepth}</p>
                     <div className="vf-modes-grid">
                       {MODES.map(m => (
                         <button key={m.id} onClick={() => setMode(m.id)} className={`vf-mode ${mode===m.id?'on':''}`}>
-                          <div className="vf-mode-dot"/>
                           <div className="vf-mode-icon-box" style={{ width:30, height:30, borderRadius:8, flexShrink:0, background:mode===m.id?GOLD_L:'rgba(255,255,255,0.05)', display:'flex', alignItems:'center', justifyContent:'center' }}>
                             <m.icon size={14} color={mode===m.id?GOLD:DIM}/>
                           </div>
@@ -978,13 +993,14 @@ export default function Verify() {
                   </div>
 
                   <div>
-                    <p style={{ fontFamily:'DM Mono,monospace', fontSize:9, color:DIM, textTransform:'uppercase', letterSpacing:'0.14em', marginBottom:10 }}>{t.language}</p>
+                    <p className="vf-wb-mode-label" style={{ fontFamily:'DM Mono,monospace', fontSize:9, color:DIM, textTransform:'uppercase', letterSpacing:'0.14em', marginBottom:12 }}>{t.language}</p>
                     <div style={{ display: 'flex', gap: 6, background: 'rgba(255,255,255,0.03)', border: `1px solid ${LINE}`, borderRadius: 10, padding: 4 }}>
                       <button onClick={() => setLang('en')} style={{ flex: 1, padding: '8px 0', borderRadius: 7, border: 'none', background: lang === 'en' ? GOLD_L : 'transparent', color: lang === 'en' ? GOLD : DIM, fontSize: 11, fontWeight: 700, cursor: 'pointer', transition: 'all 0.2s' }}>EN</button>
                       <button onClick={() => setLang('hi')} style={{ flex: 1, padding: '8px 0', borderRadius: 7, border: 'none', background: lang === 'hi' ? GOLD_L : 'transparent', color: lang === 'hi' ? GOLD : DIM, fontSize: 11, fontWeight: 700, cursor: 'pointer', transition: 'all 0.2s' }}>हिंदी</button>
                     </div>
                   </div>
                 </div>
+
 
               <div className="vf-wb-grid">
                 {/* Left: inputs */}
@@ -1185,7 +1201,7 @@ export default function Verify() {
                     {t.confidenceLevel} <strong style={{ color:TEXT }}>{Math.round(results.truthScore)}%</strong> {t.derivedFrom} {results.claims?.length} {t.verifiedAssertions}
                   </p>
                 </div>
-                <div style={{ display:'flex', flexDirection:'column', gap:8, flexShrink:0 }}>
+                <div className="vf-score-actions" style={{ display:'flex', flexDirection:'column', gap:8, flexShrink:0 }}>
                   <button data-html2canvas-ignore className="vf-run" onClick={() => navigate(`/history/${results.reportId}`)} style={{ justifyContent:'center' }}>
                     {t.viewReport} <ChevronRight size={14}/>
                   </button>
@@ -1197,6 +1213,7 @@ export default function Verify() {
                     {t.startNew}
                   </button>
                 </div>
+
               </div>
 
               {results.aiTextDetection && (
