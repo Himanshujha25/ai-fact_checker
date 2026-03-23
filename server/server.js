@@ -8,6 +8,8 @@ const rateLimit = require('express-rate-limit');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 const axios = require('axios');
 const CryptoJS = require('crypto-js');
+const ExifParser = require('exif-parser');
+const { HfInference } = require('@huggingface/inference');
 
 
 // ─── Tavily Research Agent (Live Web Search) ───
@@ -19,10 +21,11 @@ async function performTavilySearch(query, depth = 'basic') {
   }
 
   try {
-    console.log(`  [Tavily] Researching query: "${query}" (depth: ${depth})...`);
+    const cleanQuery = typeof query === 'string' ? query.substring(0, 400) : 'General research query';
+    console.log(`  [Tavily] Researching query: "${cleanQuery}" (depth: ${depth})...`);
     const response = await axios.post('https://api.tavily.com/search', {
       api_key: apiKey,
-      query: query,
+      query: cleanQuery,
       search_depth: depth,
       include_answer: true,
       include_images: true,
@@ -57,9 +60,9 @@ const fs = require('fs');
 // Multer config — store uploads in memory for direct Gemini processing
 const upload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 20 * 1024 * 1024 }, // 20MB max
+  limits: { fileSize: 100 * 1024 * 1024 }, // 100MB max
   fileFilter: (req, file, cb) => {
-    const allowed = /jpeg|jpg|png|gif|webp|mp4|webm|mov|avi/;
+    const allowed = /jpeg|jpg|png|gif|webp|mp4|webm|mov|avi|mp3|wav|ogg|m4a/;
     const ext = allowed.test(path.extname(file.originalname).toLowerCase());
     const mime = allowed.test(file.mimetype.split('/')[1]);
     cb(null, ext || mime);
@@ -297,55 +300,17 @@ app.post('/api/analyze-media', upload.array('media', 5), async (req, res) => {
       return res.status(400).json({ error: 'No files uploaded' });
     }
 
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-pro' });
     const results = [];
+    console.log(`  [Upload] Processing ${req.files.length} files through enhanced forensic pipeline...`);
 
     for (const file of req.files) {
-      try {
-        const base64 = file.buffer.toString('base64');
-        const isVideo = file.mimetype.startsWith('video/');
-
-        const analysisPrompt = isVideo
-          ? `Analyze this video for signs of AI generation, deepfake manipulation, or synthetic content. Look for:
-1. Face-swapping artifacts (misaligned features, flickering edges)
-2. Unnatural body movements or lip-sync issues
-3. Temporal inconsistencies between frames
-4. Background warping or morphing artifacts
-5. Audio-visual desynchronization clues
-Return ONLY JSON: {"isAIGenerated": boolean, "confidence": number(0-100), "indicators": ["string"], "verdict": "Authentic"|"Likely AI-Generated"|"Possibly Manipulated"|"Inconclusive", "mediaType": "video", "details": "string"}`
-          : `Analyze this image for signs of AI generation or synthetic manipulation (deepfake indicators). Look for:
-1. Unnatural skin textures, warped backgrounds, extra fingers/limbs
-2. Inconsistent lighting, reflections, or shadows
-3. Repeating patterns, blurring artifacts, watermark remnants
-4. GAN artifacts, diffusion model artifacts, face-swapping signs
-5. Text rendering errors (common in AI-generated images)
-Return ONLY JSON: {"isAIGenerated": boolean, "confidence": number(0-100), "indicators": ["string"], "verdict": "Authentic"|"Likely AI-Generated"|"Possibly Manipulated"|"Inconclusive", "mediaType": "image", "details": "string"}`;
-
-        const result = await model.generateContent([
-          { inlineData: { mimeType: file.mimetype, data: base64 } },
-          analysisPrompt
-        ]);
-
-        const json = result.response.text().match(/\{[\s\S]*\}/)?.[0] || '{}';
-        const parsed = JSON.parse(json);
-        results.push({
-          filename: file.originalname,
-          size: file.size,
-          mimeType: file.mimetype,
-          ...parsed
-        });
-      } catch (err) {
-        results.push({
-          filename: file.originalname,
-          size: file.size,
-          mimeType: file.mimetype,
-          isAIGenerated: false,
-          confidence: 0,
-          indicators: [],
-          verdict: 'Analysis Failed',
-          error: err.message
-        });
-      }
+      const analysis = await analyzeMediaForAI(file, 'buffer');
+      results.push({
+        filename: file.originalname,
+        size: file.size,
+        mimeType: file.mimetype,
+        ...analysis
+      });
     }
 
     const aiGenCount = results.filter(r => r.isAIGenerated).length;
@@ -476,18 +441,33 @@ async function extractFromUrl(url) {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
         'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8'
       },
-      validateStatus: false
+      validateStatus: false,
+      responseType: 'arraybuffer' // Download as buffer to handle both text and binary safely
     });
 
-    // Status 999 or 403? Use Tavily as a 'Proxy Scraper'
+    const contentType = response.headers['content-type'] || '';
+    const isImage = contentType.startsWith('image/');
+    const isVideo = contentType.startsWith('video/');
+    const isAudio = contentType.startsWith('audio/');
+
+    if (isImage || isVideo || isAudio) {
+      console.log(`  [Dynamic] Detected media URL (${contentType}): ${url}`);
+      return { 
+        text: `[MEDIA FILE DETECTED]\nType: ${contentType}\nURL: ${url}\n\nThis source is a direct media file. Forensic analysis will be performed on the visual/auditory components.`,
+        imageUrls: [url],
+        isMedia: true
+      };
+    }
+
+    // Status 999 or 403? Use Tavily as a 'Proxy Scraper' for TEXT content
     if (response.status !== 200 || url.includes('linkedin.com')) {
-      console.log(`  ⚠ Direct access blocked (${response.status}) for ${url}. Activating AI Proxy Fallback...`);
+      console.log(`  ⚠ Direct access blocked/failed (${response.status}) for ${url}. Activating AI Proxy Fallback...`);
       const research = await performTavilySearch(`Get the full content and details of this URL: ${url}`, 'advanced');
 
       if (research && research.answer) {
         return {
           text: `[AI Proxy Scraper Enabled] Source: ${url}\n\nRetrieved Data: ${research.answer}\n\nSearch Excerpts: ${research.sources?.map(s => s.snippet).join('\n')}`,
-          imageUrls: [], // Tavily search depth basic might not return raw images easily
+          imageUrls: [],
           blocked: false,
           viaProxy: true
         };
@@ -498,7 +478,8 @@ async function extractFromUrl(url) {
       return { text: `[Scraper Error] Status ${response.status} for ${url}.`, imageUrls: [], error: true };
     }
 
-    const html = response.data;
+    // Convert buffer to string for text/html processing
+    const html = response.data.toString('utf-8');
     const title = html.match(/<title[^>]*>([\s\S]*)<\/title>/i)?.[1] || 'No Title';
     let content = html.match(/<(article|main)[^>]*>([\s\S]*?)<\/\1>/i)?.[2] ||
       html.match(/<body[^>]*>([\s\S]*)<\/body>/i)?.[1] || html;
@@ -540,38 +521,155 @@ async function extractTextFromUrl(url) {
   return result.text;
 }
 
-// Helper: Analyze an image for AI-generation / deepfake indicators
-async function analyzeImageForAI(imageUrl) {
+// Helper: Analyze an image/video/audio for AI-generation / deepfake indicators
+// Helper: Analyze an image/video/audio for AI-generation / deepfake indicators
+async function analyzeMediaForAI(input, type = 'url') {
   try {
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-pro' });
-    // Fetch image as base64
-    const imgResponse = await axios.get(imageUrl, { responseType: 'arraybuffer', timeout: 8000 });
-    const base64 = Buffer.from(imgResponse.data).toString('base64');
-    const mimeType = imgResponse.headers['content-type'] || 'image/jpeg';
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-pro' }); // Use flash for faster descriptive analysis
+    const token = (process.env.HUGGINGFACE_API_KEY || '').replace(/['"]/g, '').trim();
+    
+    let buffer;
+    let mimeType;
+    let mediaUrl = type === 'url' ? input : 'Upload';
 
-    const result = await model.generateContent([
-      {
-        inlineData: {
-          mimeType,
-          data: base64
+    // 1. Fetch/Resolve media as buffer
+    if (type === 'url') {
+      const mediaResponse = await axios.get(input, { responseType: 'arraybuffer', timeout: 8000 });
+      buffer = Buffer.from(mediaResponse.data);
+      mimeType = mediaResponse.headers['content-type'] || 'image/jpeg';
+    } else {
+      buffer = input.buffer;
+      mimeType = input.mimetype || 'image/jpeg';
+    }
+
+    const base64 = buffer.toString('base64');
+    const isVideo = mimeType.startsWith('video/');
+    const isAudio = mimeType.startsWith('audio/');
+    const isImage = mimeType.startsWith('image/');
+
+    const indicators = [];
+    let externalScore = 0;
+    let externalSource = 'None';
+    let provenanceSearch = null;
+
+    // 2. REVERSE SEARCH / PROVENANCE (Search by Description)
+    try {
+      console.log('  [Provenance] Generating descriptive search query for reverse lookup...');
+      const descPrompt = `Describe this ${isVideo ? 'video' : isAudio ? 'audio' : 'image'} in 10 words or less. Then generate a Google search query to find the ORIGINAL source of this media.
+      Return ONLY JSON: {"description": "string", "searchQuery": "string"}`;
+      
+      const descRes = await model.generateContent([
+        { inlineData: { mimeType, data: base64 } },
+        descPrompt
+      ]);
+      const descData = JSON.parse(descRes.response.text().match(/\{[\s\S]*\}/)?.[0] || '{"description": "Unknown media", "searchQuery": ""}');
+      
+      if (descData.searchQuery) {
+        console.log(`  [Provenance] Searching for: "${descData.searchQuery}"...`);
+        provenanceSearch = await performTavilySearch(descData.searchQuery + ' original source true version', 'basic');
+        
+        if (provenanceSearch?.sources?.length > 0) {
+          const sourcesStr = provenanceSearch.sources.map(s => s.title).join(', ');
+          if (sourcesStr.toLowerCase().includes('deepfake') || sourcesStr.toLowerCase().includes('manipulated') || sourcesStr.toLowerCase().includes('ai-generated')) {
+             indicators.push(`Fact-checking sources flag this as suspicious: ${sourcesStr.substring(0, 100)}...`);
+             externalScore = 90;
+          } else {
+             indicators.push(`Visual match found in public reports: ${provenanceSearch.sources[0].title}`);
+          }
         }
-      },
-      `Analyze this image for signs of AI generation or synthetic manipulation (deepfake indicators). Look for:
-      1. Unnatural skin textures, warped backgrounds, extra fingers/limbs
-      2. Inconsistent lighting, reflections, or shadows
-      3. Repeating patterns, blurring artifacts, watermark remnants
-      4. Signs of GAN artifacts, diffusion model artifacts, or face-swapping
-      Return ONLY JSON: {
-        "isAIGenerated": boolean,
-        "confidence": number (0-100),
-        "indicators": ["string"],
-        "verdict": "Authentic" | "Likely AI-Generated" | "Possibly Manipulated" | "Inconclusive"
-      }`
+      }
+    } catch (e) {
+      console.warn('  ⚠ Provenance search failed:', e.message);
+    }
+
+    // 3. LOCAL LIBRARY FORENSICS: EXIF Metadata Scan
+    if (isImage) {
+      try {
+        const parser = ExifParser.create(buffer);
+        const exifRes = parser.parse();
+        const tags = exifRes.tags || {};
+        
+        if (tags.Software?.includes('AI') || tags.Software?.includes('DALL-E') || tags.Software?.includes('Midjourney') || tags.Software?.includes('Adobe Firefly')) {
+          indicators.push(`AI software signature detected in metadata: ${tags.Software}`);
+          externalScore = Math.max(externalScore, 85); 
+        }
+        if (!tags.Model && !tags.Make) {
+          indicators.push('Missing camera hardware signatures (common in synthetic images)');
+        }
+        if (tags.Copyright?.includes('OpenAI') || tags.UserComment?.includes('AI Generated')) {
+          indicators.push('Provider-level AI metadata markers detected');
+          externalScore = Math.max(externalScore, 95);
+        }
+      } catch (e) { }
+    }
+
+    // 4. EXTERNAL LIBRARY: Hugging Face Inference (Direct API Call for stability)
+    if (token && isImage) {
+      try {
+        console.log('  [HF] Forensic Model Check: prithivMLmods/Deep-Fake-Detector-Model...');
+        const hfResponse = await axios.post(
+          'https://api-inference.huggingface.co/models/prithivMLmods/Deep-Fake-Detector-Model',
+          buffer,
+          {
+            headers: { Authorization: `Bearer ${token}` },
+            timeout: 10000
+          }
+        );
+
+        const hfData = hfResponse.data;
+        if (Array.isArray(hfData)) {
+          const fakeLabel = hfData.find(x => 
+            x.label.toLowerCase() === 'fake' || 
+            x.label.toLowerCase() === 'generated' || 
+            x.label.toLowerCase() === 'ai'
+          );
+          const fakeScore = fakeLabel?.score || 0;
+          
+          if (fakeScore > 0.5) {
+            indicators.push(`External Forensic Model flags as synthetic: ${(fakeScore * 100).toFixed(1)}%`);
+            externalScore = Math.max(externalScore, fakeScore * 100);
+            externalSource = 'Hugging Face PRITHIV-VL';
+          }
+        }
+      } catch (e) {
+        console.warn('  ⚠ HF API Inference failed:', e.response?.data?.error || e.message);
+      }
+    }
+
+    // 5. CORE ENGINE: Gemini Agentic Analysis
+    const analysisModel = genAI.getGenerativeModel({ model: 'gemini-2.5-pro' });
+    let prompt = '';
+    if (isVideo) {
+      prompt = `Critically analyze this video for deepfake signs (temporal flickers, face-swapping artifacts, lip-sync errors). Return ONLY JSON: {"isAIGenerated": boolean, "confidence": number(0-100), "indicators": ["string"], "verdict": "Authentic"|"Likely AI-Generated"|"Possibly Manipulated"|"Inconclusive"}`;
+    } else if (isAudio) {
+      prompt = `Critically analyze this audio for synthetic voice cloning artifacts (unnatural breathing, robotic cadence, spectral mismatch). Return ONLY JSON: {"isAIGenerated": boolean, "confidence": number(0-100), "indicators": ["string"], "verdict": "Authentic"|"Likely AI-Generated"|"Possibly Manipulated"|"Inconclusive"}`;
+    } else {
+      prompt = `Critically analyze this image for GAN artifacts, diffusion anomalies, or synthetic face signatures (warped backgrounds, asymmetrical eyes, unnatural skin). Return ONLY JSON: {"isAIGenerated": boolean, "confidence": number(0-100), "indicators": ["string"], "verdict": "Authentic"|"Likely AI-Generated"|"Possibly Manipulated"|"Inconclusive"}`;
+    }
+
+    const geminiRes = await analysisModel.generateContent([
+      { inlineData: { mimeType, data: base64 } },
+      prompt
     ]);
-    const json = result.response.text().match(/\{[\s\S]*\}/)?.[0] || '{}';
-    return { url: imageUrl, ...JSON.parse(json) };
+    const jsonStr = geminiRes.response.text().match(/\{[\s\S]*\}/)?.[0] || '{}';
+    const geminiData = JSON.parse(jsonStr);
+
+    // MERGE RESULTS
+    const finalConfidence = Math.max(geminiData.confidence || 0, externalScore);
+    const finalIndicators = [...new Set([...(geminiData.indicators || []), ...indicators])];
+    const isActuallyFake = finalConfidence > 60;
+
+    return { 
+      url: mediaUrl, 
+      isAIGenerated: isActuallyFake,
+      confidence: finalConfidence,
+      indicators: finalIndicators,
+      verdict: isActuallyFake ? 'Likely AI-Generated' : geminiData.verdict,
+      externalScan: externalSource !== 'None' ? { source: externalSource, score: externalScore } : null,
+      provenance: provenanceSearch ? { found: provenanceSearch.sources?.length > 0, matches: provenanceSearch.sources?.slice(0, 2) } : null
+    };
   } catch (err) {
-    return { url: imageUrl, isAIGenerated: false, confidence: 0, indicators: [], verdict: 'Analysis Failed', error: err.message };
+    return { url: input?.originalname || 'Media', isAIGenerated: false, confidence: 0, indicators: [], verdict: 'Analysis Failed', error: err.message };
   }
 }
 
@@ -677,7 +775,7 @@ async function retryWithBackoff(fn, retries = 3, baseDelay = 1000) {
 }
 
 // Core verification pipeline — Chain-of-Thought + Multi-Mode Research Agent
-async function runVerificationPipeline(contentToProcess, mode = 'normal', language = 'en') {
+async function runVerificationPipeline(contentToProcess, mode = 'normal', language = 'en', mediaForensics = null) {
   const model = genAI.getGenerativeModel({ model: 'gemini-2.5-pro' });
   const currentDate = new Date().toISOString().split('T')[0];
   
@@ -686,7 +784,8 @@ async function runVerificationPipeline(contentToProcess, mode = 'normal', langua
     'normal': 3,
     'adversarial': 5,
     'deep': 5,
-    'pro': 8
+    'pro': 8,
+    'deepfake': 2
   };
   const claimLimit = claimLimits[mode] || 3;
 
@@ -697,6 +796,15 @@ async function runVerificationPipeline(contentToProcess, mode = 'normal', langua
   const extractionPrompt = `You are a precision fact-extraction agent. Today's date is ${currentDate}.
   TASK: Extract AT MOST ${claimLimit} verifiable factual assertions from the text. 
   
+  ${mode === 'deepfake' ? `
+  SPECIAL CASE (FORENSIC DEEPFAKE MODE):
+  - The input contains metadata about a media file ([MEDIA FILE DETECTED]).
+  - Your task is NOT to extract the specific file type or URL as a claim.
+  - Instead, formulate the core AUTHENTICITY claim.
+  - Example: "The provided image/video/audio is an authentic, non-AI-generated recording."
+  - If a subject is mentioned (e.g. "Deepfake of Obama"), the claim should be: "The provided media is a genuine recording of [Subject]."
+  ` : ''}
+
   LANGUAGE: Provide all "claim" and "context" strings in ${language === 'hi' ? 'Hindi' : 'English'}.
 
   EXAMPLES OF REPHRASING QUESTIONS:
@@ -718,8 +826,15 @@ async function runVerificationPipeline(contentToProcess, mode = 'normal', langua
   // FAILSAFE: If extraction returned nothing but we have input, force-inject a claim
   if (claims.length === 0 && contentToProcess.trim().length > 3) {
     console.log('  [Failsafe] Manual claim injection triggered.');
+    let fakeClaim = contentToProcess.substring(0, 500);
+    
+    // If it's pure media metadata, simplify it for the pipeline
+    if (contentToProcess.includes('[MEDIA FILE DETECTED]')) {
+      fakeClaim = "Forensic media authentication and source verification";
+    }
+
     const genericSubject = contentToProcess.split(' ').slice(0, 5).join(' ');
-    claims = [{ id: 1, claim: contentToProcess, context: "Direct User Inquiry", primaryEntity: genericSubject }];
+    claims = [{ id: 1, claim: fakeClaim, context: "Direct User Inquiry", primaryEntity: genericSubject }];
   }
 
   // ─── PHASE 2: Verification with Multi-Mode Tools ───
@@ -752,6 +867,16 @@ async function runVerificationPipeline(contentToProcess, mode = 'normal', langua
   CONTEXT/SUBJECT: "${claim.primaryEntity || 'General Information'}"
   MODE: ${mode.toUpperCase()}
   RESEARCH DATA: ${researchData ? JSON.stringify(researchData) : "NONE (Use internal knowledge if this is a general fact)"}
+  MEDIA FORENSICS: ${mediaForensics ? JSON.stringify(mediaForensics) : "N/A"}
+
+  ${mode === 'deepfake' ? `
+  [PROTOCOL: MEDIA FORENSICS]
+  - Use MEDIA FORENSICS as the primary ground truth for the claim.
+  - If MEDIA FORENSICS flags an image as suspicious/fake, the verdict for the "authenticity" claim MUST be "False" or "Likely False".
+  - Perform extreme analytical scrutiny for identifying AI-generated media clones or deepfakes.
+  - Look for technical artifacts: lighting mismatch, texture blurring, unnatural movements.
+  - If a person is mentioned, check for digital identity preservation/spoofing.
+  ` : ''}
 
   LANGUAGE REQUIREMENT:
   - You MUST return all text fields (verdict, reasoning, evidence text, chainOfThought) in ${language === 'hi' ? 'Hindi' : 'English'}.
@@ -831,7 +956,12 @@ async function runVerificationPipeline(contentToProcess, mode = 'normal', langua
     return ['partially true', 'mixed', 'आंशिक रूप से सही'].includes(vLower);
   }).length;
   const totalVerified = successfulResults.length || 1;
-  const truthScore = Math.min(100, ((trueCount + partialCount * 0.5) / totalVerified) * 100);
+  let truthScore = Math.min(100, ((trueCount + partialCount * 0.5) / totalVerified) * 100);
+
+  // For deepfake mode, truthScore reflects the probability of AI generation (the focus)
+  if (mode === 'deepfake' && mediaForensics) {
+    truthScore = mediaForensics.score || (mediaForensics.results?.[0]?.confidence) || 0;
+  }
 
   const finalResponse = {
     originalText: contentToProcess,
@@ -914,31 +1044,33 @@ app.post('/api/verify', maybeAuthenticate, async (req, res) => {
 
     if (!contentToProcess.trim()) return res.status(400).json({ error: 'No content provided' });
 
-    console.log(`  [Dynamic] Processing payload: ${contentToProcess.substring(0, 50)}... (Lang: ${language})`);
-    const responseData = await runVerificationPipeline(contentToProcess, mode || 'normal', language);
-
-    // AI Media Detection: analyze extracted images
+    let mediaForensics = null;
+    // AI Media Detection: analyze extracted images or text references
     if (imageUrls.length > 0) {
-      console.log(`Analyzing ${imageUrls.length} images for deepfake detection...`);
-      const imageAnalysis = await Promise.all(imageUrls.slice(0, 3).map(imgUrl => analyzeImageForAI(imgUrl)));
-      const aiGenCount = imageAnalysis.filter(a => a.isAIGenerated).length;
-      responseData.aiMediaDetection = {
+      console.log(`Analyzing ${imageUrls.length} media items for deepfake detection...`);
+      const mediaAnalysis = await Promise.all(imageUrls.slice(0, 3).map(imgUrl => analyzeMediaForAI(imgUrl)));
+      const aiGenCount = mediaAnalysis.filter(a => a.isAIGenerated).length;
+      mediaForensics = {
         imagesFound: imageUrls.length,
-        imagesAnalyzed: imageAnalysis.length,
-        results: imageAnalysis,
+        imagesAnalyzed: mediaAnalysis.length,
+        results: mediaAnalysis,
         summary: aiGenCount > 0
-          ? `${aiGenCount} of ${imageAnalysis.length} images flagged as potentially AI-generated`
-          : `All ${imageAnalysis.length} analyzed images appear authentic`,
+          ? `${aiGenCount} of ${mediaAnalysis.length} items flagged as potentially AI-generated`
+          : `All ${mediaAnalysis.length} analyzed items appear authentic`,
         verdict: aiGenCount > 0 ? 'Suspicious' : 'Authentic',
-        score: Math.round((aiGenCount / imageAnalysis.length) * 100)
+        score: Math.round((aiGenCount / mediaAnalysis.length) * 100)
       };
     } else {
       // Text-only input — use text-based media analysis
       const model = genAI.getGenerativeModel({ model: 'gemini-2.5-pro' });
       const mediaPrompt = `Analyze this text for references to synthetic/AI-generated media. Return JSON: {"score": number, "mediaFound": string[], "verdict": "string", "summary": "string"}. Text: ${contentToProcess.substring(0, 1000)}`;
       const mediaResult = await model.generateContent(mediaPrompt);
-      responseData.aiMediaDetection = JSON.parse(mediaResult.response.text().match(/\{[\s\S]*\}/)?.[0] || '{"score": 0, "mediaFound": [], "verdict": "Clear", "summary": "No media references detected"}');
+      mediaForensics = JSON.parse(mediaResult.response.text().match(/\{[\s\S]*\}/)?.[0] || '{"score": 0, "mediaFound": [], "verdict": "Clear", "summary": "No media references detected"}');
     }
+
+    console.log(`  [Dynamic] Processing payload: ${contentToProcess.substring(0, 50)}... (Lang: ${language})`);
+    const responseData = await runVerificationPipeline(contentToProcess, mode || 'normal', language, mediaForensics);
+    responseData.aiMediaDetection = mediaForensics;
     const reportId = hashKey.substring(0, 12);
     responseData.reportId = reportId;
 

@@ -176,20 +176,6 @@ export default function Sidebar({ activeFilter, onFilterChange, onExport, onShar
 
       {/* ── Actions ── */}
       <div style={{ borderTop:`1px solid ${LINE}`, paddingTop:20 }}>
-        <button className="new-btn" onClick={handleNewAnalysis}>
-          <Plus size={16}/> Launch Audit
-        </button>
-
-        <button className="action-btn" onClick={onExport}>
-          <Share size={12} style={{ opacity:0.5 }}/> Export Report
-        </button>
-
-        <button className="action-btn" onClick={() => {
-          if (onShare) onShare();
-          else { navigator.clipboard.writeText(window.location.href); }
-        }}>
-          <ArrowUpRight size={12} style={{ opacity:0.5 }}/> Share Report
-        </button>
 
         <button className="action-btn" onClick={() => navigate('/architecture')}>
           <Info size={12} style={{ opacity:0.5 }}/> System Protocols

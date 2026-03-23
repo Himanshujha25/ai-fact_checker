@@ -67,6 +67,12 @@ const UI_TEXT = {
     sourceB: "Narrative Source B",
     biasDetection: "Bias Detection & Omissions",
     uploadDossier: "Upload Dossier (PDF/DOCX)",
+    deepfakeTitle: "DEEPFAKE DETECTED",
+    deepfakeSub: "Forensic analysis has identified synthetic manipulation or AI generation.",
+    deepfakeLowTitle: "AUTHENTIC / CLEAR",
+    deepfakeLowSub: "No significant indicators of AI generation or manipulation detected.",
+    deepfakeMidTitle: "SUSPICIOUS / MIXED",
+    deepfakeMidSub: "Forensic signals are ambiguous. Indicators of potential manipulation found.",
   },
   hi: {
     finalAdjudication: "अंतिम न्यायिक निर्णय",
@@ -114,7 +120,7 @@ const UI_TEXT = {
   }
 };
 
-const VerdictHero = ({ score, language = 'en' }) => {
+const VerdictHero = ({ score, mode = 'normal', language = 'en' }) => {
   const t = UI_TEXT[language] || UI_TEXT.en;
   const isTrue = score > 65;
   const isMixed = score > 35 && score <= 65;
@@ -126,24 +132,46 @@ const VerdictHero = ({ score, language = 'en' }) => {
   let bg = 'rgba(255,255,255,0.03)';
   let icon = <Info size={28}/>;
 
-  if (isTrue) {
-    title = t.accurateTitle;
-    subtitle = t.accurateSub;
-    color = "#4ade80";
-    bg = "rgba(74,222,128,0.06)";
-    icon = <CheckCircle2 size={28} color={color}/>;
-  } else if (isMixed) {
-    title = t.mixedTitle;
-    subtitle = t.mixedSub;
-    color = "#fbbf24";
-    bg = "rgba(251,191,36,0.06)";
-    icon = <AlertTriangle size={28} color={color}/>;
-  } else if (isFalse) {
-    title = t.refuteTitle;
-    subtitle = t.refuteSub;
-    color = "#f87171";
-    bg = "rgba(248,113,113,0.06)";
-    icon = <ShieldAlert size={28} color={color}/>;
+  if (mode === 'deepfake') {
+    if (isTrue) {
+      title = t.deepfakeTitle;
+      subtitle = t.deepfakeSub;
+      color = "#f87171"; // Red for detected fake
+      bg = "rgba(248,113,113,0.06)";
+      icon = <ShieldAlert size={28} color={color}/>;
+    } else if (isMixed) {
+      title = t.deepfakeMidTitle;
+      subtitle = t.deepfakeMidSub;
+      color = "#fb923c"; // Orange
+      bg = "rgba(251,146,60,0.06)";
+      icon = <AlertTriangle size={28} color={color}/>;
+    } else {
+      title = t.deepfakeLowTitle;
+      subtitle = t.deepfakeLowSub;
+      color = "#4ade80"; // Green for clear
+      bg = "rgba(74,222,128,0.06)";
+      icon = <CheckCircle2 size={28} color={color}/>;
+    }
+  } else {
+    if (isTrue) {
+      title = t.accurateTitle;
+      subtitle = t.accurateSub;
+      color = "#4ade80";
+      bg = "rgba(74,222,128,0.06)";
+      icon = <CheckCircle2 size={28} color={color}/>;
+    } else if (isMixed) {
+      title = t.mixedTitle;
+      subtitle = t.mixedSub;
+      color = "#fbbf24";
+      bg = "rgba(251,191,36,0.06)";
+      icon = <AlertTriangle size={28} color={color}/>;
+    } else if (isFalse) {
+      title = t.refuteTitle;
+      subtitle = t.refuteSub;
+      color = "#f87171";
+      bg = "rgba(248,113,113,0.06)";
+      icon = <ShieldAlert size={28} color={color}/>;
+    }
   }
 
   return (
@@ -355,6 +383,7 @@ export default function Verify() {
   const [showExportModal,setShowExportModal]= useState(false);
   const [exportName,     setExportName]     = useState('');
   const [engineStats,    setEngineStats]    = useState({ latency:24, factIndex:4,  });
+  const [isDeepfake,     setIsDeepfake]     = useState(false);
   const { user } = useAuth();
   const [credits, setCredits] = useState(() => {
     const saved = localStorage.getItem('guest_credits');
@@ -563,6 +592,12 @@ export default function Verify() {
 
   const handleFileAudit = useCallback(async (e) => {
     const file = e.target.files?.[0]; if (!file) return;
+    
+    // Check 100MB limit
+    if (file.size > 100 * 1024 * 1024) {
+      setError('File size exceeds 100MB theoretical limit — please optimize or trim media and re-upload.');
+      return;
+    }
 
     if (!user && credits <= 0) {
       setShowCreditModal(true);
@@ -620,7 +655,8 @@ export default function Verify() {
     const controller = new AbortController(); abortRef.current = controller;
     const token = localStorage.getItem('token');
     try {
-      const payload = url.trim() ? { url:url.trim(), mode, language: lang } : { text:text.trim(), mode, language: lang };
+      const finalMode = isDeepfake ? 'deepfake' : mode;
+      const payload = url.trim() ? { url:url.trim(), mode: finalMode, language: lang } : { text:text.trim(), mode: finalMode, language: lang };
       const thoughts = ['Deconstructing source narrative…','Extracting verifiable assertions…','Cross-referencing fact indices…','Querying live OSINT streams…','Semantic integrity analysis…','Consensus aggregation — 3 agents…','Validating academic provenance…','Assembling forensic dossier…'];
       const clock   = setInterval(() => setElapsed(e => e+1), 1000);
       const stepper = setInterval(() => setStep(s => Math.min(s+1,3)), 4000);
@@ -700,7 +736,7 @@ export default function Verify() {
     }).save().then(() => document.body.removeChild(wrapper)).catch(() => document.body.removeChild(wrapper));
   };
 
-  const canRun = !!(url.trim() || text.trim() || interim.trim());
+  const canRun = isDeepfake ? !!url.trim() : !!(url.trim() || text.trim() || interim.trim());
 
   const MODES = [
     { id:'normal',      label:'Standard',         sub:'Fast consensus',           icon:Activity   },
@@ -962,67 +998,88 @@ export default function Verify() {
                     <div style={{ position:'relative' }}>
                       <LinkIcon size={14} color={DIM} style={{ position:'absolute', left:13, top:'50%', transform:'translateY(-50%)', pointerEvents:'none' }}/>
                       <input type="text" value={url} onChange={e => setUrl(e.target.value)}
-                        placeholder="https://example.com/article" className="vf-input vf-url"/>
+                        placeholder={isDeepfake ? "Paste media URL (image/video/audio)" : "https://example.com/article"} className="vf-input vf-url"/>
                     </div>
                   </div>
 
-                  <div style={{ display:'flex', alignItems:'center', gap:12 }}>
-                    <div style={{ flex:1, height:1, background:LINE }}/><span style={{ fontSize:11, color:DIM }}>or paste text</span><div style={{ flex:1, height:1, background:LINE }}/>
-                  </div>
+                  {/* Deepfake Toggle */}
+                  <label style={{ 
+                    display:'flex', alignItems:'center', gap:10, padding:'14px 16px', background:isDeepfake ? 'rgba(236,72,153,0.08)' : 'rgba(255,255,255,0.02)', 
+                    border:isDeepfake ? `1px solid ${MIC_C}40` : `1px solid ${LINE}`, borderRadius:12, cursor:'pointer', transition:'all 0.2s'
+                  }}>
+                    <div style={{ position:'relative', width:36, height:20, flexShrink:0 }}>
+                      <input type="checkbox" checked={isDeepfake} onChange={e => setIsDeepfake(e.target.checked)} style={{ display:'none' }}/>
+                      <div style={{ position:'absolute', inset:0, background:isDeepfake ? MIC_C : 'rgba(255,255,255,0.1)', borderRadius:100, transition:'.3s' }}/>
+                      <div style={{ position:'absolute', top:2, left:isDeepfake ? 18 : 2, width:16, height:16, background:'#fff', borderRadius:'50%', transition:'.3s', boxShadow:'0 2px 5px rgba(0,0,0,0.2)' }}/>
+                    </div>
+                    <div style={{ flex:1 }}>
+                      <div style={{ fontSize:13, fontWeight:700, color:isDeepfake ? MIC_C : TEXT }}>Forensic Deepfake Shield™</div>
+                      <div style={{ fontSize:10, color:DIM }}>Detect AI-generated video, image, or audio clones.</div>
+                    </div>
+                    {isDeepfake && <Zap size={14} color={MIC_C} style={{ animation:'ap-pulse 2s infinite' }}/>}
+                  </label>
 
-                  <div>
-                    <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:8, flexWrap:'wrap', gap:8 }}>
-                      <label style={{ fontFamily:'DM Mono,monospace', fontSize:9, color:DIM, textTransform:'uppercase', letterSpacing:'0.12em' }}>
-                        Claim or article text
-                      </label>
-                      <div style={{ display:'flex', alignItems:'center', gap:10 }}>
-                        <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', opacity: 0.7, transition: 'opacity 0.2s' }} onMouseOver={e => e.currentTarget.style.opacity = '1'} onMouseOut={e => e.currentTarget.style.opacity = '0.7'}>
-                          <Upload size={12} color={GOLD} />
-                          <span style={{ fontSize: 9, color: GOLD, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{t.uploadDossier}</span>
-                          <input type="file" style={{ display: 'none' }} accept=".pdf,.doc,.docx,.txt" onChange={handleFileUpload} />
-                        </label>
-                        {listening && (
-                          <div style={{ display:'flex', alignItems:'center', gap:7 }}>
-                            <div className="vf-wave"><span/><span/><span/><span/><span/></div>
-                            <span style={{ fontFamily:'DM Mono,monospace', fontSize:9, color:MIC_C }}>Listening…</span>
+                  {!isDeepfake && (
+                    <>
+                      <div style={{ display:'flex', alignItems:'center', gap:12 }}>
+                        <div style={{ flex:1, height:1, background:LINE }}/><span style={{ fontSize:11, color:DIM }}>or paste text</span><div style={{ flex:1, height:1, background:LINE }}/>
+                      </div>
+
+                      <div>
+                        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:8, flexWrap:'wrap', gap:8 }}>
+                          <label style={{ fontFamily:'DM Mono,monospace', fontSize:9, color:DIM, textTransform:'uppercase', letterSpacing:'0.12em' }}>
+                            Claim or article text
+                          </label>
+                          <div style={{ display:'flex', alignItems:'center', gap:10 }}>
+                            <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', opacity: 0.7, transition: 'opacity 0.2s' }} onMouseOver={e => e.currentTarget.style.opacity = '1'} onMouseOut={e => e.currentTarget.style.opacity = '0.7'}>
+                              <Upload size={12} color={GOLD} />
+                              <span style={{ fontSize: 9, color: GOLD, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{t.uploadDossier}</span>
+                              <input type="file" style={{ display: 'none' }} accept=".pdf,.doc,.docx,.txt" onChange={handleFileUpload} />
+                            </label>
+                            {listening && (
+                              <div style={{ display:'flex', alignItems:'center', gap:7 }}>
+                                <div className="vf-wave"><span/><span/><span/><span/><span/></div>
+                                <span style={{ fontFamily:'DM Mono,monospace', fontSize:9, color:MIC_C }}>Listening…</span>
+                              </div>
+                            )}
+                            <span style={{ fontFamily:'DM Mono,monospace', fontSize:10, color:DIM }}>{(text+interim).length}/8,000</span>
+                          </div>
+                   </div>
+                   <div style={{ position:'relative' }}>
+                          <textarea value={text+(interim?(text?' ':'')+interim:'')}
+                            onChange={e => { if (!listening) setText(e.target.value); }}
+                            readOnly={listening} maxLength={8000}
+                            placeholder={t.placeholder}
+                            className="vf-input vf-area"/>
+                          {listening && interim && (
+                            <div className="vf-transcript">
+                              <span style={{ fontSize:10, opacity:0.5, marginTop:2 }}>[LIVE TRANSCRIPT]</span>
+                              <span style={{ lineHeight:1.4 }}>{interim}</span>
+                            </div>
+                          )}
+                          {voiceReady && (
+                            <button onClick={toggleVoice} className={`vf-mic ${listening?'on':''}`} title={listening?'Stop recording':'Start voice input'}>
+                              {listening ? <MicOff size={14} color={MIC_C}/> : <Mic size={14} color={DIM}/>}
+                            </button>
+                          )}
+                        </div>
+                        {voiceReady && (
+                          <div style={{ display:'flex', alignItems:'center', gap:6, marginTop:8, flexWrap:'wrap' }}>
+                            <Zap size={11} color={DIM}/>
+                            <span style={{ fontSize:11, color:DIM }}>
+                              {listening ? <>Say <strong style={{ color:MIC_C }}>"analyze"</strong> to trigger verification hands-free</> : <>{t.voice} · say <strong style={{ color:GOLD }}>"analyze"</strong> to run automatically</>}
+                            </span>
                           </div>
                         )}
-                        <span style={{ fontFamily:'DM Mono,monospace', fontSize:10, color:DIM }}>{(text+interim).length}/8,000</span>
                       </div>
-                    </div>
-                    <div style={{ position:'relative' }}>
-                      <textarea value={text+(interim?(text?' ':'')+interim:'')}
-                        onChange={e => { if (!listening) setText(e.target.value); }}
-                        readOnly={listening} maxLength={8000}
-                        placeholder={t.placeholder}
-                        className="vf-input vf-area"/>
-                      {listening && interim && (
-                        <div className="vf-transcript">
-                          <span style={{ fontSize:10, opacity:0.5, marginTop:2 }}>[LIVE TRANSCRIPT]</span>
-                          <span style={{ lineHeight:1.4 }}>{interim}</span>
-                        </div>
-                      )}
-                      {voiceReady && (
-                        <button onClick={toggleVoice} className={`vf-mic ${listening?'on':''}`} title={listening?'Stop recording':'Start voice input'}>
-                          {listening ? <MicOff size={14} color={MIC_C}/> : <Mic size={14} color={DIM}/>}
-                        </button>
-                      )}
-                    </div>
-                    {voiceReady && (
-                      <div style={{ display:'flex', alignItems:'center', gap:6, marginTop:8, flexWrap:'wrap' }}>
-                        <Zap size={11} color={DIM}/>
-                        <span style={{ fontSize:11, color:DIM }}>
-                          {listening ? <>Say <strong style={{ color:MIC_C }}>"analyze"</strong> to trigger verification hands-free</> : <>{t.voice} · say <strong style={{ color:GOLD }}>"analyze"</strong> to run automatically</>}
-                        </span>
-                      </div>
-                    )}
-                  </div>
+                    </>
+                  )}
 
                   <div className="vf-btn-row" style={{ display:'flex', flexWrap:'wrap', alignItems:'center', gap:12, paddingTop:4 }}>
                     <button id="vfy-run-btn" className="vf-run" onClick={handleVerify} disabled={!canRun}>
                       <Gavel size={15}/> {t.runAudit}
                     </button>
-                    <input type="file" ref={fileRef} style={{ display:'none' }} accept="image/*,video/*" onChange={handleFileAudit}/>
+                    <input type="file" ref={fileRef} style={{ display:'none' }} accept="image/*,video/*,audio/*" onChange={handleFileAudit}/>
                     <button className="vf-ghost" onClick={() => fileRef.current?.click()}>
                       <Upload size={13}/> Import File
                     </button>
@@ -1101,7 +1158,7 @@ export default function Verify() {
               style={{ paddingTop:40, paddingBottom:80, background:'#08080E' }}
             >
               <div className="vf-score-header" style={{ marginBottom: 32, border: 'none', background: 'none', padding: 0 }}>
-                <VerdictHero score={results.truthScore} language={lang} />
+                <VerdictHero score={results.truthScore} mode={results.pipelineMeta?.mode} language={lang} />
               </div>
 
               {mode === 'adversarial' && results.narrativeAnalysis && (
@@ -1200,6 +1257,33 @@ export default function Verify() {
                       </div>
                     </div>
                   </div>
+
+                  {/* PROVENANCE/REVERSE SEARCH RESULTS */}
+                  {results.aiMediaDetection?.results?.[0]?.provenance?.found && (
+                    <div style={{ marginTop: 24, padding: 20, background: 'rgba(59,130,246,0.04)', border: '1px solid rgba(59,130,246,0.15)', borderRadius: 16 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
+                        <Search size={16} color="#3b82f6" />
+                        <span style={{ fontSize: 11, fontFamily: "'DM Mono', monospace", color: "#3b82f6", fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em' }}>Provenance Analysis (Reverse Lookup)</span>
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                        {results.aiMediaDetection.results[0].provenance.matches.map((m, i) => (
+                          <a key={i} href={m.url} target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'none', display: 'block', padding: '12px', background: 'rgba(0,0,0,0.2)', borderRadius: 10, border: '1px solid rgba(255,255,255,0.05)', transition: 'background 0.2s' }}
+                            onMouseOver={e => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}
+                            onMouseOut={e => e.currentTarget.style.background = 'rgba(0,0,0,0.2)'}
+                          >
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                              <span style={{ fontSize: 13, fontWeight: 600, color: TEXT }}>{m.title}</span>
+                              <LinkIcon size={12} color={DIM} />
+                            </div>
+                            <p style={{ fontSize: 11, color: DIM, margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{m.url}</p>
+                          </a>
+                        ))}
+                      </div>
+                      <p style={{ fontSize: 11, color: MUTED, marginTop: 12, fontStyle: 'italic' }}>
+                        ↳ Digital fingerprints found in public repositories. Cross-referencing against known viral media records.
+                      </p>
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -1233,8 +1317,8 @@ export default function Verify() {
                       <p style={{ fontSize:12, color:DIM, lineHeight:1.55 }}>{c.reasoning}</p>
                     </div>
                     <div style={{ textAlign:'right' }}>
-                      <span style={{ fontFamily:'DM Mono,monospace', fontSize:18, fontWeight:500, color:Math.round((c.confidence||0)*100)>=70?GOLD:DIM }}>
-                        {Math.round((c.confidence||0)*100)}<span style={{ fontSize:10, opacity:.5 }}>%</span>
+                      <span style={{ fontFamily:'DM Mono,monospace', fontSize:18, fontWeight:500, color: (c.confidence > 1 ? c.confidence : (c.confidence||0)*100) >= 70 ? GOLD : DIM }}>
+                        {Math.round(c.confidence > 1 ? c.confidence : (c.confidence||0)*100)}<span style={{ fontSize:10, opacity:.5 }}>%</span>
                       </span>
                     </div>
                   </motion.div>
