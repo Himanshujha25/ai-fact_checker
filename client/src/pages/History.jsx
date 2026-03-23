@@ -58,7 +58,8 @@ export default function History() {
   const query = searchParams.get('q')?.toLowerCase() || '';
 
   useEffect(() => {
-    axios.get(`${API_BASE}/history`)
+    const token = localStorage.getItem('token');
+    axios.get(`${API_BASE}/history`, { headers: { Authorization: `Bearer ${token}` } })
       .then(res => { setHistory(res.data); setLoading(false); })
       .catch(()  => setLoading(false));
   }, []);
@@ -79,7 +80,8 @@ export default function History() {
 
   const handleDeleteAll = async () => {
     try {
-      await axios.delete(`${API_BASE}/history`);
+      const token = localStorage.getItem('token');
+      await axios.delete(`${API_BASE}/history`, { headers: { Authorization: `Bearer ${token}` } });
       setHistory([]); setShowDelete(false);
     } catch (err) { alert('Failed to clear history: ' + err.message); }
   };

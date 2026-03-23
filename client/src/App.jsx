@@ -242,8 +242,8 @@ const AppContent = () => {
             <Route path="/verify"     element={<Verify />} />
             <Route path="/architecture" element={<Architecture />} />
             <Route path="/history"    element={<PrivateRoute><History /></PrivateRoute>} />
-            <Route path="/history/:id" element={<PrivateRoute><ReportDetail /></PrivateRoute>} />
-            <Route path="/history/:id/explorer/:claimIndex" element={<PrivateRoute><SourceExplorer /></PrivateRoute>} />
+            <Route path="/history/:id" element={<ReportDetail />} />
+            <Route path="/history/:id/explorer/:claimIndex" element={<SourceExplorer />} />
           </Routes>
         </AnimatePresence>
       </main>

@@ -78,7 +78,8 @@ export default function ReportDetail() {
 
   useEffect(() => {
     window.scrollTo(0, 0);
-    axios.get(`${API_BASE}/history/${id}`)
+    const token = localStorage.getItem('token');
+    axios.get(`${API_BASE}/history/${id}`, { headers: { Authorization: `Bearer ${token}` } })
       .then(res => { setData(res.data); setLoading(false); })
       .catch(err => { setError(err.response?.data?.error || 'Dossier not found'); setLoading(false); });
   }, [id]);
@@ -106,6 +107,28 @@ export default function ReportDetail() {
       jsPDF:{ unit:'mm', format:'a4', orientation:'portrait' },
       pagebreak:{ mode:['avoid-all','css','legacy'] }
     }).save().then(() => { document.getElementById('pdf-header-inject-detail')?.remove(); });
+  };
+
+  const handleShare = async () => {
+    const shareData = {
+      title: 'Digital Jurist Protocol Analysis',
+      text: 'Check out this forensic truth report from Truecast.',
+      url: window.location.href,
+    };
+
+    try {
+      if (navigator.share && navigator.canShare && navigator.canShare(shareData)) {
+        await navigator.share(shareData);
+      } else {
+        await navigator.clipboard.writeText(window.location.href);
+        alert('Report link copied to clipboard!');
+      }
+    } catch (err) {
+      if (err.name !== 'AbortError') {
+        await navigator.clipboard.writeText(window.location.href);
+        alert('Report link copied to clipboard!');
+      }
+    }
   };
 
   /* ── Loading ── */
@@ -250,7 +273,7 @@ export default function ReportDetail() {
       `}</style>
 
       <Sidebar id="sidebar-container" data-html2canvas-ignore activeFilter="All"
-        onFilterChange={() => navigate('/history')} onExport={handleExportPDF}/>
+        onFilterChange={() => navigate('/history')} onExport={handleExportPDF} onShare={handleShare}/>
 
       {/* className="rd-main" gives mobile padding override */}
       <main className="rd-main" style={{ flex:1, maxWidth:1240, margin:'0 auto', padding:'40px 48px 80px', overflowY:'auto', overflowX:'hidden' }}>
@@ -284,7 +307,7 @@ export default function ReportDetail() {
                 <button className="rd-btn-gold" onClick={handleExportPDF}>
                   <Download size={13}/> Export PDF
                 </button>
-                <button className="rd-btn-ghost" onClick={() => { navigator.clipboard.writeText(window.location.href); alert('Public report link copied to clipboard!'); }}>
+                <button className="rd-btn-ghost" onClick={handleShare}>
                   <ExternalLink size={13}/> Share
                 </button>
               </div>

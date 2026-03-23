@@ -197,13 +197,13 @@ async function dbGetHistory(userId) {
 
 async function dbGetReport(userId, id) {
   if (!db) {
-    const entry = memoryHistory.find(h => h.id === id && h.userId === userId);
+    const entry = memoryHistory.find(h => h.id === id);
     return entry ? entry.fullData : null;
   }
   try {
-    const result = await db.query('SELECT full_data FROM verifications WHERE id = $1 AND user_id = $2', [id, userId]);
+    const result = await db.query('SELECT full_data FROM verifications WHERE id = $1', [id]);
     if (result.rows.length === 0) {
-      const entry = memoryHistory.find(h => h.id === id && h.userId === userId);
+      const entry = memoryHistory.find(h => h.id === id);
       return entry ? entry.fullData : null;
     }
     return result.rows[0].full_data;
@@ -455,7 +455,7 @@ app.get('/api/history', authenticate, async (req, res) => {
   res.json(summaries);
 });
 
-app.get('/api/history/:id', authenticate, async (req, res) => {
+app.get('/api/history/:id', maybeAuthenticate, async (req, res) => {
   const data = await dbGetReport(req.userId, req.params.id);
   if (!data) return res.status(404).json({ error: 'Report not found' });
   res.json(data);
