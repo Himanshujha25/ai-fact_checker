@@ -263,7 +263,7 @@ const AppContent = () => {
             <Route path="/"           element={<Home />} />
             <Route path="/auth"       element={<Signin />} />
             <Route path="/signup"     element={<Signup />} />
-            <Route path="/verify"     element={<PrivateRoute><Verify /></PrivateRoute>} />
+            <Route path="/verify"     element={<Verify />} />
             <Route path="/architecture" element={<Architecture />} />
             <Route path="/history"    element={<PrivateRoute><History /></PrivateRoute>} />
             <Route path="/history/:id" element={<PrivateRoute><ReportDetail /></PrivateRoute>} />

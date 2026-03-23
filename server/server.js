@@ -10,7 +10,6 @@ const axios = require('axios');
 const CryptoJS = require('crypto-js');
 
 
-
 // ─── Tavily Research Agent (Live Web Search) ───
 async function performTavilySearch(query, depth = 'basic') {
   const apiKey = process.env.TAVILY_API_KEY;
@@ -174,16 +173,22 @@ async function dbGetHistory(userId) {
       [userId]
     );
     return result.rows.map(row => {
-      const fullData = row.full_data;
-      return formatHistoryItem({
-        id: row.id,
-        input: row.input_text,
-        truthScore: parseFloat(row.truth_score),
-        claimsCount: row.claims_count,
-        timestamp: row.created_at,
-        fullData
-      });
-    });
+      try {
+        let fd = row.full_data;
+        if (typeof fd === 'string') fd = JSON.parse(fd);
+        return formatHistoryItem({
+          id: row.id,
+          input: row.input_text,
+          truthScore: parseFloat(row.truth_score),
+          claimsCount: row.claims_count,
+          timestamp: row.created_at,
+          fullData: fd
+        });
+      } catch (e) {
+        console.error('Record format error:', e.message);
+        return null;
+      }
+    }).filter(x => x !== null);
   } catch (err) {
     console.error('DB History Error:', err.message);
     return memoryHistory.filter(h => h.userId === userId).slice(-50).reverse().map(formatHistoryItem);
@@ -362,7 +367,7 @@ Return ONLY JSON: {"isAIGenerated": boolean, "confidence": number(0-100), "indic
 // ─── Authentication Middleware ───
 const authenticate = (req, res, next) => {
   const token = req.headers.authorization?.split(' ')[1];
-  if (!token) return res.status(401).json({ error: 'Unauthorized: No token provided' });
+  if (!token || token === 'null' || token === 'undefined') return res.status(401).json({ error: 'Unauthorized: No token provided' });
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET || 'vericheck_secret_key_2026');
@@ -370,6 +375,22 @@ const authenticate = (req, res, next) => {
     next();
   } catch (err) {
     res.status(401).json({ error: 'Unauthorized: Invalid token' });
+  }
+};
+
+const maybeAuthenticate = (req, res, next) => {
+  const token = req.headers.authorization?.split(' ')[1];
+  if (!token || token === 'null' || token === 'undefined') {
+    req.userId = null;
+    return next();
+  }
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'vericheck_secret_key_2026');
+    req.userId = decoded.userId;
+    next();
+  } catch (err) {
+    req.userId = null;
+    next();
   }
 };
 
@@ -656,7 +677,7 @@ async function retryWithBackoff(fn, retries = 3, baseDelay = 1000) {
 }
 
 // Core verification pipeline — Chain-of-Thought + Multi-Mode Research Agent
-async function runVerificationPipeline(contentToProcess, mode = 'normal') {
+async function runVerificationPipeline(contentToProcess, mode = 'normal', language = 'en') {
   const model = genAI.getGenerativeModel({ model: 'gemini-2.5-pro' });
   const currentDate = new Date().toISOString().split('T')[0];
   let claimLimit = mode === 'pro' ? 8 : (mode === 'deep' ? 5 : 3);
@@ -664,10 +685,12 @@ async function runVerificationPipeline(contentToProcess, mode = 'normal') {
   console.log(`🚀 Starting ${mode.toUpperCase()} Agentic Research Pipeline (Limit: ${claimLimit} claims)...`);
 
   // ─── PHASE 1: Claim Extraction ───
-  console.log('  [Phase 1] Extracting claims...');
+  console.log(`  [Phase 1] Extracting claims (Lang: ${language})...`);
   const extractionPrompt = `You are a precision fact-extraction agent. Today's date is ${currentDate}.
   TASK: Extract AT MOST ${claimLimit} verifiable factual assertions from the text. 
   
+  LANGUAGE: Provide all "claim" and "context" strings in ${language === 'hi' ? 'Hindi' : 'English'}.
+
   EXAMPLES OF REPHRASING QUESTIONS:
   - "Is Messi the goat?" -> "Lionel Messi is the greatest football player of all time."
   - "Is it raining in London?" -> "It is currently raining in London."
@@ -720,6 +743,10 @@ async function runVerificationPipeline(contentToProcess, mode = 'normal') {
   CONTEXT/SUBJECT: "${claim.primaryEntity || 'General Information'}"
   MODE: ${mode.toUpperCase()}
   RESEARCH DATA: ${researchData ? JSON.stringify(researchData) : "NONE (Use internal knowledge if this is a general fact)"}
+
+  LANGUAGE REQUIREMENT:
+  - You MUST return all text fields (verdict, reasoning, evidence text, chainOfThought) in ${language === 'hi' ? 'Hindi' : 'English'}.
+  ${language === 'hi' ? '- For the "verdict" field, use only: "सही", "संभवतः सही", "आंशिक रूप से सही", "संभवतः गलत", "गलत", "पुष्टि नहीं की जा सकती".' : '- For the "verdict" field, use: "True", "Likely True", "Partially True", "Likely False", "False", "Unverifiable".'}
 
   ${isIdentityClaim ? `
   [PROTOCOL: IDENTITY RESOLUTION]
@@ -782,11 +809,11 @@ async function runVerificationPipeline(contentToProcess, mode = 'normal') {
   const successfulResults = verificationResults.filter(v => v && v.verdict);
   const trueCount = successfulResults.filter(v => {
     const vLower = (v.verdict || '').toLowerCase();
-    return vLower === 'true' || vLower === 'likely true' || vLower === 'accurate' || vLower === 'verified';
+    return ['true', 'likely true', 'accurate', 'verified', 'सही', 'संभवतः सही'].includes(vLower);
   }).length;
   const partialCount = successfulResults.filter(v => {
     const vLower = (v.verdict || '').toLowerCase();
-    return vLower === 'partially true' || vLower === 'mixed';
+    return ['partially true', 'mixed', 'आंशिक रूप से सही'].includes(vLower);
   }).length;
   const totalVerified = successfulResults.length || 1;
   const truthScore = Math.min(100, ((trueCount + partialCount * 0.5) / totalVerified) * 100);
@@ -802,9 +829,9 @@ async function runVerificationPipeline(contentToProcess, mode = 'normal') {
   };
 }
 
-// POST: Single Fact-Check (Protected)
-app.post('/api/verify', authenticate, async (req, res) => {
-  const { text, url, mode } = req.body;
+// POST: Single Fact-Check (Guest-Friendly)
+app.post('/api/verify', maybeAuthenticate, async (req, res) => {
+  const { text, url, mode, language = 'en' } = req.body;
   const userId = req.userId;
   let identifier = url || text;
   const hashKey = getHash(identifier);
@@ -837,8 +864,8 @@ app.post('/api/verify', authenticate, async (req, res) => {
 
     if (!contentToProcess.trim()) return res.status(400).json({ error: 'No content provided' });
 
-    console.log(`  [Dynamic] Processing payload: ${contentToProcess.substring(0, 50)}...`);
-    const responseData = await runVerificationPipeline(contentToProcess, mode || 'normal');
+    console.log(`  [Dynamic] Processing payload: ${contentToProcess.substring(0, 50)}... (Lang: ${language})`);
+    const responseData = await runVerificationPipeline(contentToProcess, mode || 'normal', language);
 
     // AI Media Detection: analyze extracted images
     if (imageUrls.length > 0) {
@@ -865,11 +892,12 @@ app.post('/api/verify', authenticate, async (req, res) => {
     const reportId = hashKey.substring(0, 12);
     responseData.reportId = reportId;
 
-    // Save with User ID
-    await dbSaveVerification(userId, reportId, url || text, responseData.truthScore, responseData.claims.length, responseData);
-
-    // Save to speed cache
-    cacheSet(cacheKey, responseData);
+    // Save with User ID (only if logged in)
+    if (userId) {
+      await dbSaveVerification(userId, reportId, url || text, responseData.truthScore, responseData.claims.length, responseData);
+      // Save to speed cache
+      cacheSet(cacheKey, responseData);
+    }
 
     res.json(responseData);
   } catch (error) {
@@ -908,3 +936,4 @@ app.post('/api/verify/bulk', authenticate, async (req, res) => {
 app.listen(PORT, () => {
   console.log(`🚀 VeriCheck server running on port ${PORT}`);
 });
+

@@ -1,17 +1,23 @@
 {
-  "name": "Truecast",
+  "name": "Truecast | Forensic Truth Protocol",
   "short_name": "Truecast",
-  "description": "Like a forecast, but for truth",
+  "description": "Like a forecast, but for truth. Forensic verification workspace.",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#f7f9fb",
-  "theme_color": "#003d9b",
+  "background_color": "#08080E",
+  "theme_color": "#C9A84C",
   "icons": [
     {
-      "src": "https://lh3.googleusercontent.com/aida-public/AB6AXuDjUYtJ0yORs6yPNTdJwSZr__L9nULtru8NP22BYdhBdhZ6B0cJN-JsxA4LCxnq6j2pU2IQkS6GblpdOG0o3gysYwpbLCeQ83wt2WvMf9M92JJWiFzRi63m8paImUIBEq2ZIB6HMVlsxCVQqs_hzrEJdDm30tKnoUduOKeVbc4vgZja05-8yA0Tn7J8j7qmWg2O07LITQ_-vmFQCa81mJvkhJeIjTnQ5hhhHaygn5S9EWhmQX1yTF_Sx5nCPrNgu8416xaiMPc6aConow=s512",
+      "src": "/lady_justice.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
+    },
+    {
+      "src": "/lady_justice.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
     }
   ]
 }

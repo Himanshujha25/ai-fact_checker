@@ -1,20 +1,21 @@
 import React, { useEffect, useRef } from 'react';
-import { motion, useInView } from 'framer-motion';
+import { motion, useInView, AnimatePresence } from 'framer-motion';
 import {
   Gavel, ArrowRight, ShieldCheck, Edit3, Network,
   CheckCircle2, BarChart3, Globe, Search, FileText,
-  TrendingUp, Database, Layers
+  TrendingUp, Database, Layers, Link as LinkIcon, ExternalLink,
+  ShieldAlert, AlertTriangle
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
-const GOLD   = '#C9A84C';
+const GOLD = '#C9A84C';
 const GOLD_D = 'rgba(201,168,76,0.1)';
-const SURF   = 'rgba(255,255,255,0.035)';
-const SURF2  = 'rgba(255,255,255,0.055)';
-const LINE   = 'rgba(255,255,255,0.07)';
-const TEXT   = '#E8E4DC';
-const MUTED  = 'rgba(232,228,220,0.38)';
-const DIM    = 'rgba(232,228,220,0.18)';
+const SURF = 'rgba(255,255,255,0.035)';
+const SURF2 = 'rgba(255,255,255,0.055)';
+const LINE = 'rgba(255,255,255,0.07)';
+const TEXT = '#E8E4DC';
+const MUTED = 'rgba(232,228,220,0.38)';
+const DIM = 'rgba(232,228,220,0.18)';
 
 function Counter({ target, suffix = '' }) {
   const ref = useRef(null);
@@ -90,21 +91,131 @@ function PipelineCard({ num, icon: Icon, title, body, children, style = {}, dela
   );
 }
 
+function SourceCard({ name, url, label, confidence, category, delay = 0 }) {
+  const isTrusted = label === 'Trusted';
+  const isBiased = label === 'Biased';
+  const isUnreliable = label === 'Unreliable';
+
+  const labelColor = isTrusted ? '#4ade80' : isBiased ? '#fbbf24' : '#f87171';
+  const labelBg = isTrusted ? 'rgba(74,222,128,0.08)' : isBiased ? 'rgba(251,191,36,0.08)' : 'rgba(248,113,113,0.08)';
+  const labelBorder = isTrusted ? 'rgba(74,222,128,0.2)' : isBiased ? 'rgba(251,191,36,0.2)' : 'rgba(248,113,113,0.2)';
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 15 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true }}
+      transition={{ duration: 0.45, delay }}
+      whileHover={{ y: -6, borderColor: 'rgba(201,168,76,0.4)', background: 'rgba(255,255,255,0.05)' }}
+      style={{
+        background: SURF,
+        border: `1px solid ${LINE}`,
+        borderRadius: 18,
+        padding: '28px',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 20,
+        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+        boxShadow: '0 10px 30px -10px rgba(0,0,0,0.3)',
+      }}
+    >
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', gap: 12 }}>
+        <div style={{ display: 'flex', gap: 12, alignItems: 'center', minWidth: 0 }}>
+          <div style={{
+            width: 40, height: 40, borderRadius: 10,
+            background: isTrusted ? 'rgba(74,222,128,0.06)' : 'rgba(255,255,255,0.03)',
+            border: `1px solid ${isTrusted ? 'rgba(74,222,128,0.15)' : LINE}`,
+            display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0
+          }}>
+            {isTrusted ? <ShieldCheck size={18} color="#4ade80" /> : isBiased ? <ShieldAlert size={18} color="#fbbf24" /> : <AlertTriangle size={18} color="#f87171" />}
+          </div>
+          <div style={{ minWidth: 0 }}>
+            <h4 style={{ fontSize: 16, fontWeight: 600, color: TEXT, marginBottom: 4, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{name}</h4>
+            <span style={{
+              fontSize: 10, color: DIM, fontFamily: "'DM Mono', monospace",
+              textTransform: 'uppercase', letterSpacing: '0.08em',
+              display: 'flex', alignItems: 'center', gap: 6
+            }}>
+              <div style={{ width: 4, height: 4, borderRadius: '50%', background: labelColor }} />
+              {category}
+            </span>
+          </div>
+        </div>
+        <div style={{
+          padding: '5px 12px', borderRadius: 6,
+          background: labelBg, border: `1px solid ${labelBorder}`,
+          color: labelColor, fontSize: 10, fontWeight: 700,
+          textTransform: 'uppercase', letterSpacing: '0.1em',
+          fontFamily: "'DM Mono', monospace", flexShrink: 0,
+          boxShadow: `0 0 15px ${labelColor}15`
+        }}>
+          {label}
+        </div>
+      </div>
+
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <a href={url} target="_blank" rel="noopener noreferrer"
+          style={{
+            fontSize: 13, color: GOLD, textDecoration: 'none',
+            display: 'flex', alignItems: 'center', gap: 8,
+            opacity: 0.75, transition: 'all 0.2s ease',
+            padding: '10px 14px', background: 'rgba(255,255,255,0.02)',
+            borderRadius: 8, border: `1px solid ${LINE}`
+          }}
+          onMouseOver={e => {
+            e.currentTarget.style.opacity = 1;
+            e.currentTarget.style.borderColor = 'rgba(201,168,76,0.2)';
+            e.currentTarget.style.background = 'rgba(201,168,76,0.05)';
+          }}
+          onMouseOut={e => {
+            e.currentTarget.style.opacity = 0.75;
+            e.currentTarget.style.borderColor = LINE;
+            e.currentTarget.style.background = 'rgba(255,255,255,0.02)';
+          }}
+        >
+          <LinkIcon size={13} />
+          <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>{url.replace(/https?:\/\/(www\.)?/, '')}</span>
+          <ExternalLink size={11} style={{ opacity: 0.5 }} />
+        </a>
+      </div>
+
+      <div style={{ paddingTop: 20, borderTop: `1px solid ${LINE}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+          <span style={{ fontSize: 9, color: DIM, textTransform: 'uppercase', letterSpacing: '0.12em', fontFamily: "'DM Mono', monospace", fontWeight: 600 }}>Forensic Authenticity</span>
+          <span style={{ fontSize: 12, color: MUTED }}>Decision Confidence</span>
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 8 }}>
+          <div style={{ width: 80, height: 5, background: 'rgba(255,255,255,0.06)', borderRadius: 3, overflow: 'hidden' }}>
+            <motion.div
+              initial={{ width: 0 }}
+              whileInView={{ width: `${confidence}%` }}
+              viewport={{ once: true }}
+              transition={{ duration: 1.2, delay: delay + 0.3, ease: [0.34, 1.56, 0.64, 1] }}
+              style={{ height: '100%', background: confidence > 85 ? '#4ade80' : confidence > 50 ? GOLD : '#f87171', borderRadius: 3 }}
+            />
+          </div>
+          <span style={{ fontSize: 20, fontWeight: 700, color: confidence > 85 ? '#4ade80' : confidence > 50 ? GOLD : '#f87171', fontFamily: "'DM Mono', monospace", lineHeight: 1 }}>
+            {confidence}<span style={{ fontSize: 12, opacity: 0.6 }}>%</span>
+          </span>
+        </div>
+      </div>
+    </motion.div>
+  );
+}
+
 export default function Home() {
   const navigate = useNavigate();
 
   const stats = [
-    { label: 'Claims Audited',       value: '4.2M',  raw: '4.2' },
-    { label: 'Error Margin',         value: '0.02%', raw: '0.02' },
-    { label: 'Trusted Sources',      value: '12k+',  raw: '12' },
-    { label: 'Verification Latency', value: '98ms',  raw: '98' },
+    { label: 'Claims Audited', value: '100+   ', raw: '100' },
+    { label: 'Error Margin', value: '0.02%', raw: '0.02' },
+    { label: 'Trusted Sources', value: '10+', raw: '10 ' },
+    { label: 'Verification Latency', value: '98ms', raw: '98' },
   ];
 
   return (
     <div style={{ background: '#08080E', color: TEXT, fontFamily: "'DM Sans', system-ui, sans-serif", minHeight: '100vh', overflowX: 'hidden' }}>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@400;500&display=swap');
-
         /* ── Buttons ── */
         .hm-btn-gold {
           background: ${GOLD}; color: #08080E; border: none; border-radius: 9px;
@@ -268,9 +379,9 @@ export default function Home() {
 
           <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 16, marginTop: 48, paddingTop: 28, borderTop: `1px solid ${LINE}` }}>
             {[
-              { icon: Database,    label: '12k+ sources indexed' },
+              { icon: Database, label: '12k+ sources indexed' },
               { icon: ShieldCheck, label: '99.98% accuracy' },
-              { icon: Globe,       label: 'Live OSINT streams' },
+              { icon: Globe, label: 'Live OSINT streams' },
             ].map(({ icon: Ic, label }, i) => (
               <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
                 <Ic size={12} color={DIM} />
@@ -280,72 +391,28 @@ export default function Home() {
           </div>
         </motion.div>
 
-        {/* Right: terminal card */}
+        {/* Right: Statue Hero */}
         <motion.div
           className="hero-card"
           initial={{ opacity: 0, x: 24, scale: 0.96 }}
           animate={{ opacity: 1, x: 0, scale: 1 }}
-          transition={{ duration: 0.6, delay: 0.15, ease: [0.4, 0, 0.2, 1] }}
+          transition={{ duration: 0.8, delay: 0.15, ease: [0.4, 0, 0.2, 1] }}
+          style={{ position:'relative', display:'flex', justifyContent:'center', perspective: 1000 }}
         >
-          <div style={{
-            background: 'rgba(12,12,20,0.9)',
-            border: '1px solid rgba(255,255,255,0.09)',
-            borderRadius: 18, overflow: 'hidden',
-            boxShadow: '0 40px 80px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.04)',
-            position: 'relative',
-          }}>
-            {/* Header bar */}
-            <div style={{ padding: '14px 20px', borderBottom: `1px solid ${LINE}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'rgba(255,255,255,0.02)' }}>
-              <div style={{ display: 'flex', gap: 7 }}>
-                {['#ff5f57','#febc2e','#28c840'].map(c => (
-                  <div key={c} style={{ width: 10, height: 10, borderRadius: '50%', background: c, opacity: 0.7 }} />
-                ))}
-              </div>
-              <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 10, color: DIM, letterSpacing: '0.08em' }}>
-                jurist-audit — session DPJ-1-884
-              </span>
-              <div style={{ width: 10, height: 10, borderRadius: '50%', background: '#4ade80', boxShadow: '0 0 8px rgba(74,222,128,0.5)' }} />
-            </div>
-
-            {/* Terminal body */}
-            <div style={{ padding: '24px 24px 0', position: 'relative' }}>
-              <div className="scan" style={{ position: 'absolute', left: 0, right: 0, height: 1, background: `linear-gradient(90deg, transparent, ${GOLD}, transparent)`, pointerEvents: 'none', zIndex: 2 }} />
-              {[
-                { label: '→ Ingesting source…',        color: DIM,       delay: 0 },
-                { label: '→ Extracting 7 claims…',      color: DIM,       delay: 0.1 },
-                { label: '→ Cross-referencing index…',  color: DIM,       delay: 0.2 },
-                { label: '→ Agent consensus: 3/3…',     color: MUTED,     delay: 0.3 },
-                { label: '✓ Forensic dossier ready.',   color: '#4ade80', delay: 0.4, bold: true },
-              ].map((line, i) => (
-                <motion.p key={i} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.6 + line.delay, duration: 0.4 }}
-                  style={{ fontFamily: "'DM Mono', monospace", fontSize: 12, lineHeight: 2, color: line.color, fontWeight: line.bold ? 500 : 400 }}>
-                  {line.label}
-                </motion.p>
-              ))}
-              <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.2 }}
-                style={{ fontFamily: "'DM Mono', monospace", fontSize: 12, color: GOLD, lineHeight: 2 }}>
-                $ <span className="cursor-blink" style={{ borderRight: `2px solid ${GOLD}`, paddingRight: 2 }} />
-              </motion.p>
-            </div>
-
-            {/* Score bar */}
-            <div style={{ padding: '20px 24px 24px' }}>
-              <div style={{ background: SURF, border: `1px solid ${LINE}`, borderRadius: 10, padding: '16px 18px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-                  <span style={{ fontSize: 11, color: DIM, fontFamily: "'DM Mono', monospace", letterSpacing: '0.08em' }}>Analysis Pipeline</span>
-                  <span style={{ fontSize: 11, color: GOLD, fontFamily: "'DM Mono', monospace", fontWeight: 500 }}>67%</span>
-                </div>
-                <div style={{ height: 3, background: 'rgba(255,255,255,0.06)', borderRadius: 10, overflow: 'hidden' }}>
-                  <motion.div initial={{ width: 0 }} animate={{ width: '67%' }} transition={{ delay: 0.8, duration: 1.5, ease: 'easeOut' }}
-                    style={{ height: '100%', background: GOLD, borderRadius: 10 }} />
-                </div>
-                <div style={{ display: 'flex', gap: 8, marginTop: 16, flexWrap: 'wrap' }}>
-                  <span className="verdict-pill" style={{ background: 'rgba(74,222,128,0.08)', color: '#4ade80', border: '1px solid rgba(74,222,128,0.2)' }}>Verified ×4</span>
-                  <span className="verdict-pill" style={{ background: 'rgba(248,113,113,0.08)', color: '#f87171', border: '1px solid rgba(248,113,113,0.2)' }}>Refuted ×1</span>
-                  <span className="verdict-pill" style={{ background: 'rgba(251,191,36,0.08)', color: '#fbbf24', border: '1px solid rgba(251,191,36,0.2)' }}>Mixed ×2</span>
-                </div>
-              </div>
-            </div>
+          {/* Ambient Glow */}
+          <div style={{ position: 'absolute', inset: -60, background: `radial-gradient(circle, ${GOLD}10 0%, transparent 60%)`, filter: 'blur(40px)', zIndex: 0 }} />
+          
+          <div style={{ position:'relative', zIndex: 1, flex: 1 }}>
+            <motion.img 
+              src="/lady_justice.png"
+              alt="Truecast Lady Justice" 
+              style={{ width: '100%', maxWidth: 520, borderRadius: 24, boxShadow: '0 50px 100px rgba(0,0,0,0.6)', border: `1px solid ${LINE}` }}
+              animate={{ y: [0, -15, 0] }}
+              transition={{ duration: 6, repeat: Infinity, ease: 'easeInOut' }}
+            />
+            
+            {/* Status Overlay */}
+            
           </div>
         </motion.div>
       </section>
@@ -384,10 +451,10 @@ export default function Home() {
               delay={0.1} style={{ height: '100%' }}>
               <div style={{ marginTop: 28, display: 'flex', flexDirection: 'column', gap: 8 }}>
                 {[
-                  { label: 'Academic archives',  w: 88 },
-                  { label: 'Live OSINT feeds',   w: 63 },
+                  { label: 'Academic archives', w: 88 },
+                  { label: 'Live OSINT feeds', w: 63 },
                   { label: 'Government indices', w: 94 },
-                  { label: 'Cross-validation',   w: 71 },
+                  { label: 'Cross-validation', w: 71 },
                 ].map((bar, i) => (
                   <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
                     <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 10, color: DIM, width: 130, flexShrink: 0 }}>{bar.label}</span>
@@ -438,6 +505,78 @@ export default function Home() {
                 </button>
               </div>
             </motion.div>
+          </div>
+        </div>
+      </section>
+
+      {/* ══════════ SOURCES ══════════════════════════════════════ */}
+      <section className="pipeline-section" style={{ borderTop: `1px solid ${LINE}`, paddingTop: 100 }}>
+        <motion.header
+          initial={{ opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }} transition={{ duration: 0.45 }}
+          style={{ marginBottom: 56 }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
+            <div style={{ width: 24, height: 1, background: GOLD, opacity: 0.55 }} />
+            <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 10, fontWeight: 500, color: GOLD, letterSpacing: '0.14em', textTransform: 'uppercase' }}>
+              Transparency
+            </span>
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', flexWrap: 'wrap', gap: 24 }}>
+            <div style={{ maxWidth: 600 }}>
+              <h2 style={{ fontFamily: "'DM Serif Display', Georgia, serif", fontSize: 'clamp(28px, 4vw, 52px)', fontWeight: 400, letterSpacing: '-0.02em', color: TEXT, marginBottom: 14, lineHeight: 1.1 }}>
+                High-Fidelity Evidence.
+              </h2>
+              <p style={{ fontSize: 15, color: MUTED, lineHeight: 1.7 }}>
+                Sources are never obscured. We provide direct access to the primary material used for adjudication, classified by our proprietary trust scoring algorithm.
+              </p>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 18px', background: 'rgba(255,255,255,0.03)', border: `1px solid ${LINE}`, borderRadius: 10 }}>
+              <ShieldCheck size={14} color="#4ade80" />
+              <span style={{ fontSize: 11, color: DIM, fontWeight: 500, fontFamily: "'DM Mono', monospace" }}>OSINT INDEXED: 12.4K</span>
+            </div>
+          </div>
+        </motion.header>
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 24 }}>
+          {[
+            { name: 'Reuters World News', url: 'https://www.reuters.com/world/exclusive-report-2026', label: 'Trusted', confidence: 98, category: 'Legacy Media' },
+            { name: 'The Associated Press', url: 'https://apnews.com/article/financial-audit-protocol', label: 'Trusted', confidence: 96, category: 'News Agency' },
+            { name: 'Bellingcat Investigator', url: 'https://www.bellingcat.com/news/uk-2026-audit', label: 'Trusted', confidence: 92, category: 'OSINT Expert' },
+            { name: 'Government Archive', url: 'https://archive.gov/records/2026/policy-audit', label: 'Trusted', confidence: 99, category: 'Official Record' },
+            { name: 'RT News Network', url: 'https://rt.com/news/state-sponsored-report', label: 'Biased', confidence: 45, category: 'State Media' },
+            { name: 'Unverified Blog', url: 'https://truth-seeker-vlog.blogspot.com/post-401', label: 'Unreliable', confidence: 12, category: 'Social Media' },
+          ].map((src, i) => (
+            <SourceCard key={i} {...src} delay={i * 0.08} />
+          ))}
+        </div>
+
+        <div style={{
+          marginTop: 64,
+          padding: '32px',
+          background: 'rgba(248,113,113,0.05)',
+          border: '1px solid rgba(248,113,113,0.15)',
+          borderRadius: 20,
+          display: 'flex',
+          alignItems: 'center',
+          gap: 24,
+          position: 'relative',
+          overflow: 'hidden'
+        }}>
+          <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 4, background: '#f87171' }} />
+          <div style={{
+            width: 48, height: 48, borderRadius: '50%',
+            background: 'rgba(248,113,113,0.12)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            flexShrink: 0, border: '1px solid rgba(248,113,113,0.2)'
+          }}>
+            <AlertTriangle size={24} color="#f87171" strokeWidth={2.5} />
+          </div>
+          <div>
+            <h5 style={{ fontSize: 15, fontWeight: 700, color: '#f87171', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Zero-Tolerance for Source Hallucination</h5>
+            <p style={{ fontSize: 13, color: 'rgba(232,228,220,0.6)', lineHeight: 1.7, maxWidth: 800 }}>
+              Unlike generic AI tools that may fabricate citations or mislabel sources to fit a narrative, Truecast enforces a strict <strong>Forensic Handshake™</strong>. Every source undergoing adjudication must pass a multi-vector validation check—verifying its cryptographic SSL certificate, domain authority, and historical neutrality index before it enters our ledger.
+            </p>
           </div>
         </div>
       </section>

@@ -43,7 +43,7 @@ const getDynamicClaims = (input) => {
 };
 
 /* ═══════════════════════════════════════════════════════════════ */
-export default function AnalysisProcessing({ elapsed, step, logs, inputTitle, onCancel }) {
+export default function AnalysisProcessing({ elapsed, step, logs, inputTitle, onCancel, listening, interim }) {
   const [dynamicClaims, setDynamicClaims] = React.useState(() => getDynamicClaims(inputTitle));
 
   React.useEffect(() => {
@@ -148,6 +148,15 @@ export default function AnalysisProcessing({ elapsed, step, logs, inputTitle, on
           )}
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 24, flexShrink: 0 }}>
+          {listening && (
+            <motion.div initial={{ opacity:0, x:10 }} animate={{ opacity:1, x:0 }} style={{ display: 'flex', alignItems: 'center', gap: 10, marginRight: 8, opacity: 0.8 }}>
+               <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#ff4b8b', animation: 'ap-pulse 1.2s infinite', boxShadow: '0 0 8px #ff4b8b' }} />
+               <div style={{ display:'flex', flexDirection:'column' }}>
+                 <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 9, color: '#ff4b8b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Mic Window (10s)</span>
+                 <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.4)', fontStyle:'italic' }}>{interim ? `↳ "${interim}..."` : 'Say "Terminate" or "Roko"...'}</span>
+               </div>
+            </motion.div>
+          )}
           <div style={{ textAlign: 'right' }}>
             <span style={{ display: 'block', fontFamily: "'DM Mono', monospace", fontSize: 9, color: DIM, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 6 }}>
               Elapsed
@@ -172,7 +181,7 @@ export default function AnalysisProcessing({ elapsed, step, logs, inputTitle, on
             onMouseOver={e => { e.currentTarget.style.background = 'rgba(248,113,113,0.12)'; e.currentTarget.style.borderColor = 'rgba(248,113,113,0.25)' }}
             onMouseOut={e => { e.currentTarget.style.background = 'rgba(248,113,113,0.06)'; e.currentTarget.style.borderColor = 'rgba(248,113,113,0.15)' }}
           >
-            Terminal
+            Terminate
           </button>
         </div>
       </div>
