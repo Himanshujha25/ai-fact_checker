@@ -88,7 +88,7 @@ export default function History() {
     ? Math.round(history.reduce((a, h) => a + (h.truthScore || 0), 0) / history.length)
     : 0;
 
-  const tabs = ['All Records', 'Priority', 'Redundant'];
+  const tabs = ['All Records'];
 
   return (
     <div style={{ background: '#08080E', minHeight: 'calc(100vh - 64px)', color: TEXT, fontFamily: "'DM Sans', system-ui, sans-serif", display: 'flex' }}>

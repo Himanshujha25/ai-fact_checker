@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <style>
+    body {
+      width: 320px;
+      padding: 0;
+      margin: 0;
+      background: #08080E;
+      color: #E8E4DC;
+      font-family: 'DM Sans', system-ui, sans-serif;
+    }
+    .header {
+      padding: 24px 20px;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .logo-container {
+      width: 32px;
+      height: 32px;
+      background: rgba(201,168,76,0.12);
+      border: 1px solid rgba(201,168,76,0.2);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .main {
+      padding: 20px;
+    }
+    .title {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: rgba(232,228,220,0.5);
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .input-group {
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.07);
+      border-radius: 10px;
+      padding: 12px;
+      margin-bottom: 20px;
+      transition: border 0.3s;
+    }
+    .input-group:focus-within {
+      border-color: rgba(201,168,76,0.5);
+    }
+    textarea {
+      width: 100%;
+      height: 80px;
+      background: transparent;
+      border: none;
+      color: #E8E4DC;
+      font-size: 13px;
+      resize: none;
+      outline: none;
+      padding: 0;
+    }
+    .btn {
+      width: 100%;
+      background: #C9A84C;
+      color: #08080E;
+      border: none;
+      border-radius: 9px;
+      padding: 14px;
+      font-weight: 700;
+      font-size: 13px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      transition: all 0.2s;
+    }
+    .btn:hover {
+      filter: brightness(1.1);
+      transform: translateY(-1px);
+    }
+    .btn-secondary {
+      width: 100%;
+      background: rgba(255,255,255,0.02);
+      color: #C9A84C;
+      border: 1px solid rgba(201,168,76,0.4);
+      border-radius: 9px;
+      padding: 12px;
+      font-weight: 600;
+      font-size: 12px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      margin-top: 4px;
+      transition: all 0.2s;
+    }
+    .btn-secondary:hover {
+      background: rgba(201,168,76,0.15);
+      border-color: #C9A84C;
+      transform: translateY(-1px);
+    }
+    .status {
+      margin-top: 24px;
+      font-size: 11px;
+      color: rgba(232,228,220,0.3);
+      line-height: 1.5;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="logo-container">
+      <span style="font-size: 18px;">⚖️</span>
+    </div>
+    <div style="font-weight: 700; font-size: 18px; color: #C9A84C; letter-spacing: -0.01em;">Truecast Eye</div>
+  </div>
+
+  <div class="main">
+    <div class="title">
+      <div style="width: 6px; height: 6px; border-radius: 50%; background: #4ade80; box-shadow: 0 0 8px #4ade80;"></div>
+      Direct Adjudication
+    </div>
+
+    <div class="input-group">
+      <textarea id="auditText" placeholder="Enter claim or paste text for forensic audit..."></textarea>
+    </div>
+
+    <button id="auditBtn" class="btn">
+      Initiate Forensic Audit
+    </button>
+
+    <div style="height: 1px; background: rgba(255,255,255,0.08); margin: 24px 0;"></div>
+
+    <div class="title">
+      <div style="width: 6px; height: 6px; border-radius: 50%; background: #fbbf24; box-shadow: 0 0 8px #fbbf24;"></div>
+      Full Page Intelligence
+    </div>
+
+    <button id="urlAuditBtn" class="btn-secondary">
+      ⚖️ Analyze Current Page URL
+    </button>
+
+    <div class="status">
+      You can also select any text on a webpage and click the <b>Truecast</b> icon to audit it instantly.
+    </div>
+  </div>
+  <script src="popup.js"></script>
+</body>
+</html>

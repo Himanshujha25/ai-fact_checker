@@ -61,7 +61,12 @@ const UI_TEXT = {
     mediaAuth: "Media Authentication",
     likelySynth: "Likely Synthesized",
     likelyHuman: "Likely Human",
-    clear: "Clear"
+    clear: "Clear",
+    narrativeDuel: "Narrative Duel: Framing Analysis",
+    sourceA: "Narrative Source A",
+    sourceB: "Narrative Source B",
+    biasDetection: "Bias Detection & Omissions",
+    uploadDossier: "Upload Dossier (PDF/DOCX)",
   },
   hi: {
     finalAdjudication: "अंतिम न्यायिक निर्णय",
@@ -100,7 +105,12 @@ const UI_TEXT = {
     mediaAuth: "मीडिया प्रमाणीकरण",
     likelySynth: "संभावित कृत्रिम",
     likelyHuman: "संभावित मानवीय",
-    clear: "स्पष्ट"
+    clear: "स्पष्ट",
+    narrativeDuel: "नेरेटिव द्वंद्व: फ्रेमिंग विश्लेषण",
+    sourceA: "नेरेटिव स्रोत A",
+    sourceB: "नेरेटिव स्रोत B",
+    biasDetection: "पूर्वाग्रह और चूक का पता लगाना",
+    uploadDossier: "डोजियर अपलोड करें (PDF/DOCX)",
   }
 };
 
@@ -237,6 +247,60 @@ const QuickAuditSummary = ({ claims = [], language = 'en' }) => {
   );
 };
 
+const NarrativeDuel = ({ analysis, language = 'en' }) => {
+  const t = UI_TEXT[language] || UI_TEXT.en;
+  if (!analysis) return null;
+  
+  return (
+    <div style={{ marginBottom: 44 }}>
+      <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:20, paddingBottom:14, borderBottom:`1px solid ${GOLD_L}` }}>
+        <Zap size={18} color={GOLD}/>
+        <h3 style={{ fontFamily:"'DM Serif Display',Georgia,serif", fontSize:'clamp(18px,2.5vw,26px)', fontWeight:400, color:TEXT }}>
+          {t.narrativeDuel}.
+        </h3>
+      </div>
+      
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24 }}>
+        {/* Source A */}
+        <div style={{ background: 'rgba(59,130,246,0.03)', border: '1px solid rgba(59,130,246,0.1)', borderRadius: 16, padding: 24 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
+            <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#3b82f6' }} />
+            <span style={{ fontSize: 11, fontFamily: "'DM Mono', monospace", color: "#3b82f6", fontWeight: 700, textTransform: 'uppercase' }}>{t.sourceA}</span>
+          </div>
+          <p style={{ fontSize: 14, color: TEXT, lineHeight: 1.6, marginBottom: 16 }}>{analysis.sourceA?.framing}</p>
+          <div style={{ padding: 12, background: 'rgba(0,0,0,0.2)', borderRadius: 8 }}>
+            <p style={{ fontSize: 10, color: DIM, textTransform: 'uppercase', marginBottom: 4 }}>Key Focus</p>
+            <p style={{ fontSize: 12, color: '#3b82f6', fontWeight: 600 }}>{analysis.sourceA?.focus}</p>
+          </div>
+        </div>
+
+        {/* Source B */}
+        <div style={{ background: 'rgba(236,72,153,0.03)', border: '1px solid rgba(236,72,153,0.1)', borderRadius: 16, padding: 24 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
+            <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#ec4899' }} />
+            <span style={{ fontSize: 11, fontFamily: "'DM Mono', monospace", color: "#ec4899", fontWeight: 700, textTransform: 'uppercase' }}>{t.sourceB}</span>
+          </div>
+          <p style={{ fontSize: 14, color: TEXT, lineHeight: 1.6, marginBottom: 16 }}>{analysis.sourceB?.framing}</p>
+          <div style={{ padding: 12, background: 'rgba(0,0,0,0.2)', borderRadius: 8 }}>
+            <p style={{ fontSize: 10, color: DIM, textTransform: 'uppercase', marginBottom: 4 }}>Key Focus</p>
+            <p style={{ fontSize: 12, color: '#ec4899', fontWeight: 600 }}>{analysis.sourceB?.focus}</p>
+          </div>
+        </div>
+      </div>
+
+      <div style={{ marginTop: 24, padding: 20, background: 'rgba(201,168,76,0.04)', border: `1px solid ${GOLD_L}`, borderRadius: 16 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+          <Activity size={14} color={GOLD} />
+          <span style={{ fontSize: 11, fontFamily: "'DM Mono', monospace", color: TEXT, fontWeight: 700, textTransform: 'uppercase' }}>{t.biasDetection}</span>
+        </div>
+        <ul style={{ margin: 0, paddingLeft: 18, fontSize: 13, color: MUTED, lineHeight: 1.6 }}>
+          {analysis.comparativeBias?.map((b, i) => <li key={i}>{b}</li>)}
+        </ul>
+      </div>
+    </div>
+  );
+};
+
 const TEXT   = '#E8E4DC';
 const MUTED  = 'rgba(232,228,220,0.42)';
 const DIM    = 'rgba(232,228,220,0.22)';
@@ -325,6 +389,21 @@ export default function Verify() {
     if (listening && recRef.current) {
       try { recRef.current.stop(); } catch(e) {}
     }
+  };
+
+  const handleFileUpload = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    
+    // Simulate reading text from dossier
+    setLoading(true); setStep(1); setElapsed(0);
+    setLogs([{ msg: `Decrypting dossier: ${file.name}...`, id: Date.now() }]);
+    
+    setTimeout(() => {
+      const simulatedText = `FORENSIC DOSSIER IMPORT: ${file.name}\n\nThis document contains multiple assertions regarding global market volatility and supply chain disruption within the tech sector. Initial scan suggests evidence of conflicting data reports from independent auditors.`;
+      setText(simulatedText);
+      setLoading(false); setStep(0); setLogs([]);
+    }, 2000);
   };
 
   useEffect(() => {
@@ -434,6 +513,38 @@ export default function Verify() {
   }, [loading, listening]);
 
   useEffect(() => {
+    // Check for audit text in URL (from Extension)
+    const params = new URLSearchParams(window.location.search);
+    const auditText = params.get('text');
+    if (auditText && !loading) {
+      // Hard-kill any voice activity for extension redirection
+      setListening(false);
+      if (recRef.current) {
+        try { recRef.current.abort(); } catch(e) {}
+        recRef.current = null;
+      }
+
+      if (auditText.startsWith('http')) {
+        // If it's a URL, put it in the URL input
+        setUrl(auditText);
+        setText(''); 
+      } else {
+        setText(auditText);
+        setUrl('');
+      }
+
+      // Automatically trigger audit
+      setTimeout(() => {
+        const b = document.getElementById('vfy-run-btn');
+        if (b && !b.disabled) b.click();
+      }, 350);
+      
+      // Clean URL after consuming text
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+  }, [loading]);
+
+  useEffect(() => {
     if (user) {
       const t = localStorage.getItem('token');
       axios.get(`${API_BASE}/history?limit=10`, { headers: { Authorization: `Bearer ${t}` } })
@@ -496,13 +607,7 @@ export default function Verify() {
   const handleVerify = useCallback(async () => {
     const input = url.trim() || text.trim(); if (!input) return;
     
-    // Force-restart microphone to clear speech buffer for the analysis phase
-    if (listening) {
-      setListening(false);
-      setTimeout(() => setListening(true), 250);
-    } else {
-      setListening(true);
-    }
+    // Microphone should remain in its current state (likely off) unless manually toggled
     setInterim(''); 
 
     if (!user && credits <= 0) {
@@ -525,7 +630,10 @@ export default function Verify() {
         headers: token ? { Authorization: `Bearer ${token}` } : {}
       });
       [clock,stepper,logger].forEach(clearInterval);
-      setStep(4); setResults(res.data); setLoading(false);
+      
+      let finalResults = res.data;
+      
+      setStep(4); setResults(finalResults); setLoading(false);
       
       if (!user) {
         const next = Math.max(0, credits - 1);
@@ -595,9 +703,10 @@ export default function Verify() {
   const canRun = !!(url.trim() || text.trim() || interim.trim());
 
   const MODES = [
-    { id:'normal', label:'Standard',      sub:'Fast consensus',       icon:Activity   },
-    { id:'deep',   label:'Deep Research', sub:'Exhaustive OSINT',     icon:Search     },
-    { id:'pro',    label:'Pro Forensic',  sub:'Multi-agent academic', icon:ShieldCheck},
+    { id:'normal',      label:'Standard',         sub:'Fast consensus',           icon:Activity   },
+    { id:'adversarial', label:'Narrative Duel',   sub:'Bias & framing audit',     icon:Zap        },
+    { id:'deep',        label:'Deep Research',    sub:'Exhaustive OSINT',         icon:Search     },
+    { id:'pro',         label:'Pro Forensic',     sub:'Multi-agent academic',     icon:ShieldCheck},
   ];
 
   const t = UI_TEXT[lang] || UI_TEXT.en;
@@ -615,7 +724,7 @@ export default function Verify() {
         .vf-input::placeholder { color:${DIM}; }
         .vf-input:focus { border-color:rgba(201,168,76,.5); background:rgba(201,168,76,.035); box-shadow:0 0 0 3px rgba(201,168,76,.08); }
         .vf-url  { padding:13px 16px 13px 42px; }
-        .vf-area { padding:16px 52px 16px 16px; resize:none; min-height:180px; line-height:1.75; }
+        .vf-area { padding:16px 52px 16px 16px; resize:none; min-height:140px; line-height:1.75; }
 
         .vf-run {
           background:${GOLD}; color:#08080E; border:none; border-radius:9px;
@@ -719,7 +828,7 @@ export default function Verify() {
         /* ══════════ LAYOUT CLASSES ══════════════════════════ */
         .vf-main { flex:1; max-width:1080px; margin:0 auto; padding:0 44px; width:100%; overflow-y:auto; overflow-x:hidden; }
         .vf-wb-grid { display:grid; grid-template-columns:1fr 276px; gap:24px; }
-        .vf-modes-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; }
+        .vf-modes-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; }
         .vf-score-header { display:flex; flex-wrap:wrap; align-items:center; gap:40px; padding:32px 36px; background:rgba(201,168,76,0.06); border:1px solid rgba(201,168,76,0.18); border-radius:16px; margin-bottom:36px; }
         .vf-claim-header { display:grid; grid-template-columns:130px 1fr 76px; gap:18px; padding:10px 24px; border-bottom:1px solid ${LINE}; background:rgba(255,255,255,0.025); }
         .vf-ai-row { margin-bottom:36px; display:flex; gap:20px; }
@@ -742,7 +851,7 @@ export default function Verify() {
 
           /* ── Mode selector: compact single-row pill checkboxes ── */
           .vf-modes-grid {
-            grid-template-columns: repeat(3, 1fr) !important;
+            grid-template-columns: repeat(4, 1fr) !important;
             gap: 6px !important;
           }
           .vf-mode {
@@ -798,7 +907,7 @@ export default function Verify() {
               exit={{ opacity:0, y:-8 }} transition={{ duration:.35, ease:[.4,0,.2,1] }}
               style={{ paddingTop:8, paddingBottom:40 }}
             >
-              <header className="vf-wb-header" style={{ marginBottom:30, position:'relative' }}>
+              <header className="vf-wb-header" style={{ marginBottom:16, position:'relative' }}>
                   {!user && (
                     <div style={{ position:'absolute', top:0, right:0, display:'flex', alignItems:'center', gap:8, padding:'6px 14px', background:GOLD_L, border:`1px solid ${GOLD}`, borderRadius:100, boxShadow:`0 0 15px ${GOLD_L}` }}>
                       <Zap size={11} color={GOLD} fill={GOLD}/>
@@ -807,7 +916,7 @@ export default function Verify() {
                       </span>
                     </div>
                   )}
-                  <h1 style={{ fontFamily:"'DM Serif Display',Georgia,serif", fontSize:'clamp(28px,4vw,54px)', fontWeight:400, color:TEXT, lineHeight:1.1, letterSpacing:'-0.022em', marginBottom:12 }}>
+                  <h1 style={{ fontFamily:"'DM Serif Display',Georgia,serif", fontSize:'clamp(28px,4vw,42px)', fontWeight:400, color:TEXT, lineHeight:1.1, letterSpacing:'-0.022em', marginBottom:8 }}>
                     {t.initiateAudit}
                   </h1>
                   <p className="vf-wb-desc" style={{ fontSize:16, color:MUTED, lineHeight:1.7, maxWidth:650 }}>
@@ -815,7 +924,7 @@ export default function Verify() {
                   </p>
                 </header>
 
-                <div style={{ marginBottom:36, display: 'grid', gridTemplateColumns: '1fr 200px', gap: 40 }}>
+                <div style={{ marginBottom:20, display: 'grid', gridTemplateColumns: '1fr 200px', gap: 40 }}>
                   <div>
                     <p className="vf-wb-mode-label" style={{ fontFamily:'DM Mono,monospace', fontSize:9, color:DIM, textTransform:'uppercase', letterSpacing:'0.14em', marginBottom:10 }}>{t.analysisDepth}</p>
                     <div className="vf-modes-grid">
@@ -867,6 +976,11 @@ export default function Verify() {
                         Claim or article text
                       </label>
                       <div style={{ display:'flex', alignItems:'center', gap:10 }}>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', opacity: 0.7, transition: 'opacity 0.2s' }} onMouseOver={e => e.currentTarget.style.opacity = '1'} onMouseOut={e => e.currentTarget.style.opacity = '0.7'}>
+                          <Upload size={12} color={GOLD} />
+                          <span style={{ fontSize: 9, color: GOLD, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{t.uploadDossier}</span>
+                          <input type="file" style={{ display: 'none' }} accept=".pdf,.doc,.docx,.txt" onChange={handleFileUpload} />
+                        </label>
                         {listening && (
                           <div style={{ display:'flex', alignItems:'center', gap:7 }}>
                             <div className="vf-wave"><span/><span/><span/><span/><span/></div>
@@ -925,7 +1039,7 @@ export default function Verify() {
                        
                       </div>
                     </div>
-                    {[['Neural Engine','v4.2'],['Fact Index',`${engineStats.factIndex}m ago`],['Latency',`${engineStats.latency} ms`]].map(([k,v],i) => (
+                    {[['Neural Engine','v1.0'],['Fact Index',`${engineStats.factIndex}m ago`],['Latency',`${engineStats.latency} ms`]].map(([k,v],i) => (
                       <div key={i} style={{ display:'flex', justifyContent:'space-between', marginBottom:i<2?10:0 }}>
                         <span style={{ fontSize:12, color:MUTED }}>{k}</span>
                         <span style={{ fontFamily:'DM Mono,monospace', fontSize:11, color:DIM, transition:'all 0.5s ease' }}>{v}</span>
@@ -989,6 +1103,10 @@ export default function Verify() {
               <div className="vf-score-header" style={{ marginBottom: 32, border: 'none', background: 'none', padding: 0 }}>
                 <VerdictHero score={results.truthScore} language={lang} />
               </div>
+
+              {mode === 'adversarial' && results.narrativeAnalysis && (
+                <NarrativeDuel analysis={results.narrativeAnalysis} language={lang} />
+              )}
 
               <QuickAuditSummary claims={results.claims} language={lang} />
 

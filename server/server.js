@@ -680,7 +680,15 @@ async function retryWithBackoff(fn, retries = 3, baseDelay = 1000) {
 async function runVerificationPipeline(contentToProcess, mode = 'normal', language = 'en') {
   const model = genAI.getGenerativeModel({ model: 'gemini-2.5-pro' });
   const currentDate = new Date().toISOString().split('T')[0];
-  let claimLimit = mode === 'pro' ? 8 : (mode === 'deep' ? 5 : 3);
+  
+  // UNIFIED CLAIM LIMITS
+  const claimLimits = {
+    'normal': 3,
+    'adversarial': 5,
+    'deep': 5,
+    'pro': 8
+  };
+  const claimLimit = claimLimits[mode] || 3;
 
   console.log(`🚀 Starting ${mode.toUpperCase()} Agentic Research Pipeline (Limit: ${claimLimit} claims)...`);
 
@@ -695,11 +703,9 @@ async function runVerificationPipeline(contentToProcess, mode = 'normal', langua
   - "Is Messi the goat?" -> "Lionel Messi is the greatest football player of all time."
   - "Is it raining in London?" -> "It is currently raining in London."
   
-  CONVERSATIONAL RULES:
-  1. If the input is a short question, rephrase it into a strong testable claim.
-  2. If the input has typos, fix them mentally and extract the intended claim.
-  3. Extract "Subject", "Context", and "Primary Entity" carefully.
-  
+  SPECIAL CASE (Dossiers):
+  If the text starts with "FORENSIC DOSSIER IMPORT", focus on the core factual assertions buried in the document summary, ignoring the metadata.
+
   Return ONLY a JSON array: [{"id": 1, "claim": "string", "context": "string", "primaryEntity": "string"}].
   Text: ${contentToProcess.substring(0, 5000)}`;
 
@@ -719,16 +725,19 @@ async function runVerificationPipeline(contentToProcess, mode = 'normal', langua
   // ─── PHASE 2: Verification with Multi-Mode Tools ───
   console.log(`  [Phase 2] Verifying ${claims.length} claims (Mode: ${mode})...`);
 
-  // Update claim limit for Phase 2 processing depth
-  claimLimit = mode === 'normal' ? 3 : (mode === 'deep' ? 5 : 8);
-
-  const verificationResults = await Promise.all(claims.slice(0, claimLimit).map(async (claim) => {
+  const verificationResults = await Promise.all(claims.map(async (claim) => {
     try {
       let researchData = null;
 
-      // DEEP or PRO Mode: Activate Tavily Live Web Research
-      if (mode === 'deep' || mode === 'pro') {
-        const query = claim.primaryEntity ? `${claim.claim} regarding ${claim.primaryEntity}` : claim.claim;
+      // DEEP, PRO, or ADVERSARIAL Mode: Activate Tavily Live Web Research
+      if (mode !== 'normal') {
+        let query = claim.primaryEntity ? `${claim.claim} regarding ${claim.primaryEntity}` : claim.claim;
+        
+        // ADVERSARIAL: Specifically ask for conflicting perspectives
+        if (mode === 'adversarial') {
+          query = `Opposing viewpoints and conflicting reports on: ${claim.claim}`;
+        }
+        
         researchData = await performTavilySearch(query, mode === 'pro' ? 'advanced' : 'basic');
       }
 
@@ -784,7 +793,13 @@ async function runVerificationPipeline(contentToProcess, mode = 'normal', langua
       parsed.claimId = claim.id;
 
       // Extra Entity Validation (Wikipedia) — run for potential reference images
-      if (claim.primaryEntity) {
+      // Improved: Skip filenames or generic dossier references
+      const skipWiki = !claim.primaryEntity || 
+                       claim.primaryEntity.includes('.') || 
+                       claim.primaryEntity.toLowerCase().includes('dossier') ||
+                       claim.primaryEntity.length < 3;
+
+      if (!skipWiki) {
         parsed.entityMetadata = await fetchEntityImage(claim.primaryEntity);
       }
 
@@ -818,7 +833,7 @@ async function runVerificationPipeline(contentToProcess, mode = 'normal', langua
   const totalVerified = successfulResults.length || 1;
   const truthScore = Math.min(100, ((trueCount + partialCount * 0.5) / totalVerified) * 100);
 
-  return {
+  const finalResponse = {
     originalText: contentToProcess,
     claims: claims.slice(0, claimLimit).map(c => ({ ...c, ...verificationResults.find(v => v.claimId === c.id) })),
     aiTextDetection: aiDetection,
@@ -827,6 +842,41 @@ async function runVerificationPipeline(contentToProcess, mode = 'normal', langua
     pipelineMeta: { mode, totalClaims: claims.length, verifiedCount: successfulResults.length },
     timestamp: new Date().toISOString()
   };
+
+  // ─── PHASE 5: Narrative Duel (Adversarial Mode Only) ───
+  if (mode === 'adversarial') {
+    console.log('  [Phase 5] Generating Narrative Duel analysis...');
+    try {
+      const narrativePrompt = `You are a Media Analyst & Forensic Linguist.
+      TASK: Analyze the provided text and research data to identify two conflicting narratives or framing styles (Source A vs Source B).
+      
+      TEXT TO ANALYZE: ${contentToProcess.substring(0, 3000)}
+      
+      INSTRUCTIONS:
+      1. Identify two distinct "Sources" or "Narratives" (e.g., Optimistic vs Pessimistic, Corporate vs Public, Pro-Regulation vs Anti-Regulation).
+      2. For each, define their "framing" (how they present the facts) and their primary "focus".
+      3. Generate a "comparativeBias" list: specific linguistic or data-driven differences (e.g., "Source A uses 40% more emotional language").
+      
+      LANGUAGE: All analysis text must be in ${language === 'hi' ? 'Hindi' : 'English'}.
+      
+      Return JSON:
+      {
+        "sourceA": { "framing": "string", "focus": "string" },
+        "sourceB": { "framing": "string", "focus": "string" },
+        "comparativeBias": ["string", "string", "string"]
+      }`;
+
+      const narrativeRes = await retryWithBackoff(() => model.generateContent(narrativePrompt));
+      const narrativeJson = narrativeRes.response.text().match(/\{[\s\S]*\}/)?.[0];
+      if (narrativeJson) {
+        finalResponse.narrativeAnalysis = JSON.parse(narrativeJson);
+      }
+    } catch (err) {
+      console.error('Narrative Analysis Error:', err.message);
+    }
+  }
+
+  return finalResponse;
 }
 
 // POST: Single Fact-Check (Guest-Friendly)
