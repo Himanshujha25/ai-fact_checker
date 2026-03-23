@@ -379,7 +379,7 @@ export default function Home() {
 
           <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 16, marginTop: 48, paddingTop: 28, borderTop: `1px solid ${LINE}` }}>
             {[
-              { icon: Database, label: '12k+ sources indexed' },
+              { icon: Database, label: '100+ sources indexed' },
               { icon: ShieldCheck, label: '99.98% accuracy' },
               { icon: Globe, label: 'Live OSINT streams' },
             ].map(({ icon: Ic, label }, i) => (
