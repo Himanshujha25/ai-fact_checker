@@ -25,8 +25,8 @@ export default function Signup() {
   const [error,        setError]        = useState('');
   const [success,      setSuccess]      = useState('');
 
-  const { register } = useAuth();
-  const navigate     = useNavigate();
+  const { signup } = useAuth();
+  const navigate   = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -35,7 +35,8 @@ export default function Signup() {
     if (password.length < 8) { setError('Password must be at least 8 characters.'); return; }
     setLoading(true);
     try {
-      await register(name, email, password);
+      // AuthContext signature: signup(email, password, fullName, organization)
+      await signup(email, password, name);
       setSuccess('Account created. Redirecting…');
       setTimeout(() => navigate('/verify'), 1200);
     } catch (err) {
