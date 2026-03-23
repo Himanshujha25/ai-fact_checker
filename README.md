@@ -1,7 +1,7 @@
 
-# VeriCheck AI - Fact & Claim Verification System
+# Truecast AI - Fact & Claim Verification System
 
-VeriCheck is a state-of-the-art AI-driven fact-checking engine that validates text integrity against real-time data using the Google Gemini API.
+Truecast AI is a state-of-the-art AI-driven fact-checking engine that validates text integrity against real-time data using the Google Gemini API.
 
 ## Features
 - **Claim Extraction**: Decomposes complex input text/URLs into discrete, verifiable statements.

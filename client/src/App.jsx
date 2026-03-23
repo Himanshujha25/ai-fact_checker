@@ -63,14 +63,6 @@ const AppFooter = () => {
       ],
     },
     {
-      heading: 'Resources',
-      items: [
-        { label: 'API Docs',        action: null },
-        { label: 'Legal Archives',  action: null },
-        { label: 'Source Registry', action: null },
-      ],
-    },
-    {
       heading: 'Security',
       items: [
         { label: 'AES-256 Vault', static: true },
@@ -159,22 +151,6 @@ const AppFooter = () => {
           }}>
             Like a forecast, but for truth. The global standard for forensic intelligence adjudication.
           </p>
-          <div style={{
-            display: 'inline-flex', alignItems: 'center', gap: 7,
-            padding: '6px 14px',
-            background: 'rgba(74,222,128,0.06)',
-            border: '1px solid rgba(74,222,128,0.15)',
-            borderRadius: 100,
-          }}>
-            <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#4ade80', boxShadow: '0 0 8px #4ade80' }} />
-            <span style={{
-              fontFamily: "'DM Mono', monospace",
-              fontSize: 10, color: 'rgba(74,222,128,0.7)',
-              letterSpacing: '0.1em', textTransform: 'uppercase', fontWeight: 500,
-            }}>
-              Protocol Operational
-            </span>
-          </div>
         </div>
 
         {/* Link columns container for mobile grid trick */}
