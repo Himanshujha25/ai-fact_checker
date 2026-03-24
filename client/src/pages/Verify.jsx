@@ -427,7 +427,7 @@ export default function Verify() {
     setLogs([{ msg: `Decrypting dossier: ${file.name}...`, id: Date.now() }]);
     
     setTimeout(() => {
-      const simulatedText = `FORENSIC DOSSIER IMPORT: ${file.name}\n\nThis document contains multiple assertions regarding global market volatility and supply chain disruption within the tech sector. Initial scan suggests evidence of conflicting data reports from independent auditors.`;
+      const simulatedText = `FORENSIC DOSSIER IMPORT: ${file.name}\n\n now backend need to check what kind of file you are providing`;
       setText(simulatedText);
       setLoading(false); setStep(0); setLogs([]);
     }, 2000);
