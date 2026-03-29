@@ -13,14 +13,14 @@ import { API_BASE } from '../config';
 
 
 
-const GOLD   = '#C9A84C';
-const GOLD_L = 'rgba(201,168,76,0.12)';
+const GOLD = 'var(--gold)';
+const GOLD_L = 'var(--gold-light)';
 const GOLD2  = 'rgba(201,168,76,0.10)';
-const LINE   = 'rgba(255,255,255,0.07)';
-const TEXT   = '#E8E4DC';
-const MUTED  = 'rgba(232,228,220,0.38)';
-const DIM    = 'rgba(232,228,220,0.18)';
-const SURF   = 'rgba(255,255,255,0.035)';
+const LINE = 'var(--line)';
+const TEXT = 'var(--text-main)';
+const MUTED = 'var(--text-muted)';
+const DIM = 'var(--text-dim)';
+const SURF = 'var(--surf)';
 
 const verdictMeta = (v) => {
   const l = v?.toLowerCase();
@@ -94,7 +94,7 @@ export default function ReportDetail() {
     const pdfHeader = document.createElement('div');
     pdfHeader.innerHTML = `
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:40px;border-bottom:1px solid rgba(201,168,76,0.3);padding:20px 20px 15px;">
-        <span style="font-family:DM Serif Display,serif;color:#C9A84C;font-size:24px;">TRUECAST</span>
+        <span style="font-family:DM Serif Display,serif;color:var(--gold);font-size:24px;">TRUECAST</span>
         <span style="font-family:DM Mono,monospace;color:rgba(232,228,220,0.5);font-size:10px;">OFFICIAL FORENSIC RECORD · ${new Date().toLocaleDateString()}</span>
       </div>`;
     pdfHeader.id = 'pdf-header-inject-detail';
@@ -102,7 +102,7 @@ export default function ReportDetail() {
     html2pdf().from(element).set({
       margin:0, filename:`${fileNameBase}_${id}.pdf`,
       image:{ type:'jpeg', quality:0.98 },
-      html2canvas:{ scale:2.5, backgroundColor:'#08080E', useCORS:true, logging:false, windowWidth:1200 },
+      html2canvas:{ scale:2.5, backgroundColor:'var(--bg-main)', useCORS:true, logging:false, windowWidth:1200 },
       jsPDF:{ unit:'mm', format:'a4', orientation:'portrait' },
       pagebreak:{ mode:['avoid-all','css','legacy'] }
     }).save().then(() => { document.getElementById('pdf-header-inject-detail')?.remove(); });
@@ -132,7 +132,7 @@ export default function ReportDetail() {
 
   /* ── Loading ── */
   if (loading) return (
-    <div style={{ minHeight:'calc(100vh - 64px)', background:'#08080E', display:'flex', alignItems:'center', justifyContent:'center', flexDirection:'column', gap:16 }}>
+    <div style={{ minHeight:'calc(100vh - 64px)', background:'var(--bg-main)', display:'flex', alignItems:'center', justifyContent:'center', flexDirection:'column', gap:16 }}>
       <style>{`@keyframes rd-spin { to { transform: rotate(360deg); } }`}</style>
       <div style={{ width:36, height:36, borderRadius:'50%', border:`2px solid rgba(201,168,76,0.15)`, borderTopColor:GOLD, animation:'rd-spin 0.85s linear infinite' }}/>
       <span style={{ fontFamily:"'DM Mono',monospace", fontSize:10, color:DIM, letterSpacing:'0.12em', textTransform:'uppercase' }}>Retrieving report…</span>
@@ -141,13 +141,13 @@ export default function ReportDetail() {
 
   /* ── Error ── */
   if (error) return (
-    <div style={{ minHeight:'calc(100vh - 64px)', background:'#08080E', display:'flex', alignItems:'center', justifyContent:'center', flexDirection:'column', gap:16, padding:48 }}>
+    <div style={{ minHeight:'calc(100vh - 64px)', background:'var(--bg-main)', display:'flex', alignItems:'center', justifyContent:'center', flexDirection:'column', gap:16, padding:48 }}>
       <div style={{ width:48, height:48, borderRadius:12, background:'rgba(248,113,113,0.08)', border:'1px solid rgba(248,113,113,0.2)', display:'flex', alignItems:'center', justifyContent:'center' }}>
         <ShieldAlert size={22} color="#f87171"/>
       </div>
       <h1 style={{ fontFamily:"'DM Serif Display',Georgia,serif", fontSize:28, fontWeight:400, color:TEXT }}>Dossier Unavailable.</h1>
       <p style={{ fontSize:13, color:MUTED }}>{error}</p>
-      <Link to="/history" style={{ display:'inline-flex', alignItems:'center', gap:8, background:GOLD, color:'#08080E', borderRadius:9, padding:'12px 24px', fontSize:13, fontWeight:600, textDecoration:'none', fontFamily:"'DM Sans',system-ui,sans-serif" }}>
+      <Link to="/history" style={{ display:'inline-flex', alignItems:'center', gap:8, background:GOLD, color:'var(--bg-main)', borderRadius:9, padding:'12px 24px', fontSize:13, fontWeight:600, textDecoration:'none', fontFamily:"'DM Sans',system-ui,sans-serif" }}>
         <ArrowLeft size={14}/> Back to History
       </Link>
     </div>
@@ -159,7 +159,7 @@ export default function ReportDetail() {
   const refutedCount  = data.claims?.filter(c => ['false','inaccurate'].includes(c.verdict?.toLowerCase())).length || 0;
 
   return (
-    <div style={{ background:'#08080E', minHeight:'calc(100vh - 64px)', color:TEXT, fontFamily:"'DM Sans',system-ui,sans-serif", display:'flex', overflowX:'hidden' }}>
+    <div style={{ background:'var(--bg-main)', minHeight:'calc(100vh - 64px)', color:TEXT, fontFamily:"'DM Sans',system-ui,sans-serif", display:'flex', overflowX:'hidden' }}>
 
       {/* ── Export modal ── */}
       <AnimatePresence>
@@ -168,13 +168,13 @@ export default function ReportDetail() {
             style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.85)', backdropFilter:'blur(4px)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:10000, padding:20 }}>
             <motion.div initial={{ scale:0.95, y:10 }} animate={{ scale:1, y:0 }} exit={{ scale:0.95, y:10 }}
               style={{ background:'#111118', border:`1px solid rgba(255,255,255,0.07)`, borderRadius:16, width:'100%', maxWidth:400, padding:32 }}>
-              <h3 style={{ fontFamily:"'DM Serif Display',serif", fontSize:24, color:'#E8E4DC', marginBottom:12 }}>Download Archive</h3>
+              <h3 style={{ fontFamily:"'DM Serif Display',serif", fontSize:24, color:'var(--text-main)', marginBottom:12 }}>Download Archive</h3>
               <p style={{ color:'rgba(232,228,220,0.42)', fontSize:14, marginBottom:24, lineHeight:1.5 }}>Enter your name for the official forensic record.</p>
               <div style={{ marginBottom:24 }}>
                 <label style={{ display:'block', fontSize:9, fontFamily:"'DM Mono',monospace", color:'rgba(232,228,220,0.22)', textTransform:'uppercase', letterSpacing:'0.1em', marginBottom:8 }}>Report Author</label>
                 <input type="text" value={exportName} onChange={e => setExportName(e.target.value)}
                   placeholder="e.g. Himanshu Jha" autoFocus
-                  style={{ width:'100%', boxSizing:'border-box', padding:'12px 14px', background:'rgba(255,255,255,0.04)', border:`1px solid rgba(255,255,255,0.07)`, borderRadius:8, color:'#E8E4DC', fontSize:14, outline:'none' }}
+                  style={{ width:'100%', boxSizing:'border-box', padding:'12px 14px', background:'rgba(255,255,255,0.04)', border:`1px solid rgba(255,255,255,0.07)`, borderRadius:8, color:'var(--text-main)', fontSize:14, outline:'none' }}
                   onKeyDown={e => e.key==='Enter' && executePDFExport()}/>
               </div>
               <div style={{ display:'flex', gap:12 }}>
@@ -183,7 +183,7 @@ export default function ReportDetail() {
                   Cancel
                 </button>
                 <button onClick={executePDFExport}
-                  style={{ flex:1, padding:'12px', background:'#C9A84C', border:'none', borderRadius:8, color:'#08080E', fontSize:13, fontWeight:600, cursor:'pointer' }}>
+                  style={{ flex:1, padding:'12px', background:'var(--gold)', border:'none', borderRadius:8, color:'var(--bg-main)', fontSize:13, fontWeight:600, cursor:'pointer' }}>
                   Download PDF
                 </button>
               </div>
@@ -197,7 +197,7 @@ export default function ReportDetail() {
 
         /* ── Buttons & rows (desktop unchanged) ── */
         .rd-btn-gold {
-          background: ${GOLD}; color: #08080E; border: none; border-radius: 9px;
+          background: ${GOLD}; color: var(--bg-main); border: none; border-radius: 9px;
           padding: 11px 22px; cursor: pointer;
           font-family: 'DM Sans', system-ui, sans-serif;
           font-weight: 600; font-size: 12px; letter-spacing: 0.02em;
@@ -276,7 +276,7 @@ export default function ReportDetail() {
 
       {/* className="rd-main" gives mobile padding override */}
       <main className="rd-main" style={{ flex:1, maxWidth:1240, margin:'0 auto', padding:'40px 48px 80px', overflowY:'auto', overflowX:'hidden' }}>
-        <div id="report-detail" style={{ background:'#08080E' }}>
+        <div id="report-detail" style={{ background:'var(--bg-main)' }}>
 
           {/* ── Page header ── */}
           <div style={{ marginBottom:40 }}>

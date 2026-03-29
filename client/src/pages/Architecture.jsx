@@ -9,13 +9,13 @@ import { useNavigate } from 'react-router-dom';
 import Sidebar from '../components/Sidebar';
 
 /* ─── Design tokens ───────────────────────────────────────────── */
-const GOLD  = '#C9A84C';
+const GOLD = 'var(--gold)';
 const GOLD2 = 'rgba(201,168,76,0.10)';
-const LINE  = 'rgba(255,255,255,0.07)';
-const TEXT  = '#E8E4DC';
-const MUTED = 'rgba(232,228,220,0.38)';
-const DIM   = 'rgba(232,228,220,0.18)';
-const SURF  = 'rgba(255,255,255,0.035)';
+const LINE = 'var(--line)';
+const TEXT = 'var(--text-main)';
+const MUTED = 'var(--text-muted)';
+const DIM = 'var(--text-dim)';
+const SURF = 'var(--surf)';
 
 /* ─── Pipeline data ───────────────────────────────────────────── */
 const PIPELINE = [
@@ -245,7 +245,7 @@ Rules:
   const totalCount = useCountUp(total ?? 0, 1400, animateCounters);
 
   return (
-    <div style={{ background: '#08080E', minHeight: 'calc(100vh - 64px)', color: TEXT, fontFamily: "'DM Sans', system-ui, sans-serif", display: 'flex', paddingBottom: 64 }}>
+    <div style={{ background: 'var(--bg-main)', minHeight: 'calc(100vh - 64px)', color: TEXT, fontFamily: "'DM Sans', system-ui, sans-serif", display: 'flex', paddingBottom: 64 }}>
       <style>{`
 
 

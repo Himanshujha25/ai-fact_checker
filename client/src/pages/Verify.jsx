@@ -16,10 +16,10 @@ import { useAuth } from '../context/AuthContext';
 
 
 
-const GOLD   = '#C9A84C';
-const GOLD_L = 'rgba(201,168,76,0.12)';
-const LINE   = 'rgba(255,255,255,0.07)';
-const SURF  = 'rgba(255,255,255,0.035)';
+const GOLD = 'var(--gold)';
+const GOLD_L = 'var(--gold-light)';
+const LINE = 'var(--line)';
+const SURF = 'var(--surf)';
 
 const UI_TEXT = {
   en: {
@@ -126,7 +126,7 @@ const VerdictHero = ({ score, mode = 'normal', language = 'en' }) => {
 
   let title = t.inconclusiveTitle;
   let subtitle = t.inconclusiveSub;
-  let color = '#E8E4DC';
+  let color = 'var(--text-main)';
   let bg = 'rgba(255,255,255,0.03)';
   let icon = <Info size={28}/>;
 
@@ -327,9 +327,9 @@ const NarrativeDuel = ({ analysis, language = 'en' }) => {
   );
 };
 
-const TEXT   = '#E8E4DC';
-const MUTED  = 'rgba(232,228,220,0.42)';
-const DIM    = 'rgba(232,228,220,0.22)';
+const TEXT = 'var(--text-main)';
+const MUTED = 'var(--text-muted)';
+const DIM = 'var(--text-dim)';
 const MIC_C  = '#EC4899';
 
 const verdictStyle = v => {
@@ -712,7 +712,7 @@ export default function Verify() {
       return `<tr style="background:${row};border-bottom:1px solid #E5E7EB;"><td style="padding:12px 16px;width:120px;vertical-align:top;"><span style="display:inline-flex;align-items:center;gap:5px;background:${vc.bg};color:${vc.fg};font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:3px 9px;border-radius:4px;"><span style="width:6px;height:6px;border-radius:50%;background:${vc.dot};flex-shrink:0;"></span>${c.verdict||'Pending'}</span></td><td style="padding:12px 16px;vertical-align:top;"><p style="margin:0 0 4px;font-size:13px;font-weight:600;color:#111827;line-height:1.5;">${c.claim||'—'}</p><p style="margin:0;font-size:12px;color:#6B7280;line-height:1.55;">${c.reasoning||''}</p></td><td style="padding:12px 16px;width:70px;vertical-align:top;text-align:right;"><span style="font-size:18px;font-weight:700;color:${pct>=70?'#B45309':'#6B7280'};">${pct}<span style="font-size:10px;font-weight:400;">%</span></span></td></tr>`;
     }).join('');
     const aiSection = results.aiTextDetection ? `<div style="display:flex;gap:16px;margin-bottom:28px;"><div style="flex:1;background:#F9FAFB;border:1px solid #E5E7EB;border-radius:10px;padding:18px 20px;"><p style="margin:0 0 6px;font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#9CA3AF;">AI Text Probability</p><p style="margin:0;font-size:30px;font-weight:700;color:#111827;line-height:1;">${results.aiTextDetection.score||0}<span style="font-size:14px;font-weight:400;color:#6B7280;">%</span></p><p style="margin:6px 0 0;font-size:12px;color:#6B7280;">${results.aiTextDetection.score>50?'Likely synthesized content':'Likely human-authored content'}</p>${results.aiTextDetection.explanation?`<p style="margin:8px 0 0;font-size:11px;color:#9CA3AF;line-height:1.5;">${results.aiTextDetection.explanation}</p>`:''}</div>${results.aiMediaDetection?`<div style="flex:1;background:#F9FAFB;border:1px solid #E5E7EB;border-radius:10px;padding:18px 20px;"><p style="margin:0 0 6px;font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#9CA3AF;">Media Authentication</p><p style="margin:0;font-size:30px;font-weight:700;color:#111827;line-height:1;">${results.aiMediaDetection.verdict||'Clear'}</p>${results.aiMediaDetection.summary?`<p style="margin:8px 0 0;font-size:11px;color:#9CA3AF;line-height:1.5;">${results.aiMediaDetection.summary}</p>`:''}</div>`:''}</div>` : '';
-    const html = `<div style="font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:13px;color:#111827;background:#fff;padding:0;margin:0;max-width:760px;box-sizing:border-box;"><div style="background:#0D0D18;padding:28px 36px 24px;"><table width="100%" cellpadding="0" cellspacing="0"><tr><td><span style="font-family:Georgia,'Times New Roman',serif;font-size:22px;font-weight:400;color:#C9A84C;letter-spacing:.04em;">TRUECAST</span><span style="display:block;font-size:9px;color:rgba(201,168,76,.55);letter-spacing:.18em;text-transform:uppercase;margin-top:3px;">Intelligence · Verification · Forensics</span></td><td style="text-align:right;vertical-align:top;"><span style="font-size:9px;color:rgba(255,255,255,.35);font-family:monospace;letter-spacing:.06em;text-transform:uppercase;line-height:1.8;">OFFICIAL AUDIT REPORT<br>${today}<br>REF: ${reportId}</span></td></tr></table></div><div style="height:3px;background:linear-gradient(90deg,#C9A84C 0%,#F0D080 50%,#C9A84C 100%);"></div><div style="padding:36px 36px 40px;"><h1 style="font-family:Georgia,'Times New Roman',serif;font-size:26px;font-weight:400;color:#111827;margin:0 0 6px;letter-spacing:-.02em;">Forensic Fact-Check Report</h1><p style="margin:0 0 28px;font-size:13px;color:#6B7280;">Automated multi-source intelligence audit with confidence scoring.</p><div style="display:flex;align-items:stretch;gap:0;border:1px solid #E5E7EB;border-radius:12px;overflow:hidden;margin-bottom:28px;"><div style="background:${scoreBg(sc)};padding:24px 28px;min-width:160px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;"><span style="font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:${scoreColor(sc)};opacity:.7;margin-bottom:8px;">Truth Index</span><span style="font-family:Georgia,'Times New Roman',serif;font-size:52px;font-weight:400;color:${scoreColor(sc)};line-height:1;">${fmt(sc)}</span><span style="font-size:11px;color:${scoreColor(sc)};opacity:.7;">/100</span><span style="margin-top:10px;font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:${scoreColor(sc)};background:${scoreColor(sc)}18;padding:3px 10px;border-radius:4px;">${scoreLabel}</span></div><div style="flex:1;padding:22px 28px;border-left:1px solid #E5E7EB;"><table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;"><tr><td style="padding:6px 0;font-size:11px;color:#9CA3AF;width:140px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;">Claims Reviewed</td><td style="padding:6px 0;font-size:13px;color:#111827;font-weight:600;">${results.claims?.length||0}</td></tr><tr><td style="padding:6px 0;font-size:11px;color:#9CA3AF;font-weight:600;text-transform:uppercase;letter-spacing:.06em;">Report Date</td><td style="padding:6px 0;font-size:13px;color:#111827;">${today}</td></tr><tr><td style="padding:6px 0;font-size:11px;color:#9CA3AF;font-weight:600;text-transform:uppercase;letter-spacing:.06em;">Report ID</td><td style="padding:6px 0;font-size:13px;color:#111827;font-family:monospace;">${reportId}</td></tr><tr><td style="padding:6px 0;font-size:11px;color:#9CA3AF;font-weight:600;text-transform:uppercase;letter-spacing:.06em;">Engine</td><td style="padding:6px 0;font-size:13px;color:#111827;">TrueCast Neural v4.2 · Multi-agent</td></tr>${exportName.trim()?`<tr><td style="padding:6px 0;font-size:11px;color:#9CA3AF;font-weight:600;text-transform:uppercase;letter-spacing:.06em;">Author</td><td style="padding:6px 0;font-size:13px;color:#111827;">${exportName.trim()}</td></tr>`:''}<tr><td style="padding:6px 0 0;font-size:11px;color:#9CA3AF;font-weight:600;text-transform:uppercase;letter-spacing:.06em;vertical-align:top;">Assessment</td><td style="padding:6px 0 0;"><span style="font-size:13px;color:${scoreColor(sc)};font-weight:600;">${sc>=75?'✓ Largely verifiable and evidence-supported.':sc>=45?'⚠ Mixed or partially verifiable claims.':'✗ Significant inaccuracies detected.'}</span></td></tr></table></div></div><div style="border-top:1px solid #E5E7EB;margin:0 0 24px;"></div>${aiSection}<h2 style="font-family:Georgia,'Times New Roman',serif;font-size:18px;font-weight:400;color:#111827;margin:0 0 14px;letter-spacing:-.01em;">Verified Assertions</h2><table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;border:1px solid #E5E7EB;border-radius:10px;overflow:hidden;font-size:13px;"><thead><tr style="background:#F3F4F6;border-bottom:2px solid #E5E7EB;"><th style="padding:11px 16px;text-align:left;font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#6B7280;width:120px;">Verdict</th><th style="padding:11px 16px;text-align:left;font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#6B7280;">Claim &amp; Reasoning</th><th style="padding:11px 16px;text-align:right;font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#6B7280;width:70px;">Conf.</th></tr></thead><tbody>${claimsHTML||`<tr><td colspan="3" style="padding:24px 16px;text-align:center;color:#9CA3AF;">No claims extracted.</td></tr>`}</tbody></table><div style="margin-top:36px;padding:16px 20px;background:#FFFBEB;border:1px solid #FDE68A;border-radius:8px;border-left:4px solid #F59E0B;"><p style="margin:0 0 4px;font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#92400E;">Disclaimer</p><p style="margin:0;font-size:11px;color:#78350F;line-height:1.6;">This report is generated by an automated AI system and is intended as a supplementary research aid only.</p></div></div><div style="background:#F9FAFB;border-top:1px solid #E5E7EB;padding:16px 36px;display:flex;align-items:center;justify-content:space-between;"><span style="font-family:Georgia,'Times New Roman',serif;font-size:12px;color:#C9A84C;letter-spacing:.06em;">TRUECAST</span><span style="font-size:10px;color:#9CA3AF;font-family:monospace;letter-spacing:.04em;">${today} · REF: ${reportId}</span><span style="font-size:10px;color:#9CA3AF;">truecast.ai</span></div></div>`;
+    const html = `<div style="font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:13px;color:#111827;background:#fff;padding:0;margin:0;max-width:760px;box-sizing:border-box;"><div style="background:#0D0D18;padding:28px 36px 24px;"><table width="100%" cellpadding="0" cellspacing="0"><tr><td><span style="font-family:Georgia,'Times New Roman',serif;font-size:22px;font-weight:400;color:var(--gold);letter-spacing:.04em;">TRUECAST</span><span style="display:block;font-size:9px;color:rgba(201,168,76,.55);letter-spacing:.18em;text-transform:uppercase;margin-top:3px;">Intelligence · Verification · Forensics</span></td><td style="text-align:right;vertical-align:top;"><span style="font-size:9px;color:rgba(255,255,255,.35);font-family:monospace;letter-spacing:.06em;text-transform:uppercase;line-height:1.8;">OFFICIAL AUDIT REPORT<br>${today}<br>REF: ${reportId}</span></td></tr></table></div><div style="height:3px;background:linear-gradient(90deg,var(--gold) 0%,#F0D080 50%,var(--gold) 100%);"></div><div style="padding:36px 36px 40px;"><h1 style="font-family:Georgia,'Times New Roman',serif;font-size:26px;font-weight:400;color:#111827;margin:0 0 6px;letter-spacing:-.02em;">Forensic Fact-Check Report</h1><p style="margin:0 0 28px;font-size:13px;color:#6B7280;">Automated multi-source intelligence audit with confidence scoring.</p><div style="display:flex;align-items:stretch;gap:0;border:1px solid #E5E7EB;border-radius:12px;overflow:hidden;margin-bottom:28px;"><div style="background:${scoreBg(sc)};padding:24px 28px;min-width:160px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;"><span style="font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:${scoreColor(sc)};opacity:.7;margin-bottom:8px;">Truth Index</span><span style="font-family:Georgia,'Times New Roman',serif;font-size:52px;font-weight:400;color:${scoreColor(sc)};line-height:1;">${fmt(sc)}</span><span style="font-size:11px;color:${scoreColor(sc)};opacity:.7;">/100</span><span style="margin-top:10px;font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:${scoreColor(sc)};background:${scoreColor(sc)}18;padding:3px 10px;border-radius:4px;">${scoreLabel}</span></div><div style="flex:1;padding:22px 28px;border-left:1px solid #E5E7EB;"><table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;"><tr><td style="padding:6px 0;font-size:11px;color:#9CA3AF;width:140px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;">Claims Reviewed</td><td style="padding:6px 0;font-size:13px;color:#111827;font-weight:600;">${results.claims?.length||0}</td></tr><tr><td style="padding:6px 0;font-size:11px;color:#9CA3AF;font-weight:600;text-transform:uppercase;letter-spacing:.06em;">Report Date</td><td style="padding:6px 0;font-size:13px;color:#111827;">${today}</td></tr><tr><td style="padding:6px 0;font-size:11px;color:#9CA3AF;font-weight:600;text-transform:uppercase;letter-spacing:.06em;">Report ID</td><td style="padding:6px 0;font-size:13px;color:#111827;font-family:monospace;">${reportId}</td></tr><tr><td style="padding:6px 0;font-size:11px;color:#9CA3AF;font-weight:600;text-transform:uppercase;letter-spacing:.06em;">Engine</td><td style="padding:6px 0;font-size:13px;color:#111827;">TrueCast Neural v4.2 · Multi-agent</td></tr>${exportName.trim()?`<tr><td style="padding:6px 0;font-size:11px;color:#9CA3AF;font-weight:600;text-transform:uppercase;letter-spacing:.06em;">Author</td><td style="padding:6px 0;font-size:13px;color:#111827;">${exportName.trim()}</td></tr>`:''}<tr><td style="padding:6px 0 0;font-size:11px;color:#9CA3AF;font-weight:600;text-transform:uppercase;letter-spacing:.06em;vertical-align:top;">Assessment</td><td style="padding:6px 0 0;"><span style="font-size:13px;color:${scoreColor(sc)};font-weight:600;">${sc>=75?'✓ Largely verifiable and evidence-supported.':sc>=45?'⚠ Mixed or partially verifiable claims.':'✗ Significant inaccuracies detected.'}</span></td></tr></table></div></div><div style="border-top:1px solid #E5E7EB;margin:0 0 24px;"></div>${aiSection}<h2 style="font-family:Georgia,'Times New Roman',serif;font-size:18px;font-weight:400;color:#111827;margin:0 0 14px;letter-spacing:-.01em;">Verified Assertions</h2><table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;border:1px solid #E5E7EB;border-radius:10px;overflow:hidden;font-size:13px;"><thead><tr style="background:#F3F4F6;border-bottom:2px solid #E5E7EB;"><th style="padding:11px 16px;text-align:left;font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#6B7280;width:120px;">Verdict</th><th style="padding:11px 16px;text-align:left;font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#6B7280;">Claim &amp; Reasoning</th><th style="padding:11px 16px;text-align:right;font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#6B7280;width:70px;">Conf.</th></tr></thead><tbody>${claimsHTML||`<tr><td colspan="3" style="padding:24px 16px;text-align:center;color:#9CA3AF;">No claims extracted.</td></tr>`}</tbody></table><div style="margin-top:36px;padding:16px 20px;background:#FFFBEB;border:1px solid #FDE68A;border-radius:8px;border-left:4px solid #F59E0B;"><p style="margin:0 0 4px;font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#92400E;">Disclaimer</p><p style="margin:0;font-size:11px;color:#78350F;line-height:1.6;">This report is generated by an automated AI system and is intended as a supplementary research aid only.</p></div></div><div style="background:#F9FAFB;border-top:1px solid #E5E7EB;padding:16px 36px;display:flex;align-items:center;justify-content:space-between;"><span style="font-family:Georgia,'Times New Roman',serif;font-size:12px;color:var(--gold);letter-spacing:.06em;">TRUECAST</span><span style="font-size:10px;color:#9CA3AF;font-family:monospace;letter-spacing:.04em;">${today} · REF: ${reportId}</span><span style="font-size:10px;color:#9CA3AF;">truecast.ai</span></div></div>`;
     const wrapper = document.createElement('div');
     wrapper.style.cssText = 'position:fixed;left:-9999px;top:0;z-index:-1;pointer-events:none;background:#ffffff;color:#111827;';
     wrapper.innerHTML = html;
@@ -746,7 +746,7 @@ export default function Verify() {
   const t = UI_TEXT[lang] || UI_TEXT.en;
 
   return (
-    <div className="vf-page-root" style={{ background:'#08080E', color:TEXT, fontFamily:"'DM Sans',system-ui,sans-serif", display:'flex', overflowX:'hidden' }}>
+    <div className="vf-page-root" style={{ background:'var(--bg-main)', color:TEXT, fontFamily:"'DM Sans',system-ui,sans-serif", display:'flex', overflowX:'hidden' }}>
       <style>{`
         .vf-page-root { min-height: calc(100vh - 60px); padding-bottom: 64px; }
         @media (max-width: 768px) {
@@ -774,7 +774,7 @@ export default function Verify() {
         }
 
         .vf-run {
-          background:${GOLD}; color:#08080E; border:none; border-radius:9px;
+          background:${GOLD}; color:var(--bg-main); border:none; border-radius:9px;
           padding:13px 28px; font-family:'DM Sans',system-ui,sans-serif;
           font-weight:600; font-size:14px; cursor:pointer;
           display:inline-flex; align-items:center; gap:8px;
@@ -850,7 +850,7 @@ export default function Verify() {
 
         .vf-transcript {
           position:absolute; bottom:55px; left:16px; right:55px;
-          background:rgba(8,8,14,0.95); border:1px solid ${GOLD_L};
+          background:var(--bg-overlay); border:1px solid ${GOLD_L};
           border-radius:8px; padding:12px 14px;
           font-family:'DM Mono',monospace; font-size:11px; color:${GOLD};
           box-shadow:0 4px 25px rgba(0,0,0,0.4);
@@ -1184,7 +1184,7 @@ export default function Verify() {
           {results && !loading && (
             <motion.div key="res" ref={reportRef}
               initial={{ opacity:0, y:12 }} animate={{ opacity:1, y:0 }}
-              style={{ paddingTop:40, paddingBottom:80, background:'#08080E' }}
+              style={{ paddingTop:40, paddingBottom:80, background:'var(--bg-main)' }}
             >
               <div className="vf-score-header" style={{ marginBottom: 32, border: 'none', background: 'none', padding: 0 }}>
                 <VerdictHero score={results.truthScore} mode={results.pipelineMeta?.mode} language={lang} />
@@ -1380,7 +1380,7 @@ export default function Verify() {
                   Cancel
                 </button>
                 <button onClick={executePDFExport}
-                  style={{ flex:1, padding:'12px', background:GOLD, border:'none', borderRadius:8, color:'#08080E', fontSize:13, fontWeight:600, cursor:'pointer' }}>
+                  style={{ flex:1, padding:'12px', background:GOLD, border:'none', borderRadius:8, color:'var(--bg-main)', fontSize:13, fontWeight:600, cursor:'pointer' }}>
                   Download PDF
                 </button>
               </div>
@@ -1390,9 +1390,9 @@ export default function Verify() {
 
         {showCreditModal && (
           <motion.div initial={{ opacity:0, backdropFilter:'blur(0px)' }} animate={{ opacity:1, backdropFilter:'blur(8px)' }} exit={{ opacity:0, backdropFilter:'blur(0px)' }}
-            style={{ position:'fixed', inset:0, background:'rgba(8,8,14,0.92)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:10001, padding:24 }}>
+            style={{ position:'fixed', inset:0, background:'var(--bg-overlay)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:10001, padding:24 }}>
             <motion.div initial={{ scale:0.92, y:20 }} animate={{ scale:1, y:0 }} exit={{ scale:0.92, y:20 }}
-              style={{ background:'#08080E', border:`1px solid ${GOLD}`, borderRadius:24, width:'100%', maxWidth:440, padding:'48px 40px', textAlign:'center', boxShadow:`0 0 60px rgba(201,168,76,0.12)`, position:'relative', overflow:'hidden' }}>
+              style={{ background:'var(--bg-main)', border:`1px solid ${GOLD}`, borderRadius:24, width:'100%', maxWidth:440, padding:'48px 40px', textAlign:'center', boxShadow:`0 0 60px rgba(201,168,76,0.12)`, position:'relative', overflow:'hidden' }}>
               <div style={{ position:'absolute', top:0, left:0, width:'100%', height:2, background:`linear-gradient(90deg, transparent, ${GOLD}, transparent)` }} />
               <div style={{ width: 72, height: 72, borderRadius: 20, background: GOLD_L, border: `1px solid ${GOLD}`, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 28px', transform:'rotate(5deg)' }}>
                 <Zap size={36} color={GOLD} fill={GOLD}/>
@@ -1402,7 +1402,7 @@ export default function Verify() {
               
               <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
                 <button onClick={() => navigate('/auth')}
-                  style={{ width:'100%', padding:'16px', background:GOLD, border:'none', borderRadius:12, color:'#08080E', fontSize:14, fontWeight:700, cursor:'pointer', boxShadow:`0 8px 30px rgba(201,168,76,0.25)`, transition:'transform 0.2s' }}
+                  style={{ width:'100%', padding:'16px', background:GOLD, border:'none', borderRadius:12, color:'var(--bg-main)', fontSize:14, fontWeight:700, cursor:'pointer', boxShadow:`0 8px 30px rgba(201,168,76,0.25)`, transition:'transform 0.2s' }}
                   onMouseOver={e => e.currentTarget.style.transform='translateY(-2px)'}
                   onMouseOut={e => e.currentTarget.style.transform='none'}>
                   Join Truecast — Unlimited Access

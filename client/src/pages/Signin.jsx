@@ -7,14 +7,14 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
-const GOLD  = '#C9A84C';
+const GOLD = 'var(--gold)';
 const GOLD2 = 'rgba(201,168,76,0.10)';
-const SURF  = 'rgba(255,255,255,0.035)';
-const LINE  = 'rgba(255,255,255,0.07)';
-const TEXT  = '#E8E4DC';
-const MUTED = 'rgba(232,228,220,0.38)';
-const DIM   = 'rgba(232,228,220,0.18)';
-const GOLD_L = 'rgba(201,168,76,0.12)';
+const SURF = 'var(--surf)';
+const LINE = 'var(--line)';
+const TEXT = 'var(--text-main)';
+const MUTED = 'var(--text-muted)';
+const DIM = 'var(--text-dim)';
+const GOLD_L = 'var(--gold-light)';
 
 export default function Signin() {
   // ── Pre-filled with demo credentials ──
@@ -43,7 +43,7 @@ export default function Signin() {
   };
 
   return (
-    <div style={{ minHeight:'100vh', background:'#08080E', color:TEXT, fontFamily:"'DM Sans',system-ui,sans-serif", display:'flex', flexDirection:'column' }}>
+    <div style={{ minHeight:'100vh', background:'var(--bg-main)', color:TEXT, fontFamily:"'DM Sans',system-ui,sans-serif", display:'flex', flexDirection:'column' }}>
       <style>{`
 
 
@@ -61,7 +61,7 @@ export default function Signin() {
         .si-input-pad-r { padding:13px 42px 13px 42px; }
 
         .si-btn-gold {
-          width:100%; background:${GOLD}; color:#08080E;
+          width:100%; background:${GOLD}; color:var(--bg-main);
           border:none; border-radius:9px; padding:14px; cursor:pointer;
           font-family:'DM Sans',system-ui,sans-serif;
           font-weight:600; font-size:14px; letter-spacing:0.02em;
@@ -100,7 +100,7 @@ export default function Signin() {
 
         /* ═══════════ RESPONSIVE ═══════════════════════════════ */
         .si-header  { position:fixed; top:0; left:0; right:0; z-index:100; background:rgba(8,8,14,0.88); backdrop-filter:blur(16px); border-bottom:1px solid ${LINE}; display:flex; justify-content:space-between; align-items:center; padding:16px 48px; }
-        .si-footer  { border-top:1px solid ${LINE}; padding:18px 48px; display:flex; justify-content:space-between; align-items:center; background:rgba(8,8,14,0.95); }
+        .si-footer  { border-top:1px solid ${LINE}; padding:18px 48px; display:flex; justify-content:space-between; align-items:center; background:var(--bg-overlay); }
         .si-footer-links { display:flex; gap:24px; }
 
         @media (max-width: 600px) {

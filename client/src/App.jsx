@@ -14,18 +14,18 @@ import Signup from './pages/Signup';
 import './index.css';
 
 /* ─── Design tokens ───────────────────────────────────────────── */
-const GOLD  = '#C9A84C';
-const LINE  = 'rgba(255,255,255,0.07)';
-const TEXT  = '#E8E4DC';
-const DIM   = 'rgba(232,228,220,0.18)';
-const MUTED = 'rgba(232,228,220,0.38)';
+const GOLD = 'var(--gold)';
+const LINE = 'var(--line)';
+const TEXT = 'var(--text-main)';
+const DIM = 'var(--text-dim)';
+const MUTED = 'var(--text-muted)';
 
 /* ─── Auth guard ──────────────────────────────────────────────── */
 const PrivateRoute = ({ children }) => {
   const { user, loading } = useAuth();
   if (loading) return (
     <div style={{
-      minHeight: '100vh', background: '#08080E',
+      minHeight: '100vh', background: 'var(--bg-main)',
       display: 'flex', alignItems: 'center', justifyContent: 'center',
       flexDirection: 'column', gap: 16,
     }}>
@@ -82,7 +82,7 @@ const AppFooter = () => {
 
   return (
     <footer className="app-footer" style={{
-      background: '#08080E',
+      background: 'var(--bg-main)',
       borderTop: `1px solid ${LINE}`,
       padding: '80px 64px 44px',
       fontFamily: "'DM Sans', system-ui, sans-serif",
@@ -231,7 +231,7 @@ const AppContent = () => {
   const isStandalone = standalonePages.includes(location.pathname);
 
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', background: '#08080E', overflowX: 'hidden' }}>
+    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', background: 'var(--bg-main)', overflowX: 'hidden' }}>
       <SubNavbar />
       <main style={{ flex: 1, width: '100%' }}>
         <AnimatePresence mode="wait">

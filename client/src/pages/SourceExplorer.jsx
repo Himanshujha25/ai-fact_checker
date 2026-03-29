@@ -11,14 +11,14 @@ import { API_BASE } from '../config';
 
 
 
-const GOLD  = '#C9A84C';
-const GOLD_L= 'rgba(201,168,76,0.12)';
+const GOLD = 'var(--gold)';
+const GOLD_L = 'var(--gold-light)';
 const GOLD2 = 'rgba(201,168,76,0.10)';
-const LINE  = 'rgba(255,255,255,0.07)';
-const TEXT  = '#E8E4DC';
-const MUTED = 'rgba(232,228,220,0.38)';
-const DIM   = 'rgba(232,228,220,0.18)';
-const SURF  = 'rgba(255,255,255,0.035)';
+const LINE = 'var(--line)';
+const TEXT = 'var(--text-main)';
+const MUTED = 'var(--text-muted)';
+const DIM = 'var(--text-dim)';
+const SURF = 'var(--surf)';
 
 const verdictMeta = (v) => {
   const l = v?.toLowerCase();
@@ -58,7 +58,7 @@ export default function SourceExplorer() {
   };
 
   if (loading) return (
-    <div style={{ minHeight:'100vh', background:'#08080E', display:'flex', alignItems:'center', justifyContent:'center', flexDirection:'column', gap:14 }}>
+    <div style={{ minHeight:'100vh', background:'var(--bg-main)', display:'flex', alignItems:'center', justifyContent:'center', flexDirection:'column', gap:14 }}>
       <style>{`@keyframes se-spin { to { transform: rotate(360deg); } }`}</style>
       <div style={{ width:34, height:34, borderRadius:'50%', border:`2px solid rgba(201,168,76,0.15)`, borderTopColor:GOLD, animation:'se-spin 0.85s linear infinite' }}/>
       <span style={{ fontFamily:"'DM Mono',monospace", fontSize:10, color:DIM, letterSpacing:'0.12em', textTransform:'uppercase' }}>Loading source data…</span>
@@ -66,9 +66,9 @@ export default function SourceExplorer() {
   );
 
   if (error || !data?.claims?.[index]) return (
-    <div style={{ minHeight:'100vh', background:'#08080E', display:'flex', alignItems:'center', justifyContent:'center', flexDirection:'column', gap:16 }}>
+    <div style={{ minHeight:'100vh', background:'var(--bg-main)', display:'flex', alignItems:'center', justifyContent:'center', flexDirection:'column', gap:16 }}>
       <h1 style={{ fontFamily:"'DM Serif Display',Georgia,serif", fontSize:28, fontWeight:400, color:TEXT }}>Source Linkage Failed.</h1>
-      <Link to={`/history/${id}`} style={{ display:'inline-flex', alignItems:'center', gap:7, background:GOLD, color:'#08080E', borderRadius:9, padding:'12px 22px', fontSize:13, fontWeight:600, textDecoration:'none', fontFamily:"'DM Sans',system-ui,sans-serif" }}>
+      <Link to={`/history/${id}`} style={{ display:'inline-flex', alignItems:'center', gap:7, background:GOLD, color:'var(--bg-main)', borderRadius:9, padding:'12px 22px', fontSize:13, fontWeight:600, textDecoration:'none', fontFamily:"'DM Sans',system-ui,sans-serif" }}>
         <ArrowLeft size={13}/> Back to Dossier
       </Link>
     </div>
@@ -78,7 +78,7 @@ export default function SourceExplorer() {
   const totalClaims = data.claims.length;
 
   return (
-    <div style={{ background:'#08080E', minHeight:'calc(100vh - 64px)', color:TEXT, fontFamily:"'DM Sans',system-ui,sans-serif", display:'flex', paddingBottom:64, overflowX:'hidden' }}>
+    <div style={{ background:'var(--bg-main)', minHeight:'calc(100vh - 64px)', color:TEXT, fontFamily:"'DM Sans',system-ui,sans-serif", display:'flex', paddingBottom:64, overflowX:'hidden' }}>
       <style>{`
 
 
@@ -95,7 +95,7 @@ export default function SourceExplorer() {
         .se-btn-nav:disabled { opacity: 0.25; cursor: default; }
 
         .se-btn-gold {
-          background: ${GOLD}; color: #08080E; border: none; border-radius: 9px;
+          background: ${GOLD}; color: var(--bg-main); border: none; border-radius: 9px;
           padding: 11px 20px; cursor: pointer;
           font-family: 'DM Sans', system-ui, sans-serif;
           font-weight: 600; font-size: 12px;

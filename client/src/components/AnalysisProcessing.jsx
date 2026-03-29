@@ -3,13 +3,13 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { FileText, Search, ShieldCheck, Network } from 'lucide-react';
 
 /* ─── Design tokens ───────────────────────────────────────────── */
-const GOLD  = '#C9A84C';
+const GOLD = 'var(--gold)';
 const GOLD2 = 'rgba(201,168,76,0.10)';
-const LINE  = 'rgba(255,255,255,0.07)';
-const TEXT  = '#E8E4DC';
-const MUTED = 'rgba(232,228,220,0.38)';
-const DIM   = 'rgba(232,228,220,0.18)';
-const SURF  = 'rgba(255,255,255,0.035)';
+const LINE = 'var(--line)';
+const TEXT = 'var(--text-main)';
+const MUTED = 'var(--text-muted)';
+const DIM = 'var(--text-dim)';
+const SURF = 'var(--surf)';
 
 const formatTime = (s) => {
   const m  = Math.floor(s / 60);

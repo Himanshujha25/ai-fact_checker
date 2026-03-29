@@ -216,3 +216,60 @@
     padding-right: 20px !important;
   }
 }
+
+/* 
+  ========================================
+    TRUE NATIVE LIGHT/DARK THEME SYSTEM
+    (Replacing CSS filter hacks with premium tokens)
+  ======================================== 
+*/
+
+:root {
+  /* DARK MODE TOKENS (Default Original Theme) */
+  --bg-main: #08080E;
+  --bg-overlay: rgba(8, 8, 14, 0.94);
+  --gold: #C9A84C;
+  --gold-light: rgba(201, 168, 76, 0.12);
+  --line: rgba(255, 255, 255, 0.07);
+  --surf: rgba(255, 255, 255, 0.035);
+  --text-main: #E8E4DC;
+  --text-muted: rgba(232, 228, 220, 0.42);
+  --text-dim: rgba(232, 228, 220, 0.22);
+}
+
+html.light-mode {
+  /* PREMIUM LIGHT MODE TOKENS */
+  --bg-main: #FAFAF8; /* Premium warm cream/grey off-white */
+  --bg-overlay: rgba(250, 250, 248, 0.94); /* Frost overlay on white */
+  --gold: #A67523; /* Darker, richer gold to pop off light background */
+  --gold-light: rgba(166, 117, 35, 0.08); /* Fainter gold highlight */
+  --line: rgba(17, 24, 39, 0.1); /* Crisp, clean dark borders */
+  --surf: #FFFFFF; /* High contrast bright white cards */
+  --text-main: #111827; /* Tailwind Gray-900 (Stunning sharp readability) */
+  --text-muted: #52525B; /* Medium-dark grey for subheadings */
+  --text-dim: #71717A; /* Medium grey for placeholder/faint text */
+
+  background-color: var(--bg-main) !important;
+  color: var(--text-main) !important;
+  color-scheme: light;
+}
+
+/* Base resets to enforce the properties */
+body {
+  background-color: var(--bg-main);
+  color: var(--text-main);
+}
+
+/* Fix invisible or poorly colored placeholders that got washed out by invert + opacity */
+html.light-mode ::placeholder {
+  color: #999999 !important; /* Inverts to a crisp #666666 dark grey */
+  opacity: 1 !important;
+  text-shadow: none !important;
+}
+
+html.light-mode input::placeholder,
+html.light-mode textarea::placeholder {
+  color: #999999 !important;
+  opacity: 1 !important;
+  text-shadow: none !important;
+}

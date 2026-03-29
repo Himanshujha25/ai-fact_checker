@@ -11,12 +11,12 @@ import { API_BASE } from '../config';
 
 
 
-const GOLD  = '#C9A84C';
-const LINE  = 'rgba(255,255,255,0.07)';
-const TEXT  = '#E8E4DC';
-const MUTED = 'rgba(232,228,220,0.38)';
-const DIM   = 'rgba(232,228,220,0.18)';
-const SURF  = 'rgba(255,255,255,0.035)';
+const GOLD = 'var(--gold)';
+const LINE = 'var(--line)';
+const TEXT = 'var(--text-main)';
+const MUTED = 'var(--text-muted)';
+const DIM = 'var(--text-dim)';
+const SURF = 'var(--surf)';
 
 /* ─── Verdict helpers ─────────────────────────────────────────── */
 const verdictMeta = (v) => {
@@ -92,7 +92,7 @@ export default function History() {
   const tabs = ['All Records'];
 
   return (
-    <div style={{ background: '#08080E', minHeight: 'calc(100vh - 64px)', color: TEXT, fontFamily: "'DM Sans', system-ui, sans-serif", display: 'flex' }}>
+    <div style={{ background: 'var(--bg-main)', minHeight: 'calc(100vh - 64px)', color: TEXT, fontFamily: "'DM Sans', system-ui, sans-serif", display: 'flex' }}>
       <style>{`
 
 
@@ -166,7 +166,7 @@ export default function History() {
         .hy-btn-danger:hover { background: rgba(248,113,113,0.12); }
 
         .hy-btn-gold {
-          background: ${GOLD}; color: #08080E; border: none; border-radius: 9px;
+          background: ${GOLD}; color: var(--bg-main); border: none; border-radius: 9px;
           padding: 12px 22px; cursor: pointer;
           font-family: 'DM Sans', system-ui, sans-serif; font-weight: 600; font-size: 13px;
           display: inline-flex; align-items: center; gap: 7px; transition: opacity 0.2s;
@@ -462,7 +462,7 @@ export default function History() {
                 </button>
                 <button
                   onClick={handleDeleteAll}
-                  style={{ flex: 1, padding: '12px', background: '#f87171', border: 'none', borderRadius: 9, fontFamily: "'DM Sans', system-ui, sans-serif", fontSize: 13, fontWeight: 600, color: '#08080E', cursor: 'pointer', transition: 'opacity 0.2s' }}
+                  style={{ flex: 1, padding: '12px', background: '#f87171', border: 'none', borderRadius: 9, fontFamily: "'DM Sans', system-ui, sans-serif", fontSize: 13, fontWeight: 600, color: 'var(--bg-main)', cursor: 'pointer', transition: 'opacity 0.2s' }}
                   onMouseOver={e => e.currentTarget.style.opacity = '0.85'}
                   onMouseOut={e  => e.currentTarget.style.opacity = '1'}
                 >

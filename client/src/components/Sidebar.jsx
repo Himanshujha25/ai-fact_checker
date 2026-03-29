@@ -6,13 +6,13 @@ import {
 } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 
-const GOLD  = '#C9A84C';
+const GOLD = 'var(--gold)';
 const GOLDD = 'rgba(201,168,76,0.15)';
-const LINE  = 'rgba(255,255,255,0.07)';
+const LINE = 'var(--line)';
 const SURF  = 'rgba(255,255,255,0.03)';
-const TEXT  = '#E8E4DC';
-const MUTED = 'rgba(232,228,220,0.38)';
-const DIM   = 'rgba(232,228,220,0.18)';
+const TEXT = 'var(--text-main)';
+const MUTED = 'var(--text-muted)';
+const DIM = 'var(--text-dim)';
 
 const NAV_ITEMS = [
   { icon: LayoutDashboard, label: 'Workbench', path: '/verify'       },
@@ -55,7 +55,7 @@ export default function Sidebar({ activeFilter, onFilterChange, onExport, onShar
           position: sticky;
           top: 6px;
           height: calc(100vh - 60px);
-          background: #08080E;
+          background: var(--bg-main);
           z-index: 40;
           flex-shrink: 0;
           overflow-y: auto;
@@ -123,7 +123,7 @@ export default function Sidebar({ activeFilter, onFilterChange, onExport, onShar
 
         .new-btn {
           width: 100%; height: 40px;
-          background: ${GOLD}; color: #08080E;
+          background: ${GOLD}; color: var(--bg-main);
           border: none; border-radius: 10px; cursor: pointer;
           font-family: 'DM Sans', system-ui, sans-serif;
           font-weight: 700; font-size: 12.5px;

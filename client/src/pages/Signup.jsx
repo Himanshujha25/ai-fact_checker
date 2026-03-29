@@ -7,13 +7,13 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
-const GOLD  = '#C9A84C';
+const GOLD = 'var(--gold)';
 const GOLD2 = 'rgba(201,168,76,0.10)';
-const LINE  = 'rgba(255,255,255,0.07)';
-const TEXT  = '#E8E4DC';
-const MUTED = 'rgba(232,228,220,0.38)';
-const DIM   = 'rgba(232,228,220,0.18)';
-const GOLD_L = 'rgba(201,168,76,0.12)';
+const LINE = 'var(--line)';
+const TEXT = 'var(--text-main)';
+const MUTED = 'var(--text-muted)';
+const DIM = 'var(--text-dim)';
+const GOLD_L = 'var(--gold-light)';
 
 export default function Signup() {
   const [name,         setName]         = useState('');
@@ -60,7 +60,7 @@ export default function Signup() {
   const strengthLabel = ['','Weak','Fair','Good','Strong'][strength];
 
   return (
-    <div style={{ minHeight:'100vh', background:'#08080E', color:TEXT, fontFamily:"'DM Sans',system-ui,sans-serif", display:'flex', flexDirection:'column' }}>
+    <div style={{ minHeight:'100vh', background:'var(--bg-main)', color:TEXT, fontFamily:"'DM Sans',system-ui,sans-serif", display:'flex', flexDirection:'column' }}>
       <style>{`
 
 
@@ -78,7 +78,7 @@ export default function Signup() {
         .su-input-r { padding-right:42px; }
 
         .su-btn-gold {
-          width:100%; background:${GOLD}; color:#08080E;
+          width:100%; background:${GOLD}; color:var(--bg-main);
           border:none; border-radius:9px; padding:14px; cursor:pointer;
           font-family:'DM Sans',system-ui,sans-serif;
           font-weight:600; font-size:14px; letter-spacing:0.02em;
@@ -124,7 +124,7 @@ export default function Signup() {
 
         /* ═══════════ RESPONSIVE ═══════════════════════════════ */
         .su-header { position:fixed; top:0; left:0; right:0; z-index:100; background:rgba(8,8,14,0.88); backdrop-filter:blur(16px); border-bottom:1px solid ${LINE}; display:flex; justify-content:space-between; align-items:center; padding:16px 48px; }
-        .su-footer { border-top:1px solid ${LINE}; padding:18px 48px; display:flex; justify-content:space-between; align-items:center; background:rgba(8,8,14,0.95); }
+        .su-footer { border-top:1px solid ${LINE}; padding:18px 48px; display:flex; justify-content:space-between; align-items:center; background:var(--bg-overlay); }
         .su-footer-links { display:flex; gap:24px; }
 
         @media (max-width: 600px) {

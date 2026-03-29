@@ -4,13 +4,13 @@ import { Search, Bell, Settings, LogOut, Key, Moon, Sun, Home, Gavel, Clock, Use
 import { useAuth } from '../context/AuthContext';
 import { motion, AnimatePresence } from 'framer-motion';
 
-const GOLD  = '#C9A84C';
-const GOLD_L= 'rgba(201,168,76,0.12)';
-const LINE  = 'rgba(255,255,255,0.07)';
-const TEXT  = '#E8E4DC';
-const MUTED = 'rgba(232,228,220,0.38)';
-const DIM   = 'rgba(232,228,220,0.18)';
-const BG    = 'rgba(8,8,14,0.96)';
+const GOLD = 'var(--gold)';
+const GOLD_L = 'var(--gold-light)';
+const LINE = 'var(--line)';
+const TEXT = 'var(--text-main)';
+const MUTED = 'var(--text-muted)';
+const DIM = 'var(--text-dim)';
+const BG    = 'var(--bg-overlay)';
 
 const LINKS = [
   { to: '/',        label: 'Overview', end: true },
@@ -34,6 +34,20 @@ export default function SubNavbar() {
   const [searchFocus, setSearchFocus] = useState(false);
   const [showSearch,  setShowSearch]  = useState(false); // mobile search overlay
   const [searchQuery, setSearchQuery] = useState('');
+  const [theme, setTheme] = useState(localStorage.getItem('theme') || 'dark');
+
+  useEffect(() => {
+    if (theme === 'light') {
+      document.documentElement.classList.add('light-mode');
+    } else {
+      document.documentElement.classList.remove('light-mode');
+    }
+    localStorage.setItem('theme', theme);
+  }, [theme]);
+
+  const toggleTheme = () => {
+    setTheme(prev => prev === 'dark' ? 'light' : 'dark');
+  };
 
   const handleSearch = (e) => {
     if (e.key === 'Enter' && searchQuery.trim()) {
@@ -71,7 +85,7 @@ export default function SubNavbar() {
           padding: 0 40px;
           position: sticky; top: 0; z-index: 100;
           height: 60px;
-          background: rgba(8,8,14,0.92);
+          background: var(--bg-overlay);
           backdrop-filter: blur(18px);
           border-bottom: 1px solid ${LINE};
           display: flex; align-items: center;
@@ -159,7 +173,7 @@ export default function SubNavbar() {
           display: none;
           position: fixed; bottom: 0; left: 0; right: 0;
           height: 64px;
-          background: rgba(8,8,14,0.97);
+          background: var(--bg-overlay);
           backdrop-filter: blur(24px);
           border-top: 1px solid rgba(255,255,255,0.08);
           z-index: 200;
@@ -194,7 +208,7 @@ export default function SubNavbar() {
         /* Mobile search overlay */
         .mob-search-overlay {
           position: fixed; inset: 0; z-index: 300;
-          background: rgba(8,8,14,0.97);
+          background: var(--bg-overlay);
           backdrop-filter: blur(20px);
           display: flex; flex-direction: column;
           align-items: center; justify-content: flex-start;
@@ -217,7 +231,7 @@ export default function SubNavbar() {
           display: none;
           position: sticky; top: 0; left: 0; right: 0;
           height: 52px;
-          background: rgba(8,8,14,0.94);
+          background: var(--bg-overlay);
           backdrop-filter: blur(16px);
           border-bottom: 1px solid ${LINE};
           z-index: 210;
@@ -259,23 +273,28 @@ export default function SubNavbar() {
           <span style={{ fontFamily:"'DM Serif Display',Georgia,serif", fontSize:15, color:TEXT, fontWeight:400 }}>Truecast</span>
         </div>
 
-        {user && (
-          <div style={{ display:'flex', alignItems:'center', gap:12 }}>
-            <p style={{ fontFamily:"'DM Mono',monospace", fontSize:9, color:DIM, textTransform:'uppercase', letterSpacing:'0.05em' }}>
-              {user.email.split('@')[0]}
-            </p>
-            <button
-              onClick={logout}
-              style={{
-                background:'rgba(244,63,94,0.1)', border:'1px solid rgba(244,63,94,0.2)',
-                borderRadius:6, padding:6, color:'#f43f5e',
-                display:'flex', alignItems:'center', justifyContent:'center'
-              }}
-            >
-              <LogOut size={13}/>
-            </button>
-          </div>
-        )}
+        <div style={{ display:'flex', alignItems:'center', gap:12 }}>
+          {user && (
+            <>
+              <p style={{ fontFamily:"'DM Mono',monospace", fontSize:9, color:DIM, textTransform:'uppercase', letterSpacing:'0.05em' }}>
+                {user.email.split('@')[0]}
+              </p>
+              <button
+                onClick={logout}
+                style={{
+                  background:'rgba(244,63,94,0.1)', border:'1px solid rgba(244,63,94,0.2)',
+                  borderRadius:6, padding:6, color:'#f43f5e',
+                  display:'flex', alignItems:'center', justifyContent:'center'
+                }}
+              >
+                <LogOut size={13}/>
+              </button>
+            </>
+          )}
+          <button onClick={toggleTheme} className="nav-icon-btn" style={{ background: 'transparent', border:'none', padding:6, display:'flex' }}>
+            {theme === 'dark' ? <Sun size={15} color={DIM} /> : <Moon size={15} color={DIM} />}
+          </button>
+        </div>
       </nav>
 
       {/* ══════════ DESKTOP NAVBAR ══════════════════════════════ */}
@@ -348,6 +367,11 @@ export default function SubNavbar() {
               )}
             </NavLink>
           )}
+
+          <div style={{ width:1, height:18, background:LINE, marginLeft: 6, marginRight: 6 }}/>
+          <button onClick={toggleTheme} className="nav-icon-btn" style={{ width: 34, height: 34, borderRadius: '50%', background: 'rgba(255,255,255,0.04)', border:`1px solid ${LINE}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            {theme === 'dark' ? <Sun size={15} color={DIM} /> : <Moon size={15} color={DIM} />}
+          </button>
         </div>
       </motion.nav>
 

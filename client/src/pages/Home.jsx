@@ -8,14 +8,14 @@ import {
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
-const GOLD = '#C9A84C';
+const GOLD = 'var(--gold)';
 const GOLD_D = 'rgba(201,168,76,0.1)';
-const SURF = 'rgba(255,255,255,0.035)';
+const SURF = 'var(--surf)';
 const SURF2 = 'rgba(255,255,255,0.055)';
-const LINE = 'rgba(255,255,255,0.07)';
-const TEXT = '#E8E4DC';
-const MUTED = 'rgba(232,228,220,0.38)';
-const DIM = 'rgba(232,228,220,0.18)';
+const LINE = 'var(--line)';
+const TEXT = 'var(--text-main)';
+const MUTED = 'var(--text-muted)';
+const DIM = 'var(--text-dim)';
 
 function Counter({ target, suffix = '' }) {
   const ref = useRef(null);
@@ -214,11 +214,11 @@ export default function Home() {
   ];
 
   return (
-    <div style={{ background: '#08080E', color: TEXT, fontFamily: "'DM Sans', system-ui, sans-serif", minHeight: '100vh', overflowX: 'hidden' }}>
+    <div style={{ background: 'var(--bg-main)', color: TEXT, fontFamily: "'DM Sans', system-ui, sans-serif", minHeight: '100vh', overflowX: 'hidden' }}>
       <style>{`
         /* ── Buttons ── */
         .hm-btn-gold {
-          background: ${GOLD}; color: #08080E; border: none; border-radius: 9px;
+          background: ${GOLD}; color: var(--bg-main); border: none; border-radius: 9px;
           padding: 14px 30px; font-family: 'DM Sans', system-ui, sans-serif;
           font-weight: 600; font-size: 13px; letter-spacing: 0.02em; cursor: pointer;
           display: inline-flex; align-items: center; gap: 8px;
