@@ -10,6 +10,7 @@ import html2pdf from 'html2pdf.js';
 import VerdictPieChart from '../components/VerdictPieChart';
 import Sidebar from '../components/Sidebar';
 import { API_BASE } from '../config';
+import { generatePDF } from '../utils/pdfGenerator';
 
 
 
@@ -86,26 +87,8 @@ export default function ReportDetail() {
   const handleExportPDF = () => setShowExportModal(true);
 
   const executePDFExport = () => {
-    const element = document.getElementById('report-detail');
-    if (!element) return;
     setShowExportModal(false);
-    const sanitizedName = exportName.trim().replace(/\s+/g,'_').toLowerCase();
-    const fileNameBase = sanitizedName ? `${sanitizedName}_truecast_final_report` : 'truecast_final_report';
-    const pdfHeader = document.createElement('div');
-    pdfHeader.innerHTML = `
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:40px;border-bottom:1px solid rgba(201,168,76,0.3);padding:20px 20px 15px;">
-        <span style="font-family:DM Serif Display,serif;color:var(--gold);font-size:24px;">TRUECAST</span>
-        <span style="font-family:DM Mono,monospace;color:rgba(232,228,220,0.5);font-size:10px;">OFFICIAL FORENSIC RECORD · ${new Date().toLocaleDateString()}</span>
-      </div>`;
-    pdfHeader.id = 'pdf-header-inject-detail';
-    element.prepend(pdfHeader);
-    html2pdf().from(element).set({
-      margin:0, filename:`${fileNameBase}_${id}.pdf`,
-      image:{ type:'jpeg', quality:0.98 },
-      html2canvas:{ scale:2.5, backgroundColor:'var(--bg-main)', useCORS:true, logging:false, windowWidth:1200 },
-      jsPDF:{ unit:'mm', format:'a4', orientation:'portrait' },
-      pagebreak:{ mode:['avoid-all','css','legacy'] }
-    }).save().then(() => { document.getElementById('pdf-header-inject-detail')?.remove(); });
+    generatePDF(data, exportName);
   };
 
   const handleShare = async () => {

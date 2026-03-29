@@ -11,8 +11,8 @@ import Sidebar from '../components/Sidebar';
 import { API_BASE } from '../config';
 import AnalysisProcessing from '../components/AnalysisProcessing';
 import confetti from 'canvas-confetti';
-import html2pdf from 'html2pdf.js';
 import { useAuth } from '../context/AuthContext';
+import { generatePDF } from '../utils/pdfGenerator';
 
 
 
@@ -655,17 +655,55 @@ export default function Verify() {
     try {
       const finalMode = isDeepfake ? 'deepfake' : mode;
       const payload = url.trim() ? { url:url.trim(), mode: finalMode, language: lang } : { text:text.trim(), mode: finalMode, language: lang };
-      const thoughts = ['Deconstructing source narrative…','Extracting verifiable assertions…','Cross-referencing fact indices…','Querying live OSINT streams…','Semantic integrity analysis…','Consensus aggregation — 3 agents…','Validating academic provenance…','Assembling forensic dossier…'];
+      
       const clock   = setInterval(() => setElapsed(e => e+1), 1000);
       const stepper = setInterval(() => setStep(s => Math.min(s+1,3)), 4000);
-      const logger  = setInterval(() => setLogs(l => [...l.slice(-8),{ msg:thoughts[Math.floor(Math.random()*thoughts.length)], id:Date.now() }]), 2000);
-      const res = await axios.post(`${API_BASE}/verify`, payload, { 
-        signal: controller.signal,
-        headers: token ? { Authorization: `Bearer ${token}` } : {}
-      });
-      [clock,stepper,logger].forEach(clearInterval);
       
-      let finalResults = res.data;
+      const apiResponse = await fetch(`${API_BASE}/verify-stream`, { 
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {})
+        },
+        body: JSON.stringify(payload),
+        signal: controller.signal
+      });
+
+      const reader = apiResponse.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+      let finalResults = null;
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        
+        const chunks = buffer.split('\n\n');
+        buffer = chunks.pop(); // Keep incomplete chunk
+        
+        for (const chunk of chunks) {
+          if (chunk.trim() && chunk.startsWith('data:')) {
+            const dataStr = chunk.slice(5).trim();
+            try {
+              const event = JSON.parse(dataStr);
+              if (event.type === 'progress') {
+                // Real Live SSE Event from AI Core!
+                setLogs(l => [...l.slice(-8), { msg: event.data, id: Date.now() }]);
+              } else if (event.type === 'complete') {
+                finalResults = event.data;
+              } else if (event.type === 'error') {
+                throw new Error(event.data);
+              }
+            } catch (e) {
+              if (e.message && e.message !== 'Unexpected end of JSON input') throw e;
+            }
+          }
+        }
+      }
+      
+      [clock,stepper].forEach(clearInterval);
+      if (!finalResults) throw new Error('Stream terminated unexpectedly.');
       
       setStep(4); setResults(finalResults); setLoading(false);
       
@@ -689,50 +727,10 @@ export default function Verify() {
   const handleExportPDF = () => setShowExportModal(true);
 
   const executePDFExport = () => {
-    if (!results) return;
     setShowExportModal(false);
-    const fmt = (v=0) => Math.round(v);
-    const today = new Date().toLocaleDateString('en-US',{ year:'numeric', month:'long', day:'numeric' });
-    const reportId = results.reportId || ('TC-'+Math.random().toString(36).substring(2,9).toUpperCase());
-    const sanitized = exportName.trim().replace(/\s+/g,'_').toLowerCase();
-    const fileName = sanitized ? `${sanitized}_truecast_${reportId}.pdf` : `TrueCast_Report_${reportId}.pdf`;
-    const verdictColor = v => {
-      const l=(v||'').toLowerCase();
-      if (['true','accurate','verified'].includes(l)) return { bg:'#D1FAE5', fg:'#065F46', dot:'#10B981' };
-      if (['false','inaccurate'].includes(l))          return { bg:'#FEE2E2', fg:'#991B1B', dot:'#EF4444' };
-      if (['partially true','mixed'].includes(l))      return { bg:'#FEF3C7', fg:'#92400E', dot:'#F59E0B' };
-      return { bg:'#F3F4F6', fg:'#374151', dot:'#9CA3AF' };
-    };
-    const scoreColor = s => s>=70?'#065F46':s>=40?'#92400E':'#991B1B';
-    const scoreBg    = s => s>=70?'#D1FAE5':s>=40?'#FEF3C7':'#FEE2E2';
-    const sc = results.truthScore || 0;
-    const scoreLabel = sc>=75?'High Confidence':sc>=50?'Moderate Confidence':'Low Confidence';
-    const claimsHTML = (results.claims||[]).map((c,i) => {
-      const vc=verdictColor(c.verdict), pct=fmt((c.confidence||0)*100), row=i%2===0?'#FFFFFF':'#F9FAFB';
-      return `<tr style="background:${row};border-bottom:1px solid #E5E7EB;"><td style="padding:12px 16px;width:120px;vertical-align:top;"><span style="display:inline-flex;align-items:center;gap:5px;background:${vc.bg};color:${vc.fg};font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:3px 9px;border-radius:4px;"><span style="width:6px;height:6px;border-radius:50%;background:${vc.dot};flex-shrink:0;"></span>${c.verdict||'Pending'}</span></td><td style="padding:12px 16px;vertical-align:top;"><p style="margin:0 0 4px;font-size:13px;font-weight:600;color:#111827;line-height:1.5;">${c.claim||'—'}</p><p style="margin:0;font-size:12px;color:#6B7280;line-height:1.55;">${c.reasoning||''}</p></td><td style="padding:12px 16px;width:70px;vertical-align:top;text-align:right;"><span style="font-size:18px;font-weight:700;color:${pct>=70?'#B45309':'#6B7280'};">${pct}<span style="font-size:10px;font-weight:400;">%</span></span></td></tr>`;
-    }).join('');
-    const aiSection = results.aiTextDetection ? `<div style="display:flex;gap:16px;margin-bottom:28px;"><div style="flex:1;background:#F9FAFB;border:1px solid #E5E7EB;border-radius:10px;padding:18px 20px;"><p style="margin:0 0 6px;font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#9CA3AF;">AI Text Probability</p><p style="margin:0;font-size:30px;font-weight:700;color:#111827;line-height:1;">${results.aiTextDetection.score||0}<span style="font-size:14px;font-weight:400;color:#6B7280;">%</span></p><p style="margin:6px 0 0;font-size:12px;color:#6B7280;">${results.aiTextDetection.score>50?'Likely synthesized content':'Likely human-authored content'}</p>${results.aiTextDetection.explanation?`<p style="margin:8px 0 0;font-size:11px;color:#9CA3AF;line-height:1.5;">${results.aiTextDetection.explanation}</p>`:''}</div>${results.aiMediaDetection?`<div style="flex:1;background:#F9FAFB;border:1px solid #E5E7EB;border-radius:10px;padding:18px 20px;"><p style="margin:0 0 6px;font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#9CA3AF;">Media Authentication</p><p style="margin:0;font-size:30px;font-weight:700;color:#111827;line-height:1;">${results.aiMediaDetection.verdict||'Clear'}</p>${results.aiMediaDetection.summary?`<p style="margin:8px 0 0;font-size:11px;color:#9CA3AF;line-height:1.5;">${results.aiMediaDetection.summary}</p>`:''}</div>`:''}</div>` : '';
-    const html = `<div style="font-family:'Helvetica Neue',Helvetica,Arial,sans-serif;font-size:13px;color:#111827;background:#fff;padding:0;margin:0;max-width:760px;box-sizing:border-box;"><div style="background:#0D0D18;padding:28px 36px 24px;"><table width="100%" cellpadding="0" cellspacing="0"><tr><td><span style="font-family:Georgia,'Times New Roman',serif;font-size:22px;font-weight:400;color:var(--gold);letter-spacing:.04em;">TRUECAST</span><span style="display:block;font-size:9px;color:rgba(201,168,76,.55);letter-spacing:.18em;text-transform:uppercase;margin-top:3px;">Intelligence · Verification · Forensics</span></td><td style="text-align:right;vertical-align:top;"><span style="font-size:9px;color:rgba(255,255,255,.35);font-family:monospace;letter-spacing:.06em;text-transform:uppercase;line-height:1.8;">OFFICIAL AUDIT REPORT<br>${today}<br>REF: ${reportId}</span></td></tr></table></div><div style="height:3px;background:linear-gradient(90deg,var(--gold) 0%,#F0D080 50%,var(--gold) 100%);"></div><div style="padding:36px 36px 40px;"><h1 style="font-family:Georgia,'Times New Roman',serif;font-size:26px;font-weight:400;color:#111827;margin:0 0 6px;letter-spacing:-.02em;">Forensic Fact-Check Report</h1><p style="margin:0 0 28px;font-size:13px;color:#6B7280;">Automated multi-source intelligence audit with confidence scoring.</p><div style="display:flex;align-items:stretch;gap:0;border:1px solid #E5E7EB;border-radius:12px;overflow:hidden;margin-bottom:28px;"><div style="background:${scoreBg(sc)};padding:24px 28px;min-width:160px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;"><span style="font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:${scoreColor(sc)};opacity:.7;margin-bottom:8px;">Truth Index</span><span style="font-family:Georgia,'Times New Roman',serif;font-size:52px;font-weight:400;color:${scoreColor(sc)};line-height:1;">${fmt(sc)}</span><span style="font-size:11px;color:${scoreColor(sc)};opacity:.7;">/100</span><span style="margin-top:10px;font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:${scoreColor(sc)};background:${scoreColor(sc)}18;padding:3px 10px;border-radius:4px;">${scoreLabel}</span></div><div style="flex:1;padding:22px 28px;border-left:1px solid #E5E7EB;"><table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;"><tr><td style="padding:6px 0;font-size:11px;color:#9CA3AF;width:140px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;">Claims Reviewed</td><td style="padding:6px 0;font-size:13px;color:#111827;font-weight:600;">${results.claims?.length||0}</td></tr><tr><td style="padding:6px 0;font-size:11px;color:#9CA3AF;font-weight:600;text-transform:uppercase;letter-spacing:.06em;">Report Date</td><td style="padding:6px 0;font-size:13px;color:#111827;">${today}</td></tr><tr><td style="padding:6px 0;font-size:11px;color:#9CA3AF;font-weight:600;text-transform:uppercase;letter-spacing:.06em;">Report ID</td><td style="padding:6px 0;font-size:13px;color:#111827;font-family:monospace;">${reportId}</td></tr><tr><td style="padding:6px 0;font-size:11px;color:#9CA3AF;font-weight:600;text-transform:uppercase;letter-spacing:.06em;">Engine</td><td style="padding:6px 0;font-size:13px;color:#111827;">TrueCast Neural v4.2 · Multi-agent</td></tr>${exportName.trim()?`<tr><td style="padding:6px 0;font-size:11px;color:#9CA3AF;font-weight:600;text-transform:uppercase;letter-spacing:.06em;">Author</td><td style="padding:6px 0;font-size:13px;color:#111827;">${exportName.trim()}</td></tr>`:''}<tr><td style="padding:6px 0 0;font-size:11px;color:#9CA3AF;font-weight:600;text-transform:uppercase;letter-spacing:.06em;vertical-align:top;">Assessment</td><td style="padding:6px 0 0;"><span style="font-size:13px;color:${scoreColor(sc)};font-weight:600;">${sc>=75?'✓ Largely verifiable and evidence-supported.':sc>=45?'⚠ Mixed or partially verifiable claims.':'✗ Significant inaccuracies detected.'}</span></td></tr></table></div></div><div style="border-top:1px solid #E5E7EB;margin:0 0 24px;"></div>${aiSection}<h2 style="font-family:Georgia,'Times New Roman',serif;font-size:18px;font-weight:400;color:#111827;margin:0 0 14px;letter-spacing:-.01em;">Verified Assertions</h2><table width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;border:1px solid #E5E7EB;border-radius:10px;overflow:hidden;font-size:13px;"><thead><tr style="background:#F3F4F6;border-bottom:2px solid #E5E7EB;"><th style="padding:11px 16px;text-align:left;font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#6B7280;width:120px;">Verdict</th><th style="padding:11px 16px;text-align:left;font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#6B7280;">Claim &amp; Reasoning</th><th style="padding:11px 16px;text-align:right;font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#6B7280;width:70px;">Conf.</th></tr></thead><tbody>${claimsHTML||`<tr><td colspan="3" style="padding:24px 16px;text-align:center;color:#9CA3AF;">No claims extracted.</td></tr>`}</tbody></table><div style="margin-top:36px;padding:16px 20px;background:#FFFBEB;border:1px solid #FDE68A;border-radius:8px;border-left:4px solid #F59E0B;"><p style="margin:0 0 4px;font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#92400E;">Disclaimer</p><p style="margin:0;font-size:11px;color:#78350F;line-height:1.6;">This report is generated by an automated AI system and is intended as a supplementary research aid only.</p></div></div><div style="background:#F9FAFB;border-top:1px solid #E5E7EB;padding:16px 36px;display:flex;align-items:center;justify-content:space-between;"><span style="font-family:Georgia,'Times New Roman',serif;font-size:12px;color:var(--gold);letter-spacing:.06em;">TRUECAST</span><span style="font-size:10px;color:#9CA3AF;font-family:monospace;letter-spacing:.04em;">${today} · REF: ${reportId}</span><span style="font-size:10px;color:#9CA3AF;">truecast.ai</span></div></div>`;
-    const wrapper = document.createElement('div');
-    wrapper.style.cssText = 'position:fixed;left:-9999px;top:0;z-index:-1;pointer-events:none;background:#ffffff;color:#111827;';
-    wrapper.innerHTML = html;
-    document.body.appendChild(wrapper);
-    wrapper.querySelectorAll('*').forEach(el => {
-      const cs = window.getComputedStyle(el);
-      const bg = cs.backgroundColor;
-      if (bg && bg !== 'rgba(0, 0, 0, 0)' && bg !== 'transparent') {
-        const m = bg.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
-        if (m && (0.299*+m[1]+0.587*+m[2]+0.114*+m[3]) < 30) el.style.backgroundColor = '#ffffff';
-      }
-    });
-    html2pdf().from(wrapper.firstElementChild).set({
-      margin:0, filename:fileName,
-      image:{ type:'jpeg', quality:0.97 },
-      html2canvas:{ scale:2.5, backgroundColor:'#ffffff', useCORS:true, logging:false, letterRendering:true, ignoreElements:(el) => el.hasAttribute('data-html2canvas-ignore') || el.id==='pdf-watermark' },
-      jsPDF:{ unit:'mm', format:'a4', orientation:'portrait' },
-      pagebreak:{ mode:['avoid-all','css','legacy'] },
-    }).save().then(() => document.body.removeChild(wrapper)).catch(() => document.body.removeChild(wrapper));
+    generatePDF(results, exportName, user?.organization || '', user?.logoUrl || '');
   };
+
 
   const canRun = isDeepfake ? !!url.trim() : !!(url.trim() || text.trim() || interim.trim());
 

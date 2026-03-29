@@ -775,10 +775,15 @@ async function retryWithBackoff(fn, retries = 3, baseDelay = 1000) {
 }
 
 // Core verification pipeline — Chain-of-Thought + Multi-Mode Research Agent
-async function runVerificationPipeline(contentToProcess, mode = 'normal', language = 'en', mediaForensics = null) {
+async function runVerificationPipeline(contentToProcess, mode = 'normal', language = 'en', mediaForensics = null, onProgress = null) {
   const model = genAI.getGenerativeModel({ model: 'gemini-2.5-pro' });
   const currentDate = new Date().toISOString().split('T')[0];
   
+  const notify = (msg) => {
+    console.log(msg);
+    if (onProgress) onProgress(msg);
+  };
+
   // UNIFIED CLAIM LIMITS
   const claimLimits = {
     'normal': 3,
@@ -789,10 +794,10 @@ async function runVerificationPipeline(contentToProcess, mode = 'normal', langua
   };
   const claimLimit = claimLimits[mode] || 3;
 
-  console.log(`🚀 Starting ${mode.toUpperCase()} Agentic Research Pipeline (Limit: ${claimLimit} claims)...`);
+  notify(`🚀 Starting ${mode.toUpperCase()} Agentic Research Pipeline (Limit: ${claimLimit} claims)...`);
 
   // ─── PHASE 1: Claim Extraction ───
-  console.log(`  [Phase 1] Extracting claims (Lang: ${language})...`);
+  notify(`  [Phase 1] Extracting claims (Lang: ${language})...`);
   const extractionPrompt = `You are a precision fact-extraction agent. Today's date is ${currentDate}.
   TASK: Extract AT MOST ${claimLimit} verifiable factual assertions from the text. 
   
@@ -825,7 +830,7 @@ async function runVerificationPipeline(contentToProcess, mode = 'normal', langua
 
   // FAILSAFE: If extraction returned nothing but we have input, force-inject a claim
   if (claims.length === 0 && contentToProcess.trim().length > 3) {
-    console.log('  [Failsafe] Manual claim injection triggered.');
+    notify('  [Failsafe] Manual claim injection triggered.');
     let fakeClaim = contentToProcess.substring(0, 500);
     
     // If it's pure media metadata, simplify it for the pipeline
@@ -838,7 +843,7 @@ async function runVerificationPipeline(contentToProcess, mode = 'normal', langua
   }
 
   // ─── PHASE 2: Verification with Multi-Mode Tools ───
-  console.log(`  [Phase 2] Verifying ${claims.length} claims (Mode: ${mode})...`);
+  notify(`  [Phase 2] Verifying ${claims.length} claims (Mode: ${mode})...`);
 
   const verificationResults = await Promise.all(claims.map(async (claim) => {
     try {
@@ -936,7 +941,7 @@ async function runVerificationPipeline(contentToProcess, mode = 'normal', langua
   }));
 
   // ─── PHASE 3: AI Text Detection ───
-  console.log('  [Phase 3] AI text detection...');
+  notify('  [Phase 3] AI text detection...');
   let aiDetection = { score: 0, explanation: 'Analysis unavailable' };
   try {
     const aiRes = await retryWithBackoff(() =>
@@ -975,7 +980,7 @@ async function runVerificationPipeline(contentToProcess, mode = 'normal', langua
 
   // ─── PHASE 5: Narrative Duel (Adversarial Mode Only) ───
   if (mode === 'adversarial') {
-    console.log('  [Phase 5] Generating Narrative Duel analysis...');
+    notify('  [Phase 5] Generating Narrative Duel analysis...');
     try {
       const narrativePrompt = `You are a Media Analyst & Forensic Linguist.
       TASK: Analyze the provided text and research data to identify two conflicting narratives or framing styles (Source A vs Source B).
@@ -1085,6 +1090,97 @@ app.post('/api/verify', maybeAuthenticate, async (req, res) => {
   } catch (error) {
     console.error('Verification error:', error);
     res.status(500).json({ error: error.message || 'Internal pipeline error' });
+  }
+});
+
+// POST: Streamed Fact-Check (SSE)
+app.post('/api/verify-stream', maybeAuthenticate, async (req, res) => {
+  res.writeHead(200, {
+    'Content-Type': 'text/event-stream',
+    'Cache-Control': 'no-cache',
+    'Connection': 'keep-alive',
+  });
+
+  const sendEvent = (type, data) => res.write(`data: ${JSON.stringify({ type, data })}\n\n`);
+
+  const { text, url, mode, language = 'en' } = req.body;
+  const userId = req.userId;
+  let identifier = url || text;
+  const hashKey = getHash(identifier);
+
+  try {
+    const cacheKey = `verify:${userId}:${hashKey}`;
+    const cached = cacheGet(cacheKey);
+    if (cached) {
+      sendEvent('progress', 'Found cached forensic evidence. Restoring report...');
+      sendEvent('complete', { ...cached, cached: true });
+      return res.end();
+    }
+
+    sendEvent('progress', 'Initializing analysis pipeline...');
+
+    let contentToProcess = text || '';
+    let imageUrls = [];
+
+    const urlPattern = /https?:\/\/[^\s]+/;
+    const detectedUrl = text?.match(urlPattern)?.[0];
+    const targetUrl = url || detectedUrl;
+
+    if (targetUrl) {
+      sendEvent('progress', `Processing URL: ${targetUrl}`);
+      const extracted = await extractFromUrl(targetUrl);
+      contentToProcess = `USER QUERY/CONTEXT: ${text || 'None'}\n\nSCRAPED CONTENT:\n${extracted.text}`;
+      imageUrls = extracted.imageUrls || [];
+    }
+
+    if (!contentToProcess.trim()) {
+      sendEvent('error', 'No content provided');
+      return res.end();
+    }
+
+    let mediaForensics = null;
+    if (imageUrls.length > 0) {
+      sendEvent('progress', `Analyzing ${imageUrls.length} media items for deepfake detection...`);
+      const mediaAnalysis = await Promise.all(imageUrls.slice(0, 3).map(imgUrl => analyzeMediaForAI(imgUrl)));
+      const aiGenCount = mediaAnalysis.filter(a => a.isAIGenerated).length;
+      mediaForensics = {
+        imagesFound: imageUrls.length,
+        imagesAnalyzed: mediaAnalysis.length,
+        results: mediaAnalysis,
+        summary: aiGenCount > 0
+          ? `${aiGenCount} of ${mediaAnalysis.length} items flagged as potentially AI-generated`
+          : `All ${mediaAnalysis.length} analyzed items appear authentic`,
+        verdict: aiGenCount > 0 ? 'Suspicious' : 'Authentic',
+        score: Math.round((aiGenCount / mediaAnalysis.length) * 100)
+      };
+    } else {
+      sendEvent('progress', 'Analyzing text for media references...');
+      const model = genAI.getGenerativeModel({ model: 'gemini-2.5-pro' });
+      const mediaPrompt = `Analyze this text for references to synthetic/AI-generated media. Return JSON: {"score": number, "mediaFound": string[], "verdict": "string", "summary": "string"}. Text: ${contentToProcess.substring(0, 1000)}`;
+      const mediaResult = await model.generateContent(mediaPrompt);
+      mediaForensics = JSON.parse(mediaResult.response.text().match(/\{[\s\S]*\}/)?.[0] || '{"score": 0, "mediaFound": [], "verdict": "Clear", "summary": "No media references detected"}');
+    }
+
+    const responseData = await runVerificationPipeline(contentToProcess, mode || 'normal', language, mediaForensics, (msg) => {
+      sendEvent('progress', msg);
+    });
+
+    responseData.aiMediaDetection = mediaForensics;
+    const reportId = hashKey.substring(0, 12);
+    responseData.reportId = reportId;
+
+    if (userId) {
+      await dbSaveVerification(userId, reportId, url || text, responseData.truthScore, responseData.claims.length, responseData);
+      cacheSet(cacheKey, responseData);
+    }
+
+    sendEvent('progress', 'Finalizing forensic dossier...');
+    sendEvent('complete', responseData);
+    res.end();
+  } catch (error) {
+    console.error('Verification stream error:', error);
+    sendEvent('error', error.message || 'Internal pipeline error');
+    res.end();
   }
 });
 
