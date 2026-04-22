@@ -3,8 +3,9 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Trash2, Plus, Layers, History as HistoryIcon,
-  ArrowUpRight, Loader2, Menu, X
+  ArrowUpRight, Loader2, Menu, X, Volume2
 } from 'lucide-react';
+import { useVoice } from '../context/VoiceContext';
 import axios from 'axios';
 import Sidebar from '../components/Sidebar';
 import { API_BASE } from '../config';
@@ -19,28 +20,41 @@ const DIM = 'var(--text-dim)';
 const SURF = 'var(--surf)';
 
 /* ─── Verdict helpers ─────────────────────────────────────────── */
+const isMatch = (v, targets) => targets.some(t => v?.toLowerCase()?.includes(t));
+
 const verdictMeta = (v) => {
-  const l = v?.toLowerCase();
-  if (['true', 'accurate', 'verified'].includes(l))
-    return { color: '#4ade80', bg: 'rgba(74,222,128,0.08)',  border: 'rgba(74,222,128,0.2)'  };
-  if (['false', 'inaccurate'].includes(l))
-    return { color: '#f87171', bg: 'rgba(248,113,113,0.08)', border: 'rgba(248,113,113,0.2)' };
-  if (['partially true', 'mixed'].includes(l))
-    return { color: '#fbbf24', bg: 'rgba(251,191,36,0.08)',  border: 'rgba(251,191,36,0.2)'  };
-  return { color: DIM, bg: SURF, border: LINE };
+  const l = v?.toLowerCase() || '';
+  // Use exact or bounded match for Green to avoid 'unverified' matching 'verified'
+  if (['true', 'accurate', 'verified', 'correct'].some(t => l === t || l === `likely ${t}`))
+    return { color: '#4ade80', bg: 'rgba(74,222,128,0.08)',  border: 'rgba(74,222,128,0.2)', label: v };
+  
+  if (isMatch(l, ['false', 'inaccurate', 'refuted', 'fake']))
+    return { color: '#f87171', bg: 'rgba(248,113,113,0.08)', border: 'rgba(248,113,113,0.2)', label: v };
+    
+  if (isMatch(l, ['unverified', 'partially', 'mixed', 'inconclusive', 'caution', 'suspicious']))
+    return { color: '#fbbf24', bg: 'rgba(251,191,36,0.08)',  border: 'rgba(251,191,36,0.2)', label: v, warning: "NOTE: Forensic signal parity not established." };
+    
+  return { color: DIM, bg: SURF, border: LINE, label: v };
 };
 
 const VerdictBadge = ({ verdict }) => {
   const m = verdictMeta(verdict);
   return (
-    <span style={{
-      color: m.color, background: m.bg, border: `1px solid ${m.border}`,
-      fontSize: 9, letterSpacing: '0.12em', fontWeight: 700,
-      textTransform: 'uppercase', padding: '4px 10px', borderRadius: 4,
-      whiteSpace: 'nowrap', fontFamily: "'DM Mono', monospace",
-    }}>
-      {verdict || 'Processed'}
-    </span>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+      <span style={{
+        color: m.color, background: m.bg, border: `1px solid ${m.border}`,
+        fontSize: 9, letterSpacing: '0.12em', fontWeight: 700,
+        textTransform: 'uppercase', padding: '4px 10px', borderRadius: 4,
+        whiteSpace: 'nowrap', fontFamily: "'DM Mono', monospace",
+      }}>
+        {m.label || 'Processed'}
+      </span>
+      {m.warning && (
+        <span style={{ fontSize: 9, color: m.color, opacity: 0.8, fontFamily: "'DM Mono', monospace", fontStyle: 'italic', fontWeight: 500 }}>
+          {m.warning}
+        </span>
+      )}
+    </div>
   );
 };
 
@@ -53,6 +67,7 @@ export default function History() {
   const [activeTab,       setActiveTab]  = useState('All Records');
   const [sidebarOpen,     setSidebarOpen] = useState(false);
   const navigate = useNavigate();
+  const { speak, isSpeaking, stop } = useVoice();
   const [searchParams] = useSearchParams();
   const query = searchParams.get('q')?.toLowerCase() || '';
 
@@ -66,9 +81,9 @@ export default function History() {
   const filteredHistory = history.filter(h => {
     const v = (h.topClaims?.[0]?.verdict || h.claims?.[0]?.verdict || '').toLowerCase();
     let verdictMatch = true;
-    if (activeFilter === 'Verified')     verdictMatch = ['true','accurate','verified'].includes(v);
-    else if (activeFilter === 'Refuted') verdictMatch = ['false','inaccurate'].includes(v);
-    else if (activeFilter === 'Inconclusive') verdictMatch = ['partially true','mixed','inconclusive'].includes(v);
+    if (activeFilter === 'Verified')     verdictMatch = isMatch(v, ['true', 'accurate', 'verified', 'correct']);
+    else if (activeFilter === 'Refuted') verdictMatch = isMatch(v, ['false', 'inaccurate', 'refuted', 'fake']);
+    else if (activeFilter === 'Inconclusive') verdictMatch = isMatch(v, ['partially true', 'mixed', 'inconclusive']);
     if (!verdictMatch) return false;
     if (query) {
       const txt = ((h.input || '') + (h.title || '') + (h.topClaims?.[0]?.claim || '')).toLowerCase();
@@ -85,9 +100,22 @@ export default function History() {
     } catch (err) { alert('Failed to clear history: ' + err.message); }
   };
 
-  const avg = history.length
-    ? Math.round(history.reduce((a, h) => a + (h.truthScore || 0), 0) / history.length)
-    : 0;
+  const handleDeleteOne = async (e, id) => {
+    e.preventDefault(); e.stopPropagation();
+    if (!window.confirm('Archive erasure protocol: Are you sure you want to delete this specific dossier?')) return;
+    try {
+      const token = localStorage.getItem('token');
+      await axios.delete(`${API_BASE}/history/${id}`, { headers: { Authorization: `Bearer ${token}` } });
+      setHistory(prev => prev.filter(h => h.id !== id));
+    } catch (err) { alert('Deletion failed: ' + err.message); }
+  };
+
+  const stats = {
+    count: filteredHistory.length,
+    avg: filteredHistory.length 
+      ? Math.round(filteredHistory.reduce((a, h) => a + (h.truthScore || 0), 0) / filteredHistory.length)
+      : 0
+  };
 
   const tabs = ['All Records'];
 
@@ -97,17 +125,21 @@ export default function History() {
 
 
         /* ── Table row — desktop ── */
+        .hy-row-container {
+          position: relative;
+          border-bottom: 1px solid ${LINE};
+           transition: background 0.18s;
+        }
+        .hy-row-container:hover { background: rgba(var(--overlay-rgb),0.03); }
+        .hy-row-container:last-child { border-bottom: none; }
+
         .hy-row {
           display: grid;
-          grid-template-columns: 64px 1fr 120px 96px;
+          grid-template-columns: 64px 1fr 120px 80px 48px;
           gap: 20px; align-items: center;
           padding: 18px 24px;
-          border-bottom: 1px solid ${LINE};
           text-decoration: none; color: inherit;
-          transition: background 0.18s;
         }
-        .hy-row:last-child { border-bottom: none; }
-        .hy-row:hover { background: rgba(255,255,255,0.03); }
         .hy-row:hover .hy-arrow { color: ${GOLD}; transform: translate(2px,-2px); }
 
         /* ── Table row — tablet ── */
@@ -183,7 +215,7 @@ export default function History() {
           text-transform: uppercase; letter-spacing: 0.08em;
           transition: border-color 0.2s;
         }
-        .sidebar-toggle:hover { border-color: rgba(255,255,255,0.14); }
+        .sidebar-toggle:hover { border-color: rgba(var(--overlay-rgb),0.14); }
 
         /* ── Header responsive ── */
         .hy-header-row {
@@ -208,10 +240,10 @@ export default function History() {
         /* ── Table header ── */
         .hy-thead {
           display: grid;
-          grid-template-columns: 64px 1fr 120px 96px;
+          grid-template-columns: 64px 1fr 120px 80px 48px;
           gap: 20px; padding: 11px 24px;
           border-bottom: 1px solid ${LINE};
-          background: rgba(255,255,255,0.02);
+          background: rgba(var(--overlay-rgb),0.02);
         }
 
         /* ── Spin ── */
@@ -301,16 +333,16 @@ export default function History() {
           <div className="hy-stats-row">
             <div style={{ textAlign: 'right' }}>
               <div style={{ fontFamily: "'DM Serif Display', Georgia, serif", fontSize: 'clamp(28px,4vw,40px)', fontWeight: 400, color: TEXT, lineHeight: 1 }}>
-                {filteredHistory.length}
+                {stats.count}
               </div>
               <div style={{ fontFamily: "'DM Mono', monospace", fontSize: 9, color: DIM, textTransform: 'uppercase', letterSpacing: '0.1em', marginTop: 4 }}>
-                Total Reports
+                {activeFilter === 'All' ? 'Total' : activeFilter} Reports
               </div>
             </div>
             <div style={{ width: 1, height: 36, background: LINE }} />
             <div style={{ textAlign: 'right' }}>
               <div style={{ fontFamily: "'DM Serif Display', Georgia, serif", fontSize: 'clamp(28px,4vw,40px)', fontWeight: 400, color: GOLD, lineHeight: 1 }}>
-                {avg}%
+                {stats.avg}%
               </div>
               <div style={{ fontFamily: "'DM Mono', monospace", fontSize: 9, color: DIM, textTransform: 'uppercase', letterSpacing: '0.1em', marginTop: 4 }}>
                 Avg Veracity
@@ -373,20 +405,19 @@ export default function History() {
             filteredHistory.map((h, i) => {
               const verdict = h.topClaims?.[0]?.verdict || h.claims?.[0]?.verdict || '';
               return (
-                <motion.div key={h.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: i * 0.04 }}>
+                <motion.div key={h.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: i * 0.04 }} className="hy-row-container">
                   <Link to={`/history/${h.id}`} className="hy-row">
 
                     {/* Score */}
                     <div className="hy-col-score" style={{ fontFamily: "'DM Serif Display', Georgia, serif", fontSize: 22, fontWeight: 400, color: TEXT }}>
-                      {Math.round(h.truthScore)}<span style={{ fontSize: 12, opacity: 0.3 }}>%</span>
+                      {Math.round(h.truthScore || 0)}<span style={{ fontSize: 12, opacity: 0.3 }}>%</span>
                     </div>
 
                     {/* Assertion */}
                     <div style={{ display: 'flex', gap: 14, alignItems: 'center', minWidth: 0 }}>
-                      {/* Thumbnail — hidden on smallest screens via inline media handled by flex */}
                       <div style={{
                         width: 64, height: 40, borderRadius: 7, overflow: 'hidden',
-                        background: 'rgba(255,255,255,0.03)', border: `1px solid ${LINE}`,
+                        background: 'rgba(var(--overlay-rgb),0.03)', border: `1px solid ${LINE}`,
                         flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
                       }}>
                         {h.thumbnail
@@ -398,12 +429,7 @@ export default function History() {
                         <p style={{ fontSize: 13, fontWeight: 500, color: TEXT, marginBottom: 5, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', lineHeight: 1.4 }}>
                           {h.input || 'Investigation Log'}
                         </p>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-                          <VerdictBadge verdict={verdict} />
-                          <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 9, color: DIM, display: 'flex', alignItems: 'center', gap: 4, opacity: 0.6 }}>
-                            <Layers size={9} /> {h.claimsCount || 0} claims
-                          </span>
-                        </div>
+                        <VerdictBadge verdict={verdict} />
                       </div>
                     </div>
 
@@ -414,9 +440,33 @@ export default function History() {
 
                     {/* Arrow */}
                     <div className="hy-col-arrow hy-arrow">
-                      <span style={{ display: 'none' }}>Open</span>
                       <ArrowUpRight size={13} />
                     </div>
+
+                    {/* Action */}
+                    <button 
+                      onClick={(e) => handleDeleteOne(e, h.id)} 
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(248,113,113,0.4)', transition: 'color 0.2s', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', padding: 0 }}
+                      onMouseOver={e => e.currentTarget.style.color = '#f87171'}
+                      onMouseOut={e => e.currentTarget.style.color = 'rgba(248,113,113,0.4)'}
+                    >
+                      <Trash2 size={13} />
+                    </button>
+                    
+                    <button 
+                      onClick={(e) => {
+                        e.preventDefault(); e.stopPropagation();
+                        if (isSpeaking) stop();
+                        else {
+                          const score = Math.round(h.truthScore || 0);
+                          const verdict = h.topClaims?.[0]?.verdict || 'Processed';
+                          speak(`Dossier found. Assertion: ${h.input}. Trust index: ${score} percent. Verdict: ${verdict}. Analysis shows: ${h.summary || h.reasoning || ""}`);
+                        }
+                      }}
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: isSpeaking ? GOLD : DIM, transition: 'color 0.2s', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', padding: '0 8px' }}
+                    >
+                      <Volume2 size={13} />
+                    </button>
 
                   </Link>
                 </motion.div>
@@ -439,7 +489,7 @@ export default function History() {
               initial={{ scale: 0.96, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.96, opacity: 0 }}
               style={{
                 position: 'relative', background: 'rgba(14,14,22,0.98)',
-                border: '1px solid rgba(255,255,255,0.1)', borderRadius: 18,
+                border: '1px solid rgba(var(--overlay-rgb),0.1)', borderRadius: 18,
                 padding: 'clamp(28px, 4vw, 40px)', maxWidth: 400, width: '100%',
                 boxShadow: '0 40px 80px rgba(0,0,0,0.6)',
               }}
@@ -455,7 +505,7 @@ export default function History() {
                 <button
                   onClick={() => setShowDelete(false)}
                   style={{ flex: 1, padding: '12px', background: SURF, border: `1px solid ${LINE}`, borderRadius: 9, fontFamily: "'DM Sans', system-ui, sans-serif", fontSize: 13, fontWeight: 500, color: MUTED, cursor: 'pointer', transition: 'border-color 0.2s' }}
-                  onMouseOver={e => e.currentTarget.style.borderColor = 'rgba(255,255,255,0.15)'}
+                  onMouseOver={e => e.currentTarget.style.borderColor = 'rgba(var(--overlay-rgb),0.15)'}
                   onMouseOut={e  => e.currentTarget.style.borderColor = LINE}
                 >
                   Cancel

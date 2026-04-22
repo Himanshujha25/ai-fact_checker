@@ -43,7 +43,7 @@ const getDynamicClaims = (input) => {
 };
 
 /* ═══════════════════════════════════════════════════════════════ */
-export default function AnalysisProcessing({ elapsed, step, logs, inputTitle, onCancel, listening, interim }) {
+export default function AnalysisProcessing({ elapsed, step, logs, inputTitle, onCancel, listening, interim, lang }) {
   const [dynamicClaims, setDynamicClaims] = React.useState(() => getDynamicClaims(inputTitle));
 
   React.useEffect(() => {
@@ -80,10 +80,33 @@ export default function AnalysisProcessing({ elapsed, step, logs, inputTitle, on
     return () => clearInterval(timer);
   }, []);
 
+  const isHindi = lang === 'hi';
+
   const STEPS = [
-    { icon: FileText,   label: 'Claim Extraction',  active: step === 1, done: step > 1, pct: step === 1 ? 84 : step > 1 ? 100 : 0,  status: step === 1 ? '84% complete'    : step > 1 ? 'Complete'  : 'Pending' },
-    { icon: Search,     label: 'Evidence Retrieval', active: step === 2, done: step > 2, pct: step === 2 ? 65 : step > 2 ? 100 : 0,  status: step === 2 ? 'Active research'  : step > 2 ? 'Complete'  : 'In queue' },
-    { icon: ShieldCheck,label: 'Final Synthesis',    active: step === 3, done: step > 3, pct: step === 3 ? 40 : step > 3 ? 100 : 0,  status: step === 3 ? 'Synthesising…'   : step > 3 ? 'Complete'  : 'Awaiting' },
+    { 
+      icon: FileText,   
+      label: isHindi ? 'दावे का निष्कर्षण' : 'Claim Extraction',  
+      active: step === 1, 
+      done: step > 1, 
+      pct: step === 1 ? 84 : step > 1 ? 100 : 0,  
+      status: step === 1 ? (isHindi ? '84% पूर्ण' : '84% complete') : step > 1 ? (isHindi ? 'पूर्ण' : 'Complete') : (isHindi ? 'लंबित' : 'Pending') 
+    },
+    { 
+      icon: Search,     
+      label: isHindi ? 'साक्ष्य पुनर्प्राप्ति' : 'Evidence Retrieval', 
+      active: step === 2, 
+      done: step > 2, 
+      pct: step === 2 ? 65 : step > 2 ? 100 : 0,  
+      status: step === 2 ? (isHindi ? 'सक्रिय शोध' : 'Active research') : step > 2 ? (isHindi ? 'पूर्ण' : 'Complete') : (isHindi ? 'कतार में' : 'In queue') 
+    },
+    { 
+      icon: ShieldCheck,
+      label: isHindi ? 'अंतिम संश्लेषण' : 'Final Synthesis',    
+      active: step === 3, 
+      done: step > 3, 
+      pct: step === 3 ? 40 : step > 3 ? 100 : 0,  
+      status: step === 3 ? (isHindi ? 'संश्लेषण जारी...' : 'Synthesising…') : step > 3 ? (isHindi ? 'पूर्ण' : 'Complete') : (isHindi ? 'प्रतीक्षारत' : 'Awaiting') 
+    },
   ];
 
   const displayLogs = (logs && logs.length > 0) ? logs : [
@@ -94,7 +117,7 @@ export default function AnalysisProcessing({ elapsed, step, logs, inputTitle, on
   ];
 
   return (
-    <div style={{ paddingTop: 40, paddingBottom: 100, fontFamily: "'DM Sans', system-ui, sans-serif" }}>
+    <div style={{ paddingTop: 40, paddingBottom: 100, fontFamily: "var(--font-body)" }}>
       <style>{`
         @keyframes ap-spin    { to { transform: rotate(360deg); } }
         @keyframes ap-ping    { 0%,100% { transform: scale(1);   opacity:.5 } 50% { transform: scale(1.5); opacity:0 } }
@@ -104,18 +127,18 @@ export default function AnalysisProcessing({ elapsed, step, logs, inputTitle, on
 
         .ap-log-row {
           display: flex; align-items: center; gap: 10px;
-          background: rgba(255,255,255,0.025);
-          border: 1px solid rgba(255,255,255,0.06);
+          background: rgba(var(--overlay-rgb),0.025);
+          border: 1px solid rgba(var(--overlay-rgb),0.06);
           border-radius: 8px; padding: 10px 14px;
-          font-family: 'DM Mono', monospace; font-size: 11px;
+          font-family: var(--font-mono); font-size: 11px;
           transition: background 0.18s;
           overflow: hidden;
         }
-        .ap-log-row:hover { background: rgba(255,255,255,0.04); }
+        .ap-log-row:hover { background: rgba(var(--overlay-rgb),0.04); }
 
         .ap-claim-card {
-          background: rgba(255,255,255,0.03);
-          border: 1px solid rgba(255,255,255,0.07);
+          background: rgba(var(--overlay-rgb),0.03);
+          border: 1px solid rgba(var(--overlay-rgb),0.07);
           border-radius: 12px; padding: 20px 22px;
           transition: border-color 0.2s;
         }
@@ -137,31 +160,37 @@ export default function AnalysisProcessing({ elapsed, step, logs, inputTitle, on
 
       {/* ── Session header ── */}
       <div className="ap-header-flex" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 40, paddingBottom: 24, borderBottom: `1px solid ${LINE}` }}>
-        <div>
-          <h1 style={{ fontFamily: "'DM Serif Display', Georgia, serif", fontSize: 'clamp(26px, 3vw, 40px)', fontWeight: 400, color: TEXT, letterSpacing: '-0.02em', lineHeight: 1.1 }}>
-            Analysis Session: {sessionID}
-          </h1>
-          {inputTitle && (
-            <p style={{ marginTop: 8, fontSize: 12, color: DIM, maxWidth: 480, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontFamily: "'DM Mono', monospace" }}>
-              ↳ {inputTitle}
-            </p>
-          )}
-        </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
+            <div style={{ position:'relative', width:40, height:40, flexShrink:0 }}>
+              <div style={{ position:'absolute', inset:0, borderRadius:'50%', border:`1px solid rgba(201,168,76,0.1)`, borderTopColor:GOLD, animation:'ap-spin 1s cubic-bezier(0.4, 0, 0.2, 1) infinite' }}/>
+              <div style={{ position:'absolute', inset:6, borderRadius:'50%', border:`1px solid rgba(201,168,76,0.05)`, borderBottomColor:GOLD, opacity:0.6, animation:'ap-spin 1.5s linear infinite reverse' }}/>
+            </div>
+            <div>
+              <h1 style={{ fontFamily: "'DM Serif Display', Georgia, serif", fontSize: 'clamp(26px, 3vw, 40px)', fontWeight: 400, color: TEXT, letterSpacing: '-0.02em', lineHeight: 1.1 }}>
+                {isHindi ? 'विश्लेषण सत्र:' : 'Analysis Session:'} {sessionID}
+              </h1>
+              {inputTitle && (
+                <p style={{ marginTop: 8, fontSize: 12, color: DIM, maxWidth: 480, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontFamily: "'DM Mono', monospace" }}>
+                  ↳ {inputTitle}
+                </p>
+              )}
+            </div>
+          </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 24, flexShrink: 0 }}>
           {listening && (
             <motion.div initial={{ opacity:0, x:10 }} animate={{ opacity:1, x:0 }} style={{ display: 'flex', alignItems: 'center', gap: 10, marginRight: 8, opacity: 0.8 }}>
                <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#ff4b8b', animation: 'ap-pulse 1.2s infinite', boxShadow: '0 0 8px #ff4b8b' }} />
                <div style={{ display:'flex', flexDirection:'column' }}>
-                 <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 9, color: '#ff4b8b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Mic Window (10s)</span>
-                 <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.4)', fontStyle:'italic' }}>{interim ? `↳ "${interim}..."` : 'Say "Terminate" or "Roko"...'}</span>
+                 <span style={{ fontFamily: "var(--font-mono)", fontSize: 9, color: '#ff4b8b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{isHindi ? 'माइक विंडो (10s)' : 'Mic Window (10s)'}</span>
+                 <span style={{ fontSize: 10, color: 'rgba(var(--overlay-rgb),0.4)', fontStyle:'italic' }}>{interim ? `↳ "${interim}..."` : (isHindi ? '"Terminate" या "Roko" कहें...' : 'Say "Terminate" or "Roko"...')}</span>
                </div>
             </motion.div>
           )}
           <div style={{ textAlign: 'right' }}>
-            <span style={{ display: 'block', fontFamily: "'DM Mono', monospace", fontSize: 9, color: DIM, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 6 }}>
-              Elapsed
+            <span style={{ display: 'block', fontFamily: "var(--font-mono)", fontSize: 9, color: DIM, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 6 }}>
+              {isHindi ? 'बीता समय' : 'Elapsed'}
             </span>
-            <span style={{ fontFamily: "'DM Serif Display', Georgia, serif", fontSize: 38, fontWeight: 400, color: GOLD, letterSpacing: '-0.03em', lineHeight: 1 }}>
+            <span style={{ fontFamily: "var(--font-serif)", fontSize: 38, fontWeight: 400, color: GOLD, letterSpacing: '-0.03em', lineHeight: 1 }}>
               {formatTime(elapsed)}
             </span>
           </div>
@@ -174,14 +203,14 @@ export default function AnalysisProcessing({ elapsed, step, logs, inputTitle, on
               borderRadius: 8,
               padding: '10px 14px',
               color: '#f87171',
-              fontFamily: "'DM Mono', monospace",
+              fontFamily: "var(--font-mono)",
               fontSize: 10, fontWeight: 500, letterSpacing: '0.08em', textTransform: 'uppercase',
               cursor: 'pointer', transition: '0.2s',
             }}
             onMouseOver={e => { e.currentTarget.style.background = 'rgba(248,113,113,0.12)'; e.currentTarget.style.borderColor = 'rgba(248,113,113,0.25)' }}
             onMouseOut={e => { e.currentTarget.style.background = 'rgba(248,113,113,0.06)'; e.currentTarget.style.borderColor = 'rgba(248,113,113,0.15)' }}
           >
-            Terminate
+            {isHindi ? 'बंद करें' : 'Terminate'}
           </button>
         </div>
       </div>
@@ -191,8 +220,8 @@ export default function AnalysisProcessing({ elapsed, step, logs, inputTitle, on
         
         {/* Left Col: Protocol Progression */}
         <div>
-          <h3 style={{ fontFamily: "'DM Mono', monospace", fontSize: 9, color: DIM, letterSpacing: '0.14em', textTransform: 'uppercase', marginBottom: 20 }}>
-            Audit Progression
+          <h3 style={{ fontFamily: "var(--font-mono)", fontSize: 9, color: DIM, letterSpacing: '0.14em', textTransform: 'uppercase', marginBottom: 20 }}>
+            {isHindi ? 'ऑडिट प्रगति' : 'Audit Progression'}
           </h3>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
             {STEPS.map((s, i) => (
@@ -204,7 +233,7 @@ export default function AnalysisProcessing({ elapsed, step, logs, inputTitle, on
                     </div>
                     <div>
                       <span style={{ display: 'block', fontSize: 13, fontWeight: s.active ? 600 : 500, color: s.done ? '#4ade80' : s.active ? TEXT : DIM }}>{s.label}</span>
-                      <span style={{ fontSize: 9, color: DIM, fontFamily: "'DM Mono', monospace", textTransform: 'uppercase' }}>{s.status}</span>
+                      <span style={{ fontSize: 9, color: DIM, fontFamily: "var(--font-mono)", textTransform: 'uppercase' }}>{s.status}</span>
                     </div>
                   </div>
                 </div>
@@ -223,16 +252,16 @@ export default function AnalysisProcessing({ elapsed, step, logs, inputTitle, on
           <div style={{ marginTop: 40, padding: 20, background: SURF, border: `1px solid ${LINE}`, borderRadius: 12 }}>
              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
                 <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#4ade80', animation: 'ap-pulse 2s infinite' }} />
-                <span style={{ fontSize: 10, fontFamily: "'DM Mono', monospace", color: DIM, letterSpacing: '0.08em', textTransform: 'uppercase' }}>Neural Engine v4.2 · Operational</span>
+                <span style={{ fontSize: 10, fontFamily: "var(--font-mono)", color: DIM, letterSpacing: '0.08em', textTransform: 'uppercase' }}>Neural Engine v4.2 · Operational</span>
              </div>
              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
                 <div className="ap-metric">
                   <span style={{ fontSize: 9, color: DIM, textTransform: 'uppercase' }}>Est. Confidence</span>
-                  <span style={{ fontSize: 18, fontFamily: "'DM Serif Display', serif", color: TEXT }}>{dynamicProb}%</span>
+                  <span style={{ fontSize: 18, fontFamily: "var(--font-serif)", color: TEXT }}>{dynamicProb}%</span>
                 </div>
                 <div className="ap-metric">
                   <span style={{ fontSize: 9, color: DIM, textTransform: 'uppercase' }}>Latency</span>
-                  <span style={{ fontSize: 18, fontFamily: "'DM Serif Display', serif", color: TEXT }}>{telemetry.velocity}ms</span>
+                  <span style={{ fontSize: 18, fontFamily: "var(--font-serif)", color: TEXT }}>{telemetry.velocity}ms</span>
                 </div>
              </div>
           </div>
@@ -240,18 +269,18 @@ export default function AnalysisProcessing({ elapsed, step, logs, inputTitle, on
 
         {/* Right Col: Active Claims & Live Stream */}
         <div>
-           <h3 style={{ fontFamily: "'DM Mono', monospace", fontSize: 9, color: DIM, letterSpacing: '0.14em', textTransform: 'uppercase', marginBottom: 20 }}>
+           <h3 style={{ fontFamily: "var(--font-mono)", fontSize: 9, color: DIM, letterSpacing: '0.14em', textTransform: 'uppercase', marginBottom: 20 }}>
             Claim Decomposition & Cross-Ref
           </h3>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14, marginBottom: 32 }}>
             {dynamicClaims.map(c => (
               <div key={c.id} className={`ap-claim-card ${c.active ? 'active' : ''}`}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
-                   <span style={{ px: 6, py: 2, borderRadius: 4, background: c.active ? 'rgba(201,168,76,0.15)' : SURF, color: c.active ? GOLD : DIM, fontSize: 8, fontFamily: "'DM Mono', monospace", letterSpacing: '0.05em' }}>
+                   <span style={{ px: 6, py: 2, borderRadius: 4, background: c.active ? 'rgba(201,168,76,0.15)' : SURF, color: c.active ? GOLD : DIM, fontSize: 8, fontFamily: "var(--font-mono)", letterSpacing: '0.05em' }}>
                      {c.id} // {c.entity}
                    </span>
                    {c.confidence && (
-                     <span style={{ fontSize: 9, color: '#4ade80', fontWeight: 600, fontFamily: "'DM Mono', monospace" }}>
+                     <span style={{ fontSize: 9, color: '#4ade80', fontWeight: 600, fontFamily: "var(--font-mono)" }}>
                         {c.confidence}
                      </span>
                    )}
@@ -266,7 +295,7 @@ export default function AnalysisProcessing({ elapsed, step, logs, inputTitle, on
             ))}
           </div>
 
-          <h3 style={{ fontFamily: "'DM Mono', monospace", fontSize: 9, color: DIM, letterSpacing: '0.14em', textTransform: 'uppercase', marginBottom: 16 }}>
+          <h3 style={{ fontFamily: "var(--font-mono)", fontSize: 9, color: DIM, letterSpacing: '0.14em', textTransform: 'uppercase', marginBottom: 16 }}>
             Verification Stream
           </h3>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxHeight: 180, overflow: 'hidden' }}>

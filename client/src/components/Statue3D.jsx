@@ -17,7 +17,7 @@ function Model() {
 
 const Statue3D = () => {
   return (
-    <div style={{ width: '100%', height: '100%', position: 'relative', cursor: 'grab' }}>
+    <div className="w-full h-full relative cursor-grab">
       <Canvas shadows camera={{ position: [0, 1, 5], fov: 40 }}>
         {/* Transparent background so it blends with Home layout */}
         <ambientLight intensity={0.5} />

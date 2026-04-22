@@ -29,6 +29,25 @@ export const AuthProvider = ({ children }) => {
     }
   }, []);
 
+  const syncGuestData = async () => {
+    try {
+      const gv = JSON.parse(localStorage.getItem('guest_verifications') || '[]');
+      const gf = JSON.parse(localStorage.getItem('guest_forensics') || '[]');
+      
+      if (gv.length > 0 || gf.length > 0) {
+        console.log(`📡 [Sync] Migrating ${gv.length} verifications and ${gf.length} forensics to account...`);
+        await axios.post(`${API_BASE}/auth/sync-history`, {
+          guestVerifications: gv,
+          guestForensics: gf
+        });
+        localStorage.removeItem('guest_verifications');
+        localStorage.removeItem('guest_forensics');
+      }
+    } catch (err) {
+      console.warn('  ⚠ Sync failed:', err.message);
+    }
+  };
+
   const login = async (email, password) => {
     try {
       const res = await axios.post(`${API_BASE}/auth/login`, { email, password });
@@ -36,9 +55,25 @@ export const AuthProvider = ({ children }) => {
       localStorage.setItem('token', token);
       axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
       setUser(userData);
+      await syncGuestData();
     } catch (err) {
       console.error('Login Failed:', err.response?.data || err.message);
       // Safely extract string to prevent React object crash (Error #31)
+      const rawErr = err.response?.data?.error || err.message;
+      throw new Error(typeof rawErr === 'object' ? JSON.stringify(rawErr) : rawErr);
+    }
+  };
+
+  const googleLogin = async (credential) => {
+    try {
+      const res = await axios.post(`${API_BASE}/auth/google`, { credential });
+      const { token, ...userData } = res.data;
+      localStorage.setItem('token', token);
+      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+      setUser(userData);
+      await syncGuestData();
+    } catch (err) {
+      console.error('Google Login Failed:', err.response?.data || err.message);
       const rawErr = err.response?.data?.error || err.message;
       throw new Error(typeof rawErr === 'object' ? JSON.stringify(rawErr) : rawErr);
     }
@@ -63,7 +98,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, signup, logout, loading }}>
+    <AuthContext.Provider value={{ user, login, googleLogin, signup, logout, loading }}>
       {children}
     </AuthContext.Provider>
   );

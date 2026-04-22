@@ -3,8 +3,10 @@ import axios from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Gavel, Link as LinkIcon, FileText, Upload, ShieldCheck,
-  ChevronRight, Clock, Activity, Search, Mic, MicOff, ShieldAlert,
-  Sparkles, Zap, AlertTriangle, Info, CheckCircle2
+  ChevronRight, ChevronDown, Clock, Activity, Search, Mic, MicOff, ShieldAlert,
+  Sparkles, Zap, AlertTriangle, Info, CheckCircle2, ExternalLink,
+  BarChart3, Globe, XCircle, ArrowRight, RotateCcw, Download,
+  Eye, BookOpen, Scale, Fingerprint, TrendingUp, Hash, Layers
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import Sidebar from '../components/Sidebar';
@@ -13,1372 +15,1109 @@ import AnalysisProcessing from '../components/AnalysisProcessing';
 import confetti from 'canvas-confetti';
 import { useAuth } from '../context/AuthContext';
 import { generatePDF } from '../utils/pdfGenerator';
+import { useVoice } from '../context/VoiceContext';
 
-
-
-const GOLD = 'var(--gold)';
-const GOLD_L = 'var(--gold-light)';
-const LINE = 'var(--line)';
-const SURF = 'var(--surf)';
-
-const UI_TEXT = {
-  en: {
-    finalAdjudication: "Final Jurist Adjudication",
-    accurateTitle: "YES, IT IS ACCURATE",
-    accurateSub: "Verified forensic evidence confirms this assertion as True.",
-    mixedTitle: "PARTIALLY TRUE",
-    mixedSub: "The result is mixed. Some parts are verified, but not the entire claim.",
-    refuteTitle: "NO, IT IS NOT",
-    refuteSub: "Forensic data refutes this assertion and flags it as False.",
-    inconclusiveTitle: "INCONCLUSIVE",
-    inconclusiveSub: "Evidence is insufficient for a forensic verdict.",
-    correctPoints: "Correct Data Points",
-    inaccuratePoints: "Inaccurate Data Points",
-    why: "Why",
-    whyNot: "Why not",
-    noData: "No verified supporting data found.",
-    noMajor: "No major inaccuracies detected.",
-    initiateAudit: "Initiate an Audit.",
-    auditDesc: "Cross-examine claims against verified archival data and live intelligence sources.",
-    analysisDepth: "Analysis depth",
-    language: "Response Language / भाषा चुनें",
-    runAudit: "Run Forensic Audit",
-    placeholder: "Enter claim for adjudication...",
-    enterUrl: "Paste URL for scraping",
-    voice: "Voice Mode",
-    certainty: "Certainty",
-    forensicSummary: "Forensic Summary",
-    auditComplete: "Audit Complete.",
-    confidenceLevel: "Confidence level of",
-    derivedFrom: "derived from",
-    verifiedAssertions: "verified assertions.",
-    viewReport: "View Report",
-    exportPDF: "Export PDF",
-    startNew: "Start new audit",
-    aiTextProb: "AI Text Probability",
-    mediaAuth: "Media Authentication",
-    likelySynth: "Likely Synthesized",
-    likelyHuman: "Likely Human",
-    clear: "Clear",
-    narrativeDuel: "Narrative Duel: Framing Analysis",
-    sourceA: "Narrative Source A",
-    sourceB: "Narrative Source B",
-    biasDetection: "Bias Detection & Omissions",
-    uploadDossier: "Upload Dossier (PDF/DOCX)",
-    deepfakeTitle: "DEEPFAKE DETECTED",
-    deepfakeSub: "Forensic analysis has identified synthetic manipulation or AI generation.",
-    deepfakeLowTitle: "AUTHENTIC / CLEAR",
-    deepfakeLowSub: "No significant indicators of AI generation or manipulation detected.",
-    deepfakeMidTitle: "SUSPICIOUS / MIXED",
-    deepfakeMidSub: "Forensic signals are ambiguous. Indicators of potential manipulation found.",
-  },
-  hi: {
-    finalAdjudication: "अंतिम न्यायिक निर्णय",
-    accurateTitle: "हाँ, यह पूरी तरह सही है",
-    accurateSub: "सत्यापित फोरेंसिक साक्ष्य इस दावे की पुष्टि 'सत्य' के रूप में करते हैं।",
-    mixedTitle: "आंशिक रूप से सही",
-    mixedSub: "परिणाम मिला-जुला है। कुछ हिस्से सत्यापित हैं, लेकिन पूरा दावा नहीं।",
-    refuteTitle: "नहीं, यह गलत है",
-    refuteSub: "फोरेंसिक डेटा इस दावे का खंडन करता है और इसे 'गलत' के रूप में चिह्नित करता है।",
-    inconclusiveTitle: "अनिर्णायक",
-    inconclusiveSub: "फोरेंसिक निर्णय के लिए साक्ष्य अपर्याप्त हैं।",
-    correctPoints: "सही डेटा बिंदु",
-    inaccuratePoints: "गलत डेटा बिंदु",
-    why: "कारण",
-    whyNot: "गलत होने का कारण",
-    noData: "कोई सत्यापित सहायक डेटा नहीं मिला।",
-    noMajor: "कोई बड़ी अशुद्धि नहीं पाई गई।",
-    initiateAudit: "ऑडिट शुरू करें।",
-    auditDesc: "सत्यापित अभिलेखीय डेटा और लाइव खुफिया स्रोतों के मुकाबले दावों की जांच करें।",
-    analysisDepth: "विश्लेषण की गहराई",
-    language: "प्रतिक्रिया की भाषा ",
-    runAudit: "फोरेंसिक ऑडिट चलाएं",
-    placeholder: "न्यायनिर्णयन के लिए दावा दर्ज करें...",
-    enterUrl: "स्क्रैपिंग के लिए URL पेस्ट करें",
-    voice: "वॉइस मोड",
-    certainty: "निश्चितता",
-    forensicSummary: "फोरेंसिक सारांश",
-    auditComplete: "ऑडिट पूर्ण।",
-    confidenceLevel: "विश्वास सूचकांक",
-    derivedFrom: "सत्यापित दावों से प्राप्त",
-    verifiedAssertions: "सत्यापित दावे।",
-    viewReport: "रिपोर्ट देखें",
-    exportPDF: "पीडीएफ निर्यात करें",
-    startNew: "नया ऑडिट शुरू करें",
-    aiTextProb: "AI टेक्स्ट संभावना",
-    mediaAuth: "मीडिया प्रमाणीकरण",
-    likelySynth: "संभावित कृत्रिम",
-    likelyHuman: "संभावित मानवीय",
-    clear: "स्पष्ट",
-    narrativeDuel: "नेरेटिव द्वंद्व: फ्रेमिंग विश्लेषण",
-    sourceA: "नेरेटिव स्रोत A",
-    sourceB: "नेरेटिव स्रोत B",
-    biasDetection: "पूर्वाग्रह और चूक का पता लगाना",
-    uploadDossier: "डोजियर अपलोड करें (PDF/DOCX)",
-  }
-};
-
-const VerdictHero = ({ score, mode = 'normal', language = 'en' }) => {
-  const t = UI_TEXT[language] || UI_TEXT.en;
-  const isTrue = score > 65;
-  const isMixed = score > 35 && score <= 65;
-  const isFalse = score <= 35;
-
-  let title = t.inconclusiveTitle;
-  let subtitle = t.inconclusiveSub;
-  let color = 'var(--text-main)';
-  let bg = 'rgba(255,255,255,0.03)';
-  let icon = <Info size={28}/>;
-
-  if (mode === 'deepfake') {
-    if (isTrue) {
-      title = t.deepfakeTitle;
-      subtitle = t.deepfakeSub;
-      color = "#f87171"; // Red for detected fake
-      bg = "rgba(248,113,113,0.06)";
-      icon = <ShieldAlert size={28} color={color}/>;
-    } else if (isMixed) {
-      title = t.deepfakeMidTitle;
-      subtitle = t.deepfakeMidSub;
-      color = "#fb923c"; // Orange
-      bg = "rgba(251,146,60,0.06)";
-      icon = <AlertTriangle size={28} color={color}/>;
-    } else {
-      title = t.deepfakeLowTitle;
-      subtitle = t.deepfakeLowSub;
-      color = "#4ade80"; // Green for clear
-      bg = "rgba(74,222,128,0.06)";
-      icon = <CheckCircle2 size={28} color={color}/>;
-    }
-  } else {
-    if (isTrue) {
-      title = t.accurateTitle;
-      subtitle = t.accurateSub;
-      color = "#4ade80";
-      bg = "rgba(74,222,128,0.06)";
-      icon = <CheckCircle2 size={28} color={color}/>;
-    } else if (isMixed) {
-      title = t.mixedTitle;
-      subtitle = t.mixedSub;
-      color = "#fbbf24";
-      bg = "rgba(251,191,36,0.06)";
-      icon = <AlertTriangle size={28} color={color}/>;
-    } else if (isFalse) {
-      title = t.refuteTitle;
-      subtitle = t.refuteSub;
-      color = "#f87171";
-      bg = "rgba(248,113,113,0.06)";
-      icon = <ShieldAlert size={28} color={color}/>;
-    }
-  }
-
-  return (
-    <motion.div
-      initial={{ opacity: 0, scale: 0.98 }}
-      animate={{ opacity: 1, scale: 1 }}
-      style={{
-        background: bg,
-        border: `1px solid ${color}33`,
-        borderRadius: 20,
-        padding: '20px 40px',
-        width: '100%',
-        display: 'flex',
-        alignItems: 'center',
-        gap: 32,
-        position: 'relative',
-        overflow: 'hidden',
-        boxShadow: `0 20px 40px -15px ${color}10`
-      }}
-    >
-      <div style={{ position: 'absolute', right: -30, top: -30, opacity: 0.04, transform: 'rotate(-15deg)' }}>
-        <Gavel size={180} />
-      </div>
-      <div style={{ 
-        width: 72, height: 72, borderRadius: '50%', 
-        background: `${color}15`, border: `1px solid ${color}33`,
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        flexShrink: 0
-      }}>
-        {icon}
-      </div>
-      <div style={{ flex: 1 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
-          <div style={{ width: 8, height: 8, borderRadius: '50%', background: color }} />
-          <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 11, fontWeight: 700, color: color, letterSpacing: '0.15em', textTransform: 'uppercase' }}>
-            {t.finalAdjudication}
-          </span>
-        </div>
-        <h1 style={{ 
-          fontFamily: "'DM Serif Display', Georgia, serif", 
-          fontSize: 'clamp(28px, 4vw, 42px)', fontWeight: 400, color: color, 
-          marginBottom: 6, letterSpacing: '-0.02em', lineHeight: 1.1
-        }}>
-          {title}.
-        </h1>
-        <p style={{ fontSize: 16, color: TEXT, opacity: 0.85, fontWeight: 400, letterSpacing: '-0.01em' }}>
-          {subtitle}
-        </p>
-      </div>
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, opacity: 0.9 }}>
-        <span style={{ fontSize: 10, color: DIM, fontFamily: "'DM Mono', monospace", textTransform: 'uppercase' }}>{t.certainty}</span>
-        <span style={{ fontSize: 24, fontWeight: 700, color: color, fontFamily: "'DM Mono', monospace" }}>{Math.round(score)}%</span>
-      </div>
-    </motion.div>
-  );
-};
-const QuickAuditSummary = ({ claims = [], language = 'en' }) => {
-  const t = UI_TEXT[language] || UI_TEXT.en;
-  const trueTerms = ['true', 'accurate', 'verified', 'likely true', 'सही', 'संभवतः सही'];
-  const falseTerms = ['false', 'inaccurate', 'refuted', 'likely false', 'गलत', 'संभवतः गलत'];
-  
-  const trueClaims = claims.filter(c => trueTerms.includes(c.verdict?.toLowerCase()));
-  const falseClaims = claims.filter(c => falseTerms.includes(c.verdict?.toLowerCase()));
-
-  return (
-    <div className="vf-audit-summary" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 20, marginBottom: 36 }}>
-      <div style={{ background: 'rgba(74,222,128,0.03)', border: '1px solid rgba(74,222,128,0.1)', borderRadius: 16, padding: '24px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
-          <CheckCircle2 color="#4ade80" size={16} />
-          <span style={{ fontSize: 11, fontFamily: "'DM Mono', monospace", color: "#4ade80", fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em' }}>{t.correctPoints}</span>
-        </div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-          {trueClaims.length > 0 ? trueClaims.slice(0, 3).map((c, i) => (
-            <div key={i} style={{ borderLeft: '2px solid rgba(74,222,128,0.2)', paddingLeft: 14 }}>
-              <p style={{ fontSize: 14, fontWeight: 600, color: TEXT, marginBottom: 4 }}>{c.claim}</p>
-              <p style={{ fontSize: 12, color: MUTED, lineHeight: 1.5 }}>
-                <span style={{ color: '#4ade80', fontWeight: 600 }}>{t.why}:</span> {c.reasoning?.split('.')[0]}.
-              </p>
-            </div>
-          )) : <p style={{ fontSize: 13, color: DIM, fontStyle: 'italic' }}>{t.noData}</p>}
-        </div>
-      </div>
-
-      <div style={{ background: 'rgba(248,113,113,0.03)', border: '1px solid rgba(248,113,113,0.1)', borderRadius: 16, padding: '24px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
-          <ShieldAlert color="#f87171" size={16} />
-          <span style={{ fontSize: 11, fontFamily: "'DM Mono', monospace", color: "#f87171", fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em' }}>{t.inaccuratePoints}</span>
-        </div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-          {falseClaims.length > 0 ? falseClaims.slice(0, 3).map((c, i) => (
-            <div key={i} style={{ borderLeft: '2px solid rgba(248,113,113,0.2)', paddingLeft: 14 }}>
-              <p style={{ fontSize: 14, fontWeight: 600, color: TEXT, marginBottom: 4 }}>{c.claim}</p>
-              <p style={{ fontSize: 12, color: MUTED, lineHeight: 1.5 }}>
-                <span style={{ color: '#f87171', fontWeight: 600 }}>{t.whyNot}:</span> {c.reasoning?.split('.')[0]}.
-              </p>
-            </div>
-          )) : <p style={{ fontSize: 13, color: DIM, fontStyle: 'italic' }}>{t.noMajor}</p>}
-        </div>
-      </div>
-    </div>
-  );
-};
-
-const NarrativeDuel = ({ analysis, language = 'en' }) => {
-  const t = UI_TEXT[language] || UI_TEXT.en;
-  if (!analysis) return null;
-  
-  return (
-    <div style={{ marginBottom: 44 }}>
-      <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:20, paddingBottom:14, borderBottom:`1px solid ${GOLD_L}` }}>
-        <Zap size={18} color={GOLD}/>
-        <h3 style={{ fontFamily:"'DM Serif Display',Georgia,serif", fontSize:'clamp(18px,2.5vw,26px)', fontWeight:400, color:TEXT }}>
-          {t.narrativeDuel}.
-        </h3>
-      </div>
-      
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24 }}>
-        {/* Source A */}
-        <div style={{ background: 'rgba(59,130,246,0.03)', border: '1px solid rgba(59,130,246,0.1)', borderRadius: 16, padding: 24 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
-            <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#3b82f6' }} />
-            <span style={{ fontSize: 11, fontFamily: "'DM Mono', monospace", color: "#3b82f6", fontWeight: 700, textTransform: 'uppercase' }}>{t.sourceA}</span>
-          </div>
-          <p style={{ fontSize: 14, color: TEXT, lineHeight: 1.6, marginBottom: 16 }}>{analysis.sourceA?.framing}</p>
-          <div style={{ padding: 12, background: 'rgba(0,0,0,0.2)', borderRadius: 8 }}>
-            <p style={{ fontSize: 10, color: DIM, textTransform: 'uppercase', marginBottom: 4 }}>Key Focus</p>
-            <p style={{ fontSize: 12, color: '#3b82f6', fontWeight: 600 }}>{analysis.sourceA?.focus}</p>
-          </div>
-        </div>
-
-        {/* Source B */}
-        <div style={{ background: 'rgba(236,72,153,0.03)', border: '1px solid rgba(236,72,153,0.1)', borderRadius: 16, padding: 24 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
-            <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#ec4899' }} />
-            <span style={{ fontSize: 11, fontFamily: "'DM Mono', monospace", color: "#ec4899", fontWeight: 700, textTransform: 'uppercase' }}>{t.sourceB}</span>
-          </div>
-          <p style={{ fontSize: 14, color: TEXT, lineHeight: 1.6, marginBottom: 16 }}>{analysis.sourceB?.framing}</p>
-          <div style={{ padding: 12, background: 'rgba(0,0,0,0.2)', borderRadius: 8 }}>
-            <p style={{ fontSize: 10, color: DIM, textTransform: 'uppercase', marginBottom: 4 }}>Key Focus</p>
-            <p style={{ fontSize: 12, color: '#ec4899', fontWeight: 600 }}>{analysis.sourceB?.focus}</p>
-          </div>
-        </div>
-      </div>
-
-      <div style={{ marginTop: 24, padding: 20, background: 'rgba(201,168,76,0.04)', border: `1px solid ${GOLD_L}`, borderRadius: 16 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
-          <Activity size={14} color={GOLD} />
-          <span style={{ fontSize: 11, fontFamily: "'DM Mono', monospace", color: TEXT, fontWeight: 700, textTransform: 'uppercase' }}>{t.biasDetection}</span>
-        </div>
-        <ul style={{ margin: 0, paddingLeft: 18, fontSize: 13, color: MUTED, lineHeight: 1.6 }}>
-          {analysis.comparativeBias?.map((b, i) => <li key={i}>{b}</li>)}
-        </ul>
-      </div>
-    </div>
-  );
-};
-
-const TEXT = 'var(--text-main)';
+/* ─── Design tokens ─────────────────────────────── */
+const GOLD  = 'var(--gold)';
+const LINE  = 'var(--line)';
+const TEXT  = 'var(--text-main)';
+const DIM   = 'var(--text-dim)';
 const MUTED = 'var(--text-muted)';
-const DIM = 'var(--text-dim)';
-const MIC_C  = '#EC4899';
 
-const verdictStyle = v => {
-  const l = v?.toLowerCase();
-  if (['true','accurate','verified'].includes(l))  return { color:'#4ade80', bg:'rgba(74,222,128,0.08)',  border:'rgba(74,222,128,0.22)' };
-  if (['false','inaccurate'].includes(l))           return { color:'#f87171', bg:'rgba(248,113,113,0.08)', border:'rgba(248,113,113,0.22)' };
-  if (['partially true','mixed'].includes(l))       return { color:'#fbbf24', bg:'rgba(251,191,36,0.08)',  border:'rgba(251,191,36,0.22)' };
-  return { color:DIM, bg:SURF, border:LINE };
+/* ─── Animated Score Ring ─────────────────────────── */
+const ScoreRing = ({ score, size = 160, stroke = 8 }) => {
+  const r = (size - stroke) / 2;
+  const circ = 2 * Math.PI * r;
+  const pct = Math.min(100, Math.max(0, score));
+  const dash = (pct / 100) * circ;
+  const color = pct >= 70 ? '#4ade80' : pct >= 40 ? '#fbbf24' : '#f87171';
+  const glowColor = pct >= 70 ? 'rgba(74,222,128,0.25)' : pct >= 40 ? 'rgba(251,191,36,0.25)' : 'rgba(248,113,113,0.25)';
+
+  return (
+    <div style={{ position:'relative', width: size, height: size }}>
+      <svg viewBox={`0 0 ${size} ${size}`} width={size} height={size} style={{ transform:'rotate(-90deg)' }}>
+        <circle cx={size/2} cy={size/2} r={r} fill="none" stroke="rgba(var(--overlay-rgb),0.06)" strokeWidth={stroke} />
+        <motion.circle
+          cx={size/2} cy={size/2} r={r} fill="none" stroke={color} strokeWidth={stroke}
+          strokeLinecap="round"
+          initial={{ strokeDasharray: `0 ${circ}` }}
+          animate={{ strokeDasharray: `${dash} ${circ}` }}
+          transition={{ duration: 1.8, ease: [0.34, 1.56, 0.64, 1] }}
+          style={{ filter: `drop-shadow(0 0 8px ${glowColor})` }}
+        />
+      </svg>
+      <div style={{ position:'absolute', inset:0, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center' }}>
+        <motion.span
+          initial={{ opacity: 0, scale: 0.5 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ delay: 0.4, duration: 0.6 }}
+          style={{ fontFamily:"var(--font-serif)", fontSize: size * 0.28, fontWeight: 400, color, lineHeight:1 }}
+        >
+          {Math.round(score)}
+        </motion.span>
+        <span style={{ fontFamily:"var(--font-mono)", fontSize: 9, color: DIM, letterSpacing:'0.15em', marginTop:4 }}>/ 100</span>
+      </div>
+    </div>
+  );
 };
 
-const VerdictBadge = ({ verdict }) => {
-  const s = verdictStyle(verdict);
+/* ─── Verdict Badge ──────────────────────────────── */
+const VerdictBadge = ({ verdict, size = 'sm' }) => {
+  const v = (verdict || '').toLowerCase();
+  let bg, fg, border, dot;
+
+  if (['true','accurate','verified','correct','likely true'].some(t => v === t || v === `likely ${t}`)) {
+    bg = 'rgba(74,222,128,0.08)'; fg = '#4ade80'; border = 'rgba(74,222,128,0.2)'; dot = '#4ade80';
+  } else if (['false','inaccurate','refuted','fake'].some(t => v.includes(t))) {
+    bg = 'rgba(248,113,113,0.08)'; fg = '#f87171'; border = 'rgba(248,113,113,0.2)'; dot = '#f87171';
+  } else if (['unverified','partially','mixed','inconclusive','caution','suspicious'].some(t => v.includes(t))) {
+    bg = 'rgba(251,191,36,0.08)'; fg = '#fbbf24'; border = 'rgba(251,191,36,0.2)'; dot = '#fbbf24';
+  } else {
+    bg = 'rgba(var(--overlay-rgb),0.04)'; fg = DIM; border = 'rgba(var(--overlay-rgb),0.1)'; dot = DIM;
+  }
+
+  const fontSize = size === 'lg' ? 11 : 9;
+  const pad = size === 'lg' ? '5px 14px' : '3px 10px';
+
   return (
-    <span style={{ color:s.color, background:s.bg, border:`1px solid ${s.border}`, fontSize:9, letterSpacing:'0.12em', fontWeight:700, textTransform:'uppercase', padding:'4px 10px', borderRadius:4, whiteSpace:'nowrap', fontFamily:'DM Mono,monospace' }}>
+    <span style={{
+      display:'inline-flex', alignItems:'center', gap:6,
+      background: bg, color: fg, border: `1px solid ${border}`,
+      fontSize, fontWeight: 700, letterSpacing:'0.08em', textTransform:'uppercase',
+      padding: pad, borderRadius: 5, fontFamily:"var(--font-mono)", whiteSpace:'nowrap'
+    }}>
+      <span style={{ width:5, height:5, borderRadius:'50%', background: dot }} />
       {verdict || 'Pending'}
     </span>
   );
 };
 
-const ScoreArc = ({ score }) => {
-  const r = 50, circ = 2 * Math.PI * r;
-  const dash = (Math.min(100, score) / 100) * circ;
-  const color = score >= 70 ? GOLD : score >= 40 ? '#fbbf24' : '#f87171';
+/* ─── Confidence Bar ─────────────────────────────── */
+const ConfidenceBar = ({ value, delay = 0 }) => {
+  const pct = value > 1 ? value : value * 100;
+  const color = pct >= 70 ? '#4ade80' : pct >= 40 ? '#fbbf24' : '#f87171';
   return (
-    <svg viewBox="0 0 112 112" width="112" height="112" style={{ transform:'rotate(-90deg)' }}>
-      <circle cx="56" cy="56" r={r} fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="5"/>
-      <circle cx="56" cy="56" r={r} fill="none" stroke={color} strokeWidth="5"
-        strokeDasharray={`${dash} ${circ}`} strokeLinecap="round"/>
-    </svg>
+    <div style={{ display:'flex', alignItems:'center', gap:10, width:'100%' }}>
+      <div style={{ flex:1, height:4, background:'rgba(var(--overlay-rgb),0.06)', borderRadius:2, overflow:'hidden' }}>
+        <motion.div
+          initial={{ width:0 }}
+          animate={{ width:`${pct}%` }}
+          transition={{ duration:1.2, delay, ease:[0.34,1.56,0.64,1] }}
+          style={{ height:'100%', borderRadius:2, background:color }}
+        />
+      </div>
+      <span style={{ fontFamily:"var(--font-mono)", fontSize:12, fontWeight:700, color, minWidth:36, textAlign:'right' }}>
+        {Math.round(pct)}%
+      </span>
+    </div>
   );
 };
 
+/* ─── Expandable Claim Card ──────────────────────── */
+const ClaimCard = ({ claim, index, delay = 0 }) => {
+  const [open, setOpen] = useState(false);
+  const isHindi = document.body.classList.contains('hi-mode');
+  const v = (claim.verdict || '').toLowerCase();
+  const isTrue = ['true','accurate','verified','correct'].some(t => v.includes(t));
+  const isFalse = ['false','inaccurate','refuted','fake'].some(t => v.includes(t));
+  const accentColor = isTrue ? '#4ade80' : isFalse ? '#f87171' : '#fbbf24';
+
+  return (
+    <motion.div
+      initial={{ opacity:0, y:16 }}
+      animate={{ opacity:1, y:0 }}
+      transition={{ duration:0.45, delay }}
+      style={{
+        background: 'rgba(var(--overlay-rgb),0.02)',
+        border: `1px solid rgba(var(--overlay-rgb),0.06)`,
+        borderLeft: `3px solid ${accentColor}`,
+        borderRadius: '2px 14px 14px 2px',
+        overflow:'hidden',
+        transition:'border-color 0.2s, background 0.2s'
+      }}
+      onMouseEnter={e => { e.currentTarget.style.borderColor = `rgba(var(--overlay-rgb),0.12)`; e.currentTarget.style.background = 'rgba(var(--overlay-rgb),0.035)'; }}
+      onMouseLeave={e => { e.currentTarget.style.borderColor = `rgba(var(--overlay-rgb),0.06)`; e.currentTarget.style.background = 'rgba(var(--overlay-rgb),0.02)'; }}
+    >
+      {/* Header */}
+      <div
+        onClick={() => setOpen(!open)}
+        style={{ display:'flex', alignItems:'flex-start', gap:16, padding:'20px 24px', cursor:'pointer' }}
+      >
+        <div style={{ display:'flex', alignItems:'center', justifyContent:'center', width:32, height:32, borderRadius:8,
+          background: isTrue ? 'rgba(74,222,128,0.08)' : isFalse ? 'rgba(248,113,113,0.08)' : 'rgba(251,191,36,0.08)',
+          flexShrink:0, marginTop:2
+        }}>
+          <span style={{ fontFamily:"var(--font-mono)", fontSize:11, fontWeight:700, color: accentColor }}>
+            {String(index + 1).padStart(2, '0')}
+          </span>
+        </div>
+
+        <div style={{ flex:1, minWidth:0 }}>
+          <div style={{ display:'flex', alignItems:'center', gap:10, flexWrap:'wrap', marginBottom:8 }}>
+            <VerdictBadge verdict={claim.verdict} />
+            {claim.primaryEntity && (
+              <span style={{ fontSize:10, color:DIM, fontFamily:"var(--font-mono)" }}>
+                {claim.primaryEntity}
+              </span>
+            )}
+          </div>
+          <p style={{ margin:0, fontSize:15, fontWeight:500, color:TEXT, lineHeight:1.55 }}>
+            {claim.claim}
+          </p>
+          {claim.reasoning && !open && (
+            <p style={{ margin:'8px 0 0', fontSize:12, color:MUTED, lineHeight:1.6, display:'-webkit-box', WebkitLineClamp:2, WebkitBoxOrient:'vertical', overflow:'hidden' }}>
+              {claim.reasoning}
+            </p>
+          )}
+        </div>
+
+        <div style={{ display:'flex', flexDirection:'column', alignItems:'flex-end', gap:6, flexShrink:0 }}>
+          <ConfidenceBar value={claim.confidence || 0} delay={delay + 0.2} />
+          <motion.div animate={{ rotate: open ? 180 : 0 }} transition={{ duration:0.2 }}>
+            <ChevronDown size={16} color={DIM} />
+          </motion.div>
+        </div>
+      </div>
+
+      {/* Expandable Detail */}
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            initial={{ height:0, opacity:0 }}
+            animate={{ height:'auto', opacity:1 }}
+            exit={{ height:0, opacity:0 }}
+            transition={{ duration:0.3 }}
+            style={{ overflow:'hidden' }}
+          >
+            <div style={{ padding:'0 24px 24px', borderTop:'1px solid rgba(var(--overlay-rgb),0.05)' }}>
+              {/* Reasoning */}
+              {claim.reasoning && (
+                <div style={{ padding:'16px 0' }}>
+                  <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:8 }}>
+                    <BookOpen size={12} color={GOLD} />
+                    <span style={{ fontSize:10, fontWeight:700, color:GOLD, letterSpacing:'0.1em', textTransform:'uppercase', fontFamily:"var(--font-mono)" }}>{isHindi ? 'विश्लेषण तर्क और सबूत' : 'Analysis Reasoning'}</span>
+                  </div>
+                  <p style={{ margin:0, fontSize:13, color:MUTED, lineHeight:1.7 }}>{claim.reasoning}</p>
+                </div>
+              )}
+
+              {/* Evidence Sources */}
+              {claim.evidence && claim.evidence.length > 0 && (
+                <div style={{ paddingTop:12 }}>
+                  <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:12 }}>
+                    <Globe size={12} color={GOLD} />
+                    <span style={{ fontSize:10, fontWeight:700, color:GOLD, letterSpacing:'0.1em', textTransform:'uppercase', fontFamily:"var(--font-mono)" }}>
+                      {claim.evidence.length} Source{claim.evidence.length > 1 ? 's' : ''} Referenced
+                    </span>
+                  </div>
+                  <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+                    {claim.evidence.slice(0, 4).map((ev, j) => (
+                      <a
+                        key={j}
+                        href={ev.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{
+                          display:'flex', alignItems:'center', gap:10,
+                          padding:'10px 14px',
+                          background:'rgba(var(--overlay-rgb),0.03)',
+                          border:'1px solid rgba(var(--overlay-rgb),0.06)',
+                          borderRadius:8, textDecoration:'none',
+                          transition:'all 0.15s'
+                        }}
+                        onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(201,168,76,0.3)'; e.currentTarget.style.background = 'rgba(201,168,76,0.04)'; }}
+                        onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(var(--overlay-rgb),0.06)'; e.currentTarget.style.background = 'rgba(var(--overlay-rgb),0.03)'; }}
+                      >
+                        <LinkIcon size={12} color={DIM} style={{ flexShrink:0 }} />
+                        <span style={{ flex:1, fontSize:12, color:MUTED, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+                          {ev.url?.replace(/^https?:\/\/(www\.)?/, '').split('/')[0] || 'Source'}
+                        </span>
+                        <ExternalLink size={10} color={DIM} />
+                      </a>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </motion.div>
+  );
+};
+
+const safeStr = (v) => {
+  if (v === null || v === undefined) return "";
+  let val = v;
+  if (typeof v === 'string' && (v.trim().startsWith('{') || v.trim().startsWith('['))) {
+    try { val = JSON.parse(v); } catch(e) {}
+  }
+  if (typeof val === 'object' && val !== null) {
+    if (Array.isArray(val)) {
+      const first = val[0] || {};
+      return first.reasoning || first.summary || first.text || first.verdict || JSON.stringify(val);
+    }
+    return val.summary || val.text || val.reasoning || val.analysis || val.overview || 
+           val.ExecutiveSummary?.text || val.claims?.[0]?.claim || JSON.stringify(val);
+  }
+  return String(val);
+};
+
+/* ─── Verdict Hero ───────────────────────────────── */
+const VerdictHero = ({ score, claims = [], summary }) => {
+  const isHindi = document.body.classList.contains('hi-mode');
+  const isTrue = score > 65;
+  const isMixed = score > 35 && score <= 65;
+  const isFalse = score <= 35;
+
+  let title, subtitle, color, icon, bgGrad;
+  if (isTrue) {
+    title = isHindi ? "सटीक के रूप में सत्यापित" : "Verified as Accurate";
+    subtitle = isHindi 
+      ? "क्रॉस-रेफरेंसिड इंटेलिजेंस मुख्य दावों को विश्वसनीय होने की पुष्टि करती है।" 
+      : "Cross-referenced intelligence confirms the core assertions as reliable.";
+    color = '#4ade80'; icon = <CheckCircle2 size={23} />; bgGrad = 'from-green-500/8 to-transparent';
+  } else if (isMixed) {
+    title = isHindi ? "आंशिक रूप से सत्यापित" : "Partially Verified";
+    subtitle = isHindi 
+      ? "मिश्रित संकेत — कुछ दावे पुष्ट, अन्य को और समीक्षा की आवश्यकता है।" 
+      : "Mixed signals — some assertions confirmed, others require further review.";
+    color = '#fbbf24'; icon = <AlertTriangle size={23} />; bgGrad = 'from-yellow-500/8 to-transparent';
+  } else {
+    title = isHindi ? "गलत के रूप में चिह्नित" : "Flagged as Inaccurate";
+    subtitle = isHindi 
+      ? "सबूत मुख्य दावों का खंडन करते हैं। स्रोत की विश्वसनीयता पर कम भरोसा है।" 
+      : "Evidence contradicts core assertions. Low confidence in source reliability.";
+    color = '#f87171'; icon = <ShieldAlert size={23} />; bgGrad = 'from-red-500/8 to-transparent';
+  }
+
+  const trueCount = claims.filter(c => ['true','accurate','verified','correct'].some(t => (c.verdict||'').toLowerCase().includes(t))).length;
+  const falseCount = claims.filter(c => ['false','inaccurate','refuted'].some(t => (c.verdict||'').toLowerCase().includes(t))).length;
+  const otherCount = claims.length - trueCount - falseCount;
+
+  return (
+    <motion.div
+      initial={{ opacity:0, y:20 }}
+      animate={{ opacity:1, y:0 }}
+      transition={{ duration:0.6 }}
+      style={{
+        display:'flex', alignItems:'center', gap:40,
+        padding:'40px 48px',
+        background:'rgba(var(--overlay-rgb),0.02)',
+        border:'1px solid rgba(var(--overlay-rgb),0.06)',
+        borderRadius:24,
+        position:'relative', overflow:'hidden',
+        flexWrap:'wrap'
+      }}
+    >
+      {/* Background accent */}
+      <div style={{ position:'absolute', top:0, left:0, right:0, height:2, background:`linear-gradient(90deg, ${color}, transparent)` }} />
+
+      {/* Score Ring */}
+      <ScoreRing score={score} size={140} />
+
+      {/* Verdict Text */}
+      <div style={{ flex:1, minWidth:240 }}>
+        <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:8 }}>
+          <span style={{ color }}>{icon}</span>
+          <span style={{ fontFamily:"var(--font-mono)", fontSize:10, fontWeight:700, color, letterSpacing:'0.12em', textTransform:'uppercase' }}>
+            {isHindi ? 'अंतिम फैसला' : 'Final Verdict'}
+          </span>
+        </div>
+        <h2 style={{ fontFamily:"'DM Serif Display',Georgia,serif", fontSize:'clamp(32px,4vw,48px)', fontWeight:400, color:TEXT, margin:'0 0 12px', letterSpacing:'-0.02em', lineHeight:1.1 }}>
+          {title}.
+        </h2>
+        <p style={{ fontSize:16, color:TEXT, lineHeight:1.6, margin:0, maxWidth:620, opacity:0.95, fontWeight:450 }}>
+          {safeStr(summary) || subtitle}
+        </p>
+      </div>
+
+      {/* Quick Stats */}
+      <div style={{ display:'flex', gap:20, flexShrink:0 }}>
+        {[
+          { label: isHindi ? 'सत्यापित' : 'Verified', count: trueCount, color:'#4ade80', icon: CheckCircle2 },
+          { label: isHindi ? 'खंडन' : 'Refuted', count: falseCount, color:'#f87171', icon: XCircle },
+          { label: isHindi ? 'मिश्रित' : 'Mixed', count: otherCount, color:'#fbbf24', icon: AlertTriangle },
+        ].map(s => (
+          <div key={s.label} style={{ textAlign:'center', minWidth:60 }}>
+            <div style={{ display:'flex', alignItems:'center', justifyContent:'center', width:40, height:40, borderRadius:10, background:`${s.color}10`, margin:'0 auto 8px' }}>
+              <s.icon size={18} color={s.color} />
+            </div>
+            <div style={{ fontFamily:"var(--font-serif)", fontSize:22, fontWeight:500, color: s.count > 0 ? s.color : DIM }}>{s.count}</div>
+            <div style={{ fontFamily:"var(--font-mono)", fontSize:8, color:DIM, letterSpacing:'0.1em', textTransform:'uppercase' }}>{s.label}</div>
+          </div>
+        ))}
+      </div>
+    </motion.div>
+  );
+};
+
+/* ─── Narrative Duel ─────────────────────────────── */
+const NarrativeDuel = ({ analysis }) => {
+  if (!analysis) return null;
+  return (
+    <motion.div initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }} transition={{ delay:0.2 }} style={{ marginBottom:8 }}>
+      <div style={{ display:'flex', alignItems:'center', gap:12, marginBottom:20, paddingBottom:16, borderBottom:'1px solid rgba(201,168,76,0.15)' }}>
+        <Zap size={18} color={GOLD} />
+        <h3 style={{ fontFamily:"'DM Serif Display',Georgia,serif", fontSize:'clamp(18px,2.5vw,26px)', fontWeight:400, color:TEXT, margin:0 }}>Narrative Comparison</h3>
+      </div>
+      <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(280px, 1fr))', gap:16 }}>
+        {[
+          { data: analysis.sourceA, label:'Source A', isCorrect: analysis.sourceACorrect, color:'#60a5fa', bg:'rgba(96,165,250,0.05)', border:'rgba(96,165,250,0.12)' },
+          { data: analysis.sourceB, label:'Source B', isCorrect: analysis.sourceBCorrect, color:'#f472b6', bg:'rgba(244,114,182,0.05)', border:'rgba(244,114,182,0.12)' },
+        ].map(src => (
+          <div key={src.label} style={{ 
+            padding:24, borderRadius:16, 
+            background: src.isCorrect ? 'rgba(74,222,128,0.08)' : src.bg, 
+            border: src.isCorrect ? '1px solid #4ade80' : `1px solid ${src.border}`,
+            position: 'relative'
+          }}>
+            {src.isCorrect && (
+              <div style={{ position:'absolute', top:12, right:12, background:'#4ade80', color:'black', fontSize:8, fontWeight:800, padding:'2px 8px', borderRadius:100, letterSpacing:'0.1em' }}>VERIFIED CORRECT</div>
+            )}
+            <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:14 }}>
+              <div style={{ width:6, height:6, borderRadius:'50%', background: src.isCorrect ? '#4ade80' : src.color }} />
+              <span style={{ fontFamily:"var(--font-mono)", fontSize:10, fontWeight:700, color: src.isCorrect ? '#4ade80' : src.color, letterSpacing:'0.1em', textTransform:'uppercase' }}>{src.label}</span>
+            </div>
+            <p style={{ fontSize:14, color:TEXT, lineHeight:1.6, margin:'0 0 16px' }}>{src.data?.framing}</p>
+            <div style={{ padding:12, background:'rgba(0,0,0,0.2)', borderRadius:10, border:'1px solid rgba(255,255,255,0.04)' }}>
+              <span style={{ display:'block', fontSize:9, fontWeight:700, color:'rgba(var(--overlay-rgb),0.3)', marginBottom:4, textTransform:'uppercase' }}>Strategic Focus</span>
+              <p style={{ fontSize:12, fontWeight:600, color: src.isCorrect ? '#4ade80' : src.color, margin:0 }}>{src.data?.focus}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+      {analysis.verdict && (
+        <div style={{ marginTop:20, padding:'24px 28px', borderRadius:18, background:'linear-gradient(135deg, rgba(201,168,76,0.12) 0%, rgba(201,168,76,0.04) 100%)', border:'1px solid var(--gold)', boxShadow:'0 10px 40px -10px rgba(0,0,0,0.4)', position:'relative', overflow:'hidden' }}>
+          <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:12 }}>
+            <ShieldCheck size={18} color={GOLD} />
+            <span style={{ fontFamily:"var(--font-mono)", fontSize:11, fontWeight:800, color:GOLD, letterSpacing:'0.15em', textTransform:'uppercase' }}>Final Narrative Verdict</span>
+          </div>
+          <p style={{ fontSize:15, fontWeight:600, color:TEXT, lineHeight:1.6, margin:0, position:'relative', zIndex:1 }}>{analysis.verdict}</p>
+          <div style={{ position:'absolute', top:-20, right:-20, width:100, height:100, borderRadius:'50%', background:GOLD, opacity:0.05, filter:'blur(40px)' }} />
+        </div>
+      )}
+      {analysis.comparativeBias?.length > 0 && (
+        <div style={{ marginTop:16, padding:20, borderRadius:14, background:'rgba(255,255,255,0.02)', border:'1px solid rgba(var(--overlay-rgb),0.06)' }}>
+          <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:12 }}>
+            <Activity size={13} color={DIM} />
+            <span style={{ fontFamily:"var(--font-mono)", fontSize:10, fontWeight:700, color:DIM, letterSpacing:'0.1em', textTransform:'uppercase' }}>Bias & Omissions</span>
+          </div>
+          <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(260px, 1fr))', gap:8 }}>
+            {analysis.comparativeBias.map((b, i) => (
+              <div key={i} style={{ display:'flex', alignItems:'flex-start', gap:8, fontSize:12, color:MUTED, lineHeight:1.5 }}>
+                <span style={{ color:GOLD, marginTop:2, flexShrink:0 }}>·</span> {b}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </motion.div>
+  );
+};
+
+
+/* ═══════════════════════════════════════════════════
+   MAIN VERIFY COMPONENT
+   ═══════════════════════════════════════════════════ */
 export default function Verify() {
-  const [url,            setUrl]            = useState('');
-  const [text,           setText]           = useState('');
-  const [loading,        setLoading]        = useState(false);
-  const [results,        setResults]        = useState(null);
-  const [error,          setError]          = useState(null);
-  const [step,           setStep]           = useState(0);
-  const [logs,           setLogs]           = useState([]);
-  const [elapsed,        setElapsed]        = useState(0);
-  const [recentReports,  setRecentReports]  = useState([]);
-  const [activeFilter,   setActiveFilter]   = useState('All');
-  const [mode,           setMode]           = useState('normal');
-  const [lang,           setLang]           = useState('en');
-  const [listening,      setListening]      = useState(false);
-  const [voiceReady,     setVoiceReady]     = useState(false);
-  const [interim,        setInterim]        = useState('');
-  const [showExportModal,setShowExportModal]= useState(false);
-  const [exportName,     setExportName]     = useState('');
-  const [engineStats,    setEngineStats]    = useState({ latency:24, factIndex:4,  });
-  const [isDeepfake,     setIsDeepfake]     = useState(false);
   const { user } = useAuth();
+  const [lang, setLang] = useState('en');
+  const [mode, setMode] = useState('normal');
+  const isHindi = lang === 'hi';
+
+  useEffect(() => {
+    if (lang === 'hi') {
+      document.body.classList.add('hi-mode');
+    } else {
+      document.body.classList.remove('hi-mode');
+    }
+  }, [lang]);
+
+  const [url, setUrl] = useState('');
+  const [url2, setUrl2] = useState('');
+  const [text, setText] = useState('');
+  const [text2, setText2] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [results, setResults] = useState(null);
+  const [error, setError] = useState(null);
+  const [step, setStep] = useState(0);
+  const [logs, setLogs] = useState([]);
+  const [elapsed, setElapsed] = useState(0);
+  const [recentReports, setRecentReports] = useState(() => {
+    if (!localStorage.getItem('token')) {
+      return JSON.parse(localStorage.getItem('guest_verifications') || '[]').map(v => ({
+        id: v.id,
+        input_text: v.input || v.text || 'Guest Audit',
+        truth_score: v.truthScore,
+        claims_count: v.claims?.length || 0,
+        full_data: v,
+        timestamp: v.timestamp || new Date().toISOString()
+      }));
+    }
+    return [];
+  });
+  const [activeFilter, setActiveFilter] = useState('All');
+  const [listening, setListening] = useState(null);
+  const [voiceReady, setVoiceReady] = useState(false);
+  const [interim, setInterim] = useState('');
+  const [showExportModal, setShowExportModal] = useState(false);
+  const [exportName, setExportName] = useState('');
   const [credits, setCredits] = useState(() => {
     const saved = localStorage.getItem('guest_credits');
     return saved !== null ? parseInt(saved) : 3;
   });
   const [showCreditModal, setShowCreditModal] = useState(false);
 
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setEngineStats(prev => ({
-        ...prev,
-        latency: Math.max(18, Math.min(34, prev.latency + (Math.random() > 0.5 ? 1 : -1))),
-        factIndex: Math.random() > 0.96 ? Math.max(1, Math.min(12, prev.factIndex + (Math.random() > 0.5 ? 1 : -1))) : prev.factIndex
-      }));
-    }, 3000);
-    return () => clearInterval(timer);
-  }, []);
-
-  const recRef    = useRef(null);
-  const abortRef  = useRef(null);
-  const fileRef   = useRef(null);
-  const reportRef = useRef(null);
-  const navigate  = useNavigate();
+  const navigate = useNavigate();
+  const recRef = useRef(null);
+  const abortRef = useRef(null);
+  const { speak } = useVoice();
 
   useEffect(() => {
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (SR) setVoiceReady(true);
   }, []);
 
-  const toggleVoice = () => {
-    setListening(!listening);
-    if (listening && recRef.current) {
-      try { recRef.current.stop(); } catch(e) {}
-    }
-  };
-
-  const handleFileUpload = (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    
-    // Simulate reading text from dossier
-    setLoading(true); setStep(1); setElapsed(0);
-    setLogs([{ msg: `Decrypting dossier: ${file.name}...`, id: Date.now() }]);
-    
-    setTimeout(() => {
-      const simulatedText = `FORENSIC DOSSIER IMPORT: ${file.name}\n\n now backend need to check what kind of file you are providing`;
-      setText(simulatedText);
-      setLoading(false); setStep(0); setLogs([]);
-    }, 2000);
-  };
-
-  useEffect(() => {
-    if (!listening) {
-      if (recRef.current) {
-        try { recRef.current.stop(); } catch(e) {}
-        recRef.current = null;
-      }
-      return;
-    }
-
-    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SR) return;
-    const rec = new SR();
-    rec.continuous = true; rec.interimResults = true; 
-    rec.lang = lang === 'hi' ? 'hi-IN' : 'en-IN';
-    
-    rec.onresult = (e) => {
-      let fin = '', tmp = '';
-      for (let i = e.resultIndex; i < e.results.length; i++) {
-        const t = e.results[i][0].transcript;
-        if (e.results[i].isFinal) fin += t; else tmp += t;
-      }
-      setInterim(tmp);
-      
-      const combined = (fin + tmp).toLowerCase();
-
-      // 1. Termination Triggers (Check both final & interim results!)
-      if (loading) {
-        const tTrigs = ['stop','stop it','cancel','terminate','terminat','terminet','tarminate','abort','rok do','roko','रोको','रुक जाओ','बंद करो','cancel karo','piche chalo','back','ruk jao','ruko'];
-        if (tTrigs.some(t => combined.includes(t))) {
-          handleCancel();
-          setInterim('');
-          rec.stop();
-          setListening(false);
-          return;
-        }
-      }
-
-      if (fin) {
-        const finLower = fin.toLowerCase();
-
-        // 2. Language Switching Triggers (Verbal)
-        const toHindi = ['switch to hindi','hindi mode','हिन्दी में','हिंदी में'];
-        const toEnglish = ['switch to english','english mode','अंग्रेजी में','english mein'];
-        
-        if (toHindi.some(t => finLower.includes(t))) {
-          setLang('hi'); setInterim(''); return; 
-        }
-        if (toEnglish.some(t => finLower.includes(t))) {
-          setLang('en'); setInterim(''); return;
-        }
-
-        // 3. Auto-detect Hindi script and switch mode
-        if (/[\u0900-\u097F]/.test(fin) && lang !== 'hi') {
-          setLang('hi');
-        }
-
-        // 4. Command Triggers (Analyze/Verify)
-        const triggers = [
-          'analyze','analyse','verify','run verification','audit now','start audit',
-          'एनालाइज','एनालिसिस','विश्लेषण','सत्यापित','जांच','जाँच','चेक','चेक करें','शुरू करें','रिजल्ट','जानकारी'
-        ];
-        const found = triggers.find(t => finLower.includes(t));
-        
-        if (found) {
-          const idx = finLower.indexOf(found);
-          const prefix = fin.substring(0, idx).trim();
-          if (prefix) setText(p => p ? `${p.trimEnd()} ${prefix}` : prefix);
-          setInterim('');
-          rec.stop();
-          setListening(false);
-          setTimeout(() => {
-            const b = document.getElementById('vfy-run-btn');
-            if (b && !b.disabled) b.click();
-          }, 450);
-        } else if (!loading) {
-          setText(p => p ? `${p.trimEnd()} ${fin.trim()}` : fin.trim());
-          setInterim('');
-        }
-      }
-    };
-    rec.onerror = () => { setListening(false); setInterim(''); };
-    rec.onend   = () => { setListening(false); setInterim(''); };
-    
-    try { 
-      rec.start(); 
-      recRef.current = rec; 
-    } catch(e) { console.error(e); }
-
-    return () => {
-      try { rec.abort(); } catch(e) {}
-    };
-  }, [listening, lang, loading]);
-
-  useEffect(() => {
-    if (loading && listening) {
-      const timer = setTimeout(() => {
-        // Automatically stop the mic after 10 seconds of analysis to prevent ghost triggers
-        if (loading) {
-          setListening(false);
-          setInterim('');
-        }
-      }, 10000); 
-      return () => clearTimeout(timer);
-    }
-  }, [loading, listening]);
-
-  useEffect(() => {
-    // Check for audit text in URL (from Extension)
-    const params = new URLSearchParams(window.location.search);
-    const auditText = params.get('text');
-    if (auditText && !loading) {
-      // Hard-kill any voice activity for extension redirection
-      setListening(false);
-      if (recRef.current) {
-        try { recRef.current.abort(); } catch(e) {}
-        recRef.current = null;
-      }
-
-      if (auditText.startsWith('http')) {
-        // If it's a URL, put it in the URL input
-        setUrl(auditText);
-        setText(''); 
-      } else {
-        setText(auditText);
-        setUrl('');
-      }
-
-      // Automatically trigger audit
-      setTimeout(() => {
-        const b = document.getElementById('vfy-run-btn');
-        if (b && !b.disabled) b.click();
-      }, 350);
-      
-      // Clean URL after consuming text
-      window.history.replaceState({}, '', window.location.pathname);
-    }
-  }, [loading]);
-
-  useEffect(() => {
-    if (user) {
-      const t = localStorage.getItem('token');
-      axios.get(`${API_BASE}/history?limit=10`, { headers: { Authorization: `Bearer ${t}` } })
-        .then(r => setRecentReports(r.data))
-        .catch(() => {});
-    }
-  }, [user]);
-
-  const filteredReports = (activeFilter === 'All' ? recentReports : recentReports.filter(d => {
-    const v = (d.topClaims?.[0]?.verdict || d.claims?.[0]?.verdict || '').toLowerCase();
-    if (activeFilter === 'Verified')     return ['true','accurate','verified'].includes(v);
-    if (activeFilter === 'Refuted')      return ['false','inaccurate'].includes(v);
-    if (activeFilter === 'Inconclusive') return ['partially true','mixed','inconclusive'].includes(v);
-    return true;
-  })).slice(0, 3);
-
-  const handleFileAudit = useCallback(async (e) => {
-    const file = e.target.files?.[0]; if (!file) return;
-    
-    // Check 100MB limit
-    if (file.size > 100 * 1024 * 1024) {
-      setError('File size exceeds 100MB theoretical limit — please optimize or trim media and re-upload.');
-      return;
-    }
-
-    if (!user && credits <= 0) {
-      setShowCreditModal(true);
-      return;
-    }
-
-    setLoading(true); setResults(null); setError(null); setStep(1); setElapsed(0);
-    setLogs([{ msg:'Receiving encrypted media stream…', id:Date.now() }]);
-    const controller = new AbortController(); abortRef.current = controller;
-    try {
-      const formData = new FormData(); formData.append('media', file);
-      const thoughts = ['Decoding spatial tensors…','Analyzing pixel consistency…','Detecting GAN artifacts…','Isolating synthetic patterns…','Deep-fake forensic analysis…','Validating optical integrity…'];
-      const clock   = setInterval(() => setElapsed(e => e+1), 1000);
-      const stepper = setInterval(() => setStep(s => Math.min(s+1,3)), 3000);
-      const logger  = setInterval(() => setLogs(l => [...l.slice(-8),{ msg:thoughts[Math.floor(Math.random()*thoughts.length)], id:Date.now() }]), 1500);
-      const res = await axios.post(`${API_BASE}/analyze-media`, formData, { signal:controller.signal, headers:{'Content-Type':'multipart/form-data'} });
-      [clock,stepper,logger].forEach(clearInterval);
-      const analysisData = res.data; const fileResult = analysisData.results?.[0] || {};
-      
-      if (!user) {
-        const next = Math.max(0, credits - 1);
-        setCredits(next);
-        localStorage.setItem('guest_credits', next);
-      }
-
-      const adaptedResults = {
-        truthScore: 100-(fileResult.confidence||0),
-        aiTextDetection: { score:0, explanation:'Media-based audit performed.' },
-        aiMediaDetection: { verdict:fileResult.verdict||'Analysis Complete', summary:analysisData.summary, score:fileResult.confidence||0, results:[{ url:URL.createObjectURL(file), ...fileResult }] },
-        claims: (fileResult.indicators||[]).map((ind,i) => ({ id:i, claim:`Forensic Indicator: ${ind}`, verdict:fileResult.isAIGenerated?'Likely AI':'Possibly Authentic', confidence:fileResult.confidence/100, reasoning:fileResult.details||'Detected through structural integrity audit.' })),
-        forensicReference: fileResult.isAIGenerated ? 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?ixlib=rb-4.0.3&auto=format&fit=crop&w=512&q=80' : null,
-        reportId: 'media-'+Math.random().toString(36).substring(2,8)
-      };
-      setStep(4); setResults(adaptedResults); setLoading(false);
-      if (adaptedResults.truthScore >= 80) confetti({ particleCount:40, spread:55, origin:{ y:0.7 }, colors:[GOLD,'#fff'] });
-    } catch(err) {
-      if (!axios.isCancel(err)) setError(err.response?.data?.error || 'Media analysis failed or timed out.');
-      setStep(0); setLoading(false);
-    }
-  }, []);
+  const handleCancel = () => { if (abortRef.current) { abortRef.current.abort(); setLoading(false); setStep(0); setLogs([]); } };
 
   const handleVerify = useCallback(async () => {
-    const input = url.trim() || text.trim(); if (!input) return;
-    
-    // Microphone should remain in its current state (likely off) unless manually toggled
-    setInterim(''); 
-
-    if (!user && credits <= 0) {
-      setShowCreditModal(true);
-      return;
-    }
+    const input = url.trim() || text.trim();
+    if (!input) return;
+    if (mode === 'adversarial' && !((url.trim() && url2.trim()) || (text.trim() && text2.trim()))) return;
+    if (!user && credits <= 0) { setShowCreditModal(true); return; }
 
     setLoading(true); setResults(null); setError(null); setStep(1); setElapsed(0);
-    setLogs([{ msg:'Initializing analysis pipeline…', id:Date.now() }]);
+    setLogs([{ msg: 'Initializing analysis pipeline…', id: Date.now() }]);
     const controller = new AbortController(); abortRef.current = controller;
     const token = localStorage.getItem('token');
+
     try {
-      const finalMode = isDeepfake ? 'deepfake' : mode;
-      const payload = url.trim() ? { url:url.trim(), mode: finalMode, language: lang } : { text:text.trim(), mode: finalMode, language: lang };
-      
-      const clock   = setInterval(() => setElapsed(e => e+1), 1000);
-      const stepper = setInterval(() => setStep(s => Math.min(s+1,3)), 4000);
-      
-      const apiResponse = await fetch(`${API_BASE}/verify-stream`, { 
+      let payload = { mode, language: lang };
+      if (mode === 'adversarial') {
+        if (url.trim()) payload = { ...payload, url: url.trim(), url2: url2.trim() };
+        else payload = { ...payload, text: text.trim(), text2: text2.trim() };
+      } else {
+        if (url.trim()) payload = { ...payload, url: url.trim() };
+        else payload = { ...payload, text: text.trim() };
+      }
+
+      const clock = setInterval(() => setElapsed(e => e + 1), 1000);
+      const res = await fetch(`${API_BASE}/verify-stream`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { Authorization: `Bearer ${token}` } : {})
-        },
+        headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
         body: JSON.stringify(payload),
         signal: controller.signal
       });
 
-      const reader = apiResponse.body.getReader();
+      const reader = res.body.getReader();
       const decoder = new TextDecoder();
-      let buffer = '';
-      let finalResults = null;
+      let buffer = '', finalResults = null;
 
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
         buffer += decoder.decode(value, { stream: true });
-        
         const chunks = buffer.split('\n\n');
-        buffer = chunks.pop(); // Keep incomplete chunk
-        
+        buffer = chunks.pop();
         for (const chunk of chunks) {
-          if (chunk.trim() && chunk.startsWith('data:')) {
-            const dataStr = chunk.slice(5).trim();
-            try {
-              const event = JSON.parse(dataStr);
-              if (event.type === 'progress') {
-                // Real Live SSE Event from AI Core!
-                setLogs(l => [...l.slice(-8), { msg: event.data, id: Date.now() }]);
-              } else if (event.type === 'complete') {
-                finalResults = event.data;
-              } else if (event.type === 'error') {
-                throw new Error(event.data);
-              }
-            } catch (e) {
-              if (e.message && e.message !== 'Unexpected end of JSON input') throw e;
-            }
+          if (chunk.startsWith('data:')) {
+            const ev = JSON.parse(chunk.slice(5).trim());
+            if (ev.type === 'progress') setLogs(l => [...l.slice(-10), { msg: ev.data, id: Date.now() }]);
+            else if (ev.type === 'complete') finalResults = ev.data;
+            else if (ev.type === 'error') throw new Error(ev.data);
           }
         }
       }
-      
-      [clock,stepper].forEach(clearInterval);
-      if (!finalResults) throw new Error('Stream terminated unexpectedly.');
-      
+      clearInterval(clock);
+      if (!finalResults) throw new Error('Stream terminated.');
       setStep(4); setResults(finalResults); setLoading(false);
-      
+
+      // ── Voice Adjudication ──
+      const score = finalResults.truthScore || 0;
+      const verdict = finalResults.verdict || (score > 65 ? 'Verified' : score > 35 ? 'Mixed' : 'Refuted');
+      const intro = isHindi ? `विश्लेषण पूर्ण। सत्यता स्कोर: ${Math.round(score)} प्रतिशत। निष्कर्ष: ${verdict}। ` : `Analysis Complete. Truth Index: ${Math.round(score)} percent. Verdict: ${verdict}. `;
+      speak(intro + (finalResults.summary || ''));
+
       if (!user) {
-        const next = Math.max(0, credits - 1);
-        setCredits(next);
-        localStorage.setItem('guest_credits', next);
+        const guestData = JSON.parse(localStorage.getItem('guest_verifications') || '[]');
+        const newItem = { ...finalResults, timestamp: new Date().toISOString(), type: 'verification' };
+        guestData.unshift(newItem);
+        localStorage.setItem('guest_verifications', JSON.stringify(guestData.slice(0, 5)));
+        setRecentReports(guestData.slice(0, 5).map(v => ({
+          id: v.id, input_text: v.input || v.text || 'Guest Audit',
+          truth_score: v.truthScore, claims_count: v.claims?.length || 0,
+          full_data: v, timestamp: v.timestamp
+        })));
+        const n = Math.max(0, credits - 1);
+        setCredits(n);
+        localStorage.setItem('guest_credits', n);
       }
 
-      if (res.data.truthScore >= 80) confetti({ particleCount:40, spread:55, origin:{ y:0.7 }, colors:[GOLD,'#fff'] });
-    } catch(err) {
-      if (!axios.isCancel(err)) setError('Analysis interrupted or connection lost.');
-      setStep(0); setLoading(false);
+      if (token) axios.get(`${API_BASE}/history?limit=10`, { headers: { Authorization: `Bearer ${token}` } }).then(r => setRecentReports(r.data));
+      if (finalResults.truthScore >= 80) confetti({ particleCount: 40, spread: 55, origin: { y: 0.7 }, colors: ['#C9A84C', '#fff'] });
+    } catch (err) {
+      if (!axios.isCancel(err)) setError('Audit failed or interrupted.');
+      setLoading(false);
     }
-  }, [url, text, mode, listening, lang, user, credits]);
+  }, [url, url2, text, text2, mode, lang, user, credits]);
 
-  const handleCancel = () => {
-    if (abortRef.current) { abortRef.current.abort(); setLoading(false); setStep(0); setLogs([]); }
+  const handleFileAudit = async (e) => {
+    const file = e.target.files?.[0]; if (!file) return;
+    if (file.size > 50 * 1024 * 1024) { setError('File too large (>50MB).'); return; }
+    if (!user && credits <= 0) { setShowCreditModal(true); return; }
+    setLoading(true); setStep(1); setElapsed(0);
+    setLogs([{ msg: 'Decoding encrypted media stream…', id: Date.now() }]);
+    const formData = new FormData(); formData.append('media', file);
+    try {
+      const res = await axios.post(`${API_BASE}/transcribe-and-verify`, formData, { headers: { 'Content-Type': 'multipart/form-data' } });
+      setResults(res.data); setStep(4); setLoading(false);
+    } catch (err) { setError('Media audit failed.'); setLoading(false); }
   };
 
-  const handleExportPDF = () => setShowExportModal(true);
+  const toggleVoice = (target) => {
+    if (listening === target) {
+      if (recRef.current) try { recRef.current.stop(); } catch(e){}
+      setListening(null);
+    } else {
+      if (recRef.current) try { recRef.current.stop(); } catch(e){}
+      setListening(target);
+      if (voiceReady) {
+        const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+        const rec = new SR();
+        rec.continuous = true; rec.interimResults = true;
+        rec.lang = lang === 'hi' ? 'hi-IN' : 'en-IN';
+        rec.onresult = (e) => {
+          let f='', i='';
+          for(let j=e.resultIndex; j<e.results.length; j++){ if(e.results[j].isFinal) f+=e.results[j][0].transcript; else i+=e.results[j][0].transcript; }
+          setInterim(i);
+          if(f) {
+            const cmd = f.trim().toLowerCase();
 
-  const executePDFExport = () => {
-    setShowExportModal(false);
-    generatePDF(results, exportName, user?.organization || '', user?.logoUrl || '');
+            // ── Voice Commands (intercepted, not appended) ──
+            if (['clear','delete','reset','क्लियर','डिलीट','मिटाओ','हटाओ'].some(c => cmd.includes(c))) {
+              setText(''); setText2(''); setUrl(''); setUrl2(''); setError(null);
+              setInterim('');
+              return;
+            }
+            if (['switch to hindi','hindi','हिंदी','हिन्दी'].some(c => cmd.includes(c))) {
+              setLang('hi');
+              if (recRef.current) try { recRef.current.stop(); } catch(ex){}
+              setListening(null); setInterim('');
+              setTimeout(() => toggleVoice(target), 300); // restart in new lang
+              return;
+            }
+            if (['switch to english','english','इंग्लिश','अंग्रेजी'].some(c => cmd.includes(c))) {
+              setLang('en');
+              if (recRef.current) try { recRef.current.stop(); } catch(ex){}
+              setListening(null); setInterim('');
+              setTimeout(() => toggleVoice(target), 300);
+              return;
+            }
+            if (['stop','terminate','रुको','बंद करो'].some(c => cmd.includes(c))) {
+              if (recRef.current) try { recRef.current.stop(); } catch(ex){}
+              setListening(null); setInterim('');
+              return;
+            }
+            // ── Expanded Analysis Trigger ──
+            const analyzeCommands = [
+              'analyze','analyse','analysis','verify','verifying','run','start','begin','go','audit','interrogate',
+              'चलाओ','जांचो','जांच करो','जांच','जांचिये','जांचें','शुरू करो','शुरू','शुरू करें','देखें',
+              'jaanch karo','jaanch','jach karo','jach','jaanchiye','janche','jancho','jaanch akro','jach akro','jachakro','janchna'
+            ];
+            if (analyzeCommands.some(c => cmd.includes(c))) {
+              setLogs(l => [...l, { msg: isHindi ? 'वॉइस कमांड: विश्लेषण शुरू हो रहा है...' : 'Voice Command: Starting analysis...', id: Date.now() }]);
+              handleVerify();
+              setListening(null);
+              setInterim('');
+              if (recRef.current) try { recRef.current.stop(); } catch(ex){}
+              return;
+            }
+
+            // ── Normal dictation (append to field) ──
+            if (target === 'text') setText(p => p ? `${p} ${f}` : f);
+            else setText2(p => p ? `${p} ${f}` : f);
+          }
+        };
+        rec.onend = () => { if (listening === target) setListening(null); };
+        rec.start(); recRef.current = rec;
+      }
+    }
   };
 
+  const canRun = mode === 'adversarial'
+    ? ((url.trim() && url2.trim()) || (text.trim() && text2.trim()))
+    : (url.trim() || text.trim() || interim.trim());
 
-  const canRun = isDeepfake ? !!url.trim() : !!(url.trim() || text.trim() || interim.trim());
+  const resetAll = () => { setResults(null); setUrl(''); setUrl2(''); setText(''); setText2(''); setError(null); };
 
+  /* ── Mode Definitions ── */
   const MODES = [
-    { id:'normal',      label:'Standard',         sub:'Fast consensus',           icon:Activity   },
-    { id:'adversarial', label:'Narrative Duel',   sub:'Bias & framing audit',     icon:Zap        },
-    { id:'deep',        label:'Deep Research',    sub:'Exhaustive OSINT',         icon:Search     },
-    { id:'pro',         label:'Pro Forensic',     sub:'Multi-agent academic',     icon:ShieldCheck},
+    { id:'normal',      label: isHindi ? 'मानक' : 'Standard',       desc: isHindi ? 'मल्टी-सोर्स आम सहमति' : 'Multi-source consensus', icon: Scale,        color:'#60a5fa' },
+    { id:'adversarial', label: isHindi ? 'तुलना' : 'Compare',         desc: isHindi ? 'कथा द्वंद्व विश्लेषण' : 'Narrative duel analysis', icon: Layers,      color:'#f472b6' },
+    { id:'deep',        label: isHindi ? 'गहन ओएसइंट' : 'Deep OSINT',      desc: isHindi ? 'संपूर्ण खुफिया' : 'Exhaustive intelligence', icon: Fingerprint, color:'#a78bfa' },
+    { id:'pro',         label: isHindi ? 'मल्टी-एजेंट' : 'Multi-Agent',     desc: isHindi ? 'एआई एन्सेम्बल पाइपलाइन' : 'AI ensemble pipeline',    icon: Zap,         color: GOLD },
   ];
 
-  const t = UI_TEXT[lang] || UI_TEXT.en;
-
+  /* ═══════════════════════════════════════════════════ */
   return (
-    <div className="vf-page-root" style={{ background:'var(--bg-main)', color:TEXT, fontFamily:"'DM Sans',system-ui,sans-serif", display:'flex', overflowX:'hidden' }}>
+    <div style={{ display:'flex', background:'var(--bg-main)', minHeight:'100vh', color:TEXT, fontFamily:"var(--font-body)" }}>
       <style>{`
-        .vf-page-root { min-height: calc(100vh - 60px); padding-bottom: 64px; }
-        @media (max-width: 768px) {
-          .vf-page-root { min-height: auto; padding-bottom: 40px; }
-        }
-
-        .vf-input {
+        .v-input-field {
           width:100%; box-sizing:border-box;
-          background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.09);
-          border-radius:10px; color:${TEXT}; font-family:'DM Sans',system-ui,sans-serif;
-          font-size:14px; outline:none;
-          transition:border-color .2s,background .2s,box-shadow .2s;
+          background: rgba(var(--overlay-rgb),0.025);
+          border: 1px solid rgba(var(--overlay-rgb),0.08);
+          border-radius: 12px;
+          color: ${TEXT}; outline:none;
+          font-family: var(--font-body);
+          transition: border-color 0.25s, background 0.25s, box-shadow 0.25s;
         }
-        .vf-input::placeholder { color:${DIM}; }
-        .vf-input:focus { border-color:rgba(201,168,76,.5); background:rgba(201,168,76,.035); box-shadow:0 0 0 3px rgba(201,168,76,.08); }
-        .vf-url  { padding:13px 16px 13px 42px; }
-        .vf-area { padding:16px 52px 16px 16px; resize:none; min-height:140px; line-height:1.75; }
-
-        .vf-credits { 
-          position: absolute; top: 0; right: 0;
-          display: flex; align-items: center; gap: 8px; padding: 6px 14px;
-          background: ${GOLD_L}; border: 1px solid ${GOLD};
-          border-radius: 100px; box-shadow: 0 0 15px ${GOLD_L};
-          z-index: 5;
+        .v-input-field:focus {
+          border-color: rgba(201,168,76,0.45);
+          background: rgba(201,168,76,0.035);
+          box-shadow: 0 0 0 3px rgba(201,168,76,0.06), 0 2px 12px rgba(201,168,76,0.04);
         }
+        .v-input-field:hover:not(:focus) { border-color: rgba(var(--overlay-rgb),0.14); }
+        .v-input-field::placeholder { color: ${DIM}; }
 
-        .vf-run {
-          background:${GOLD}; color:var(--bg-main); border:none; border-radius:9px;
-          padding:13px 28px; font-family:'DM Sans',system-ui,sans-serif;
-          font-weight:600; font-size:14px; cursor:pointer;
+        .v-mode-card {
+          display:flex; align-items:center; gap:12px;
+          padding: 12px 16px;
+          border-radius: 12px;
+          border: 1px solid rgba(var(--overlay-rgb),0.06);
+          background: rgba(var(--overlay-rgb),0.02);
+          cursor:pointer; transition: all 0.2s;
+          text-align:left;
+        }
+        .v-mode-card:hover { border-color: rgba(var(--overlay-rgb),0.12); background: rgba(var(--overlay-rgb),0.04); }
+        .v-mode-card.active { border-color: rgba(201,168,76,0.4); background: rgba(201,168,76,0.06); box-shadow: 0 0 0 1px rgba(201,168,76,0.15); }
+
+        .v-cta-btn {
+          display:inline-flex; align-items:center; gap:10px;
+          height:48px; padding:0 32px;
+          background: var(--gold); color: var(--bg-main);
+          border:none; border-radius:13px;
+          font-family: var(--font-body);
+          font-weight:700; font-size:14px;
+          cursor:pointer; transition: all 0.2s;
+          box-shadow: 0 4px 20px rgba(201,168,76,0.2);
+        }
+        .v-cta-btn:hover { filter: brightness(1.1); transform: translateY(-1px); box-shadow: 0 8px 25px rgba(201,168,76,0.3); }
+        .v-cta-btn:active { transform: translateY(0); }
+        .v-cta-btn:disabled { opacity:0.3; pointer-events:none; }
+
+        .v-ghost-btn {
           display:inline-flex; align-items:center; gap:8px;
-          box-shadow:0 4px 20px rgba(201,168,76,.28);
-          transition:opacity .18s,transform .15s,box-shadow .18s; white-space:nowrap;
+          height:44px; padding:0 20px;
+          background:transparent; color: var(--gold);
+          border: 1px solid rgba(201,168,76,0.25);
+          border-radius:12px;
+          font-family: var(--font-body);
+          font-weight:600; font-size:13px;
+          cursor:pointer; transition: all 0.2s;
         }
-        .vf-run:hover:not(:disabled) { opacity:.88; transform:translateY(-1px); box-shadow:0 6px 28px rgba(201,168,76,.42); }
-        .vf-run:active:not(:disabled){ transform:none; }
-        .vf-run:disabled { opacity:.28; cursor:default; box-shadow:none; }
+        .v-ghost-btn:hover { background: rgba(201,168,76,0.08); border-color: rgba(201,168,76,0.4); }
 
-        .vf-ghost {
-          background:rgba(255,255,255,0.04); color:${MUTED};
-          border:1px solid rgba(255,255,255,0.09); border-radius:9px;
-          padding:13px 20px; font-family:'DM Sans',system-ui,sans-serif;
-          font-weight:500; font-size:14px; cursor:pointer;
-          display:inline-flex; align-items:center; gap:7px;
-          transition:border-color .2s,color .2s; white-space:nowrap;
+        @media (max-width: 768px) {
+          .v-results-hero { flex-direction: column !important; text-align: center; }
+          .v-input-grid { grid-template-columns: 1fr !important; }
+          .v-mode-grid { grid-template-columns: repeat(2, 1fr) !important; }
         }
-        .vf-ghost:hover { border-color:rgba(255,255,255,.16); color:${TEXT}; }
-
-        .vf-mic {
-          position:absolute; bottom:12px; right:12px;
-          width:34px; height:34px; border-radius:50%; border:none;
-          background:rgba(255,255,255,0.06);
-          display:flex; align-items:center; justify-content:center;
-          cursor:pointer; transition:background .2s,box-shadow .2s; flex-shrink:0;
-        }
-        .vf-mic:hover { background:rgba(236,72,153,.14); }
-        .vf-mic.on {
-          background:rgba(236,72,153,.15);
-          box-shadow:0 0 0 3px rgba(236,72,153,.15),0 0 18px rgba(236,72,153,.25);
-          animation:mic-pulse 1.5s ease-in-out infinite;
-        }
-        @keyframes mic-pulse {
-          0%,100%{ box-shadow:0 0 0 3px rgba(236,72,153,.15),0 0 18px rgba(236,72,153,.25); }
-          50%    { box-shadow:0 0 0 6px rgba(236,72,153,.07),0 0 26px rgba(236,72,153,.35); }
-        }
-
-        /* ── Mode card (DESKTOP) — unchanged ── */
-        .vf-mode {
-          background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08);
-          border-radius:11px; padding:15px 16px; cursor:pointer;
-          display:flex; align-items:center; gap:12px; text-align:left;
-          transition:border-color .2s,background .2s;
-        }
-        .vf-mode:hover:not(.on){ border-color:rgba(255,255,255,.14); }
-        .vf-mode.on { border-color:rgba(201,168,76,.5); background:rgba(201,168,76,.07); }
-
-        .vf-dos {
-          padding:13px 15px; border-radius:10px;
-          border:1px solid rgba(255,255,255,0.06); background:rgba(255,255,255,0.02);
-          cursor:pointer; display:flex; gap:10px; align-items:flex-start;
-          transition:border-color .18s,background .18s;
-        }
-        .vf-dos:hover { border-color:rgba(255,255,255,.13); background:rgba(255,255,255,.04); }
-
-        .vf-claim {
-          padding:20px 24px; border-bottom:1px solid rgba(255,255,255,.05);
-          display:grid; grid-template-columns:130px 1fr 76px;
-          gap:18px; align-items:start; transition:background .15s;
-        }
-        .vf-claim:last-child { border-bottom:none; }
-        .vf-claim:hover { background:rgba(255,255,255,.02); }
-
-        .vf-tab {
-          background:none; border:none; cursor:pointer;
-          font-family:'DM Sans',system-ui,sans-serif;
-          font-size:11px; font-weight:500; padding:4px 10px;
-          border-radius:1000px; color:${DIM}; transition:background .18s,color .18s;
-        }
-        .vf-tab.on { background:rgba(201,168,76,.13); color:${GOLD}; }
-        .vf-tab:hover:not(.on){ color:${MUTED}; }
-
-        .vf-transcript {
-          position:absolute; bottom:55px; left:16px; right:55px;
-          background:var(--bg-overlay); border:1px solid ${GOLD_L};
-          border-radius:8px; padding:12px 14px;
-          font-family:'DM Mono',monospace; font-size:11px; color:${GOLD};
-          box-shadow:0 4px 25px rgba(0,0,0,0.4);
-          z-index:10; pointer-events:none;
-          display:flex; gap:10px; align-items:flex-start;
-        }
-
-        .vf-chip { display:flex; align-items:center; gap:4px; font-size:10px; color:${DIM}; font-family:'DM Mono',monospace; }
-        .vf-link { background:none; border:none; cursor:pointer; font-family:'DM Sans',system-ui,sans-serif; font-size:11px; color:${DIM}; text-decoration:underline; text-decoration-color:transparent; transition:color .2s,text-decoration-color .2s; padding:0; }
-        .vf-link:hover { color:${GOLD}; text-decoration-color:${GOLD}; }
-        .ft-btn { background:none; border:none; cursor:pointer; font-size:11px; color:${DIM}; padding:0; transition:color .2s; font-family:'DM Sans',system-ui,sans-serif; }
-        .ft-btn:hover { color:${MUTED}; }
-
-        @keyframes vwave { 0%,100%{height:3px} 50%{height:13px} }
-        .vf-wave span { display:inline-block; width:3px; border-radius:3px; background:${MIC_C}; margin:0 1.5px; animation:vwave .75s ease-in-out infinite; }
-        .vf-wave span:nth-child(2){ animation-delay:.1s }
-        .vf-wave span:nth-child(3){ animation-delay:.2s }
-        .vf-wave span:nth-child(4){ animation-delay:.12s }
-        .vf-wave span:nth-child(5){ animation-delay:.05s }
-        @keyframes ap-pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.4;transform:scale(1.3)} }
-
-        /* ══════════ LAYOUT CLASSES ══════════════════════════ */
-        .vf-main { flex:1; max-width:1080px; margin:0 auto; padding:0 44px; width:100%; overflow-y:auto; overflow-x:hidden; }
-        .vf-wb-grid { display:grid; grid-template-columns:1fr 276px; gap:24px; padding-bottom: 60px; }
-        .vf-modes-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; }
-        .vf-score-header { display:flex; flex-wrap:wrap; align-items:center; gap:40px; padding:32px 36px; background:rgba(201,168,76,0.06); border:1px solid rgba(201,168,76,0.18); border-radius:16px; margin-bottom:36px; }
-        .vf-claim-header { display:grid; grid-template-columns:130px 1fr 76px; gap:18px; padding:10px 24px; border-bottom:1px solid ${LINE}; background:rgba(255,255,255,0.025); }
-        .vf-ai-row { margin-bottom:36px; display:flex; gap:20px; }
-        .vf-forensic-grid { display:grid; grid-template-columns:1fr 1fr; gap:20px; }
-        .vf-input-wrap { display: flex; flex-direction: column; gap: 24px; }
-        .vf-wb-header-inner { display: flex; justify-content: space-between; align-items: flex-start; gap: 20px; margin-bottom: 32px; }
-
-
-        /* ── Tablet/Mobile ≤ 860px ── */
-        @media (max-width:860px) {
-          .vf-main { padding:0 24px; }
-          .vf-wb-grid { grid-template-columns:1fr; gap: 48px; }
-          .vf-wb-header-inner { flex-direction: column-reverse; }
-          .vf-modes-parent { grid-template-columns: 1fr !important; gap: 24px !important; }
-        }
-
-        /* ═══════════════════════════════════════════════════
-           MOBILE ≤ 768px
-           ═══════════════════════════════════════════════════ */
-        @media (max-width:768px) {
-          .vf-main { padding:0 16px 20px; }
-          .vf-wb-header { text-align: center !important; }
-          .vf-wb-desc { margin: 0 auto !important; }
-          .vf-wb-mode-label { text-align: center !important; }
-
-          /* ── Mode selector: compact single-row pill checkboxes ── */
-          .vf-modes-grid {
-            grid-template-columns: repeat(2, 1fr) !important;
-            gap: 10px !important;
-          }
-          .vf-mode {
-            padding: 12px 14px !important;
-            gap: 10px !important;
-            border-radius: 12px !important;
-          }
-          .vf-mode-sub { display: none !important; }
-          .vf-mode-label {
-            font-size: 13px !important;
-            margin-bottom: 0 !important;
-            line-height: 1.2 !important;
-          }
-          .vf-mode-icon-box { width: 28px !important; height: 28px !important; }
-
-          .vf-ai-row { flex-direction:column; gap: 16px; }
-          .vf-forensic-grid { grid-template-columns:1fr; gap: 16px; }
-          .vf-score-header { 
-            flex-direction: column;
-            gap:32px; padding:32px 24px; 
-            justify-content: center !important; text-align: center !important; 
-          }
-          .vf-score-actions { width: 100%; gap: 12px !important; }
-          .vf-score-actions button { width: 100%; justify-content: center; }
-
-          .vf-claim { grid-template-columns:1fr 50px; gap:8px 12px; padding:20px 16px; }
-          .vf-claim > div:first-child { grid-column: 1 / -1; margin-bottom: 4px; }
-          .vf-claim-header { display:none; }
-          
-          .vf-area { min-height: 180px !important; }
-          .vf-score-header, .vf-ai-row { margin-bottom: 24px !important; }
-          .vf-wb-grid { padding-bottom: 20px !important; }
-          .vf-credits { 
-            position: relative !important; 
-            top: auto !important; 
-            right: auto !important; 
-            margin: 0 auto 20px !important; 
-            display: inline-flex !important;
-          }
-        }
-
-
-        /* ── Mobile-small ≤ 480px ── */
-        @media (max-width:480px) {
-          .vf-main { padding:0 12px 32px; }
-          .vf-modes-grid { grid-template-columns: repeat(2, 1fr) !important; gap: 8px !important; }
-          .vf-mode { padding: 12px 10px !important; }
-          .vf-mode-label { font-size: 11px !important; }
-          .vf-claim { padding: 16px 12px; }
-          .vf-btn-row { flex-direction: column !important; align-items: stretch !important; gap: 12px !important; }
-          .vf-run, .vf-ghost { width: 100% !important; justify-content: center !important; }
-        }
-
-
       `}</style>
 
-      <Sidebar data-html2canvas-ignore activeFilter={activeFilter} onFilterChange={setActiveFilter} onExport={handleExportPDF}/>
+      <Sidebar data-html2canvas-ignore activeFilter={activeFilter} onFilterChange={setActiveFilter} onExport={() => setShowExportModal(true)} />
 
-      <main className="vf-main">
+      <main style={{ flex:1, maxWidth:1100, margin:'0 auto', padding:'28px 28px 24px', overflowY:'auto' }}>
         <AnimatePresence mode="wait">
 
-          {/* ═══ WORKBENCH ═══ */}
+          {/* ═══════════ INPUT STATE ═══════════ */}
           {!loading && !results && (
-            <motion.div key="wb"
-              initial={{ opacity:0, y:12 }} animate={{ opacity:1, y:0 }}
-              exit={{ opacity:0, y:-8 }} transition={{ duration:.35, ease:[.4,0,.2,1] }}
-              style={{ paddingTop:8, paddingBottom:40 }}
-            >
-              <header className="vf-wb-header" style={{ marginBottom:16, position:'relative' }}>
-                  {!user && (
-                    <div className="vf-credits">
-                      <Zap size={11} color={GOLD} fill={GOLD}/>
-                      <span style={{ fontFamily:"'DM Mono',monospace", fontSize:9, fontWeight:600, color:GOLD, textTransform:'uppercase', letterSpacing:'0.1em' }}>
-                        {credits} / 3 CREDITS
-                      </span>
-                    </div>
-                  )}
-                  <h1 style={{ fontFamily:"'DM Serif Display',Georgia,serif", fontSize:'clamp(28px,4vw,42px)', fontWeight:400, color:TEXT, lineHeight:1.1, letterSpacing:'-0.022em', marginBottom:8 }}>
-                    {t.initiateAudit}
-                  </h1>
-                  <p className="vf-wb-desc" style={{ fontSize:16, color:MUTED, lineHeight:1.7, maxWidth:650 }}>
-                    {t.auditDesc}
-                  </p>
-                </header>
+            <motion.div key="input" initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }} exit={{ opacity:0, y:-12 }} transition={{ duration:0.4 }}>
 
-                <div className="vf-modes-parent" style={{ marginBottom:32, display: 'grid', gridTemplateColumns: '1fr 200px', gap: 40 }}>
-                  <div>
-                    <p className="vf-wb-mode-label" style={{ fontFamily:'DM Mono,monospace', fontSize:9, color:DIM, textTransform:'uppercase', letterSpacing:'0.14em', marginBottom:12 }}>{t.analysisDepth}</p>
-                    <div className="vf-modes-grid">
-                      {MODES.map(m => (
-                        <button key={m.id} onClick={() => setMode(m.id)} className={`vf-mode ${mode===m.id?'on':''}`}>
-                          <div className="vf-mode-icon-box" style={{ width:30, height:30, borderRadius:8, flexShrink:0, background:mode===m.id?GOLD_L:'rgba(255,255,255,0.05)', display:'flex', alignItems:'center', justifyContent:'center' }}>
-                            <m.icon size={14} color={mode===m.id?GOLD:DIM}/>
-                          </div>
-                          <div>
-                            <div className="vf-mode-label" style={{ fontSize:13, fontWeight:500, color:mode===m.id?TEXT:MUTED, marginBottom:2 }}>{m.label}</div>
-                            <div className="vf-mode-sub" style={{ fontSize:11, color:DIM }}>{m.sub}</div>
-                          </div>
-                        </button>
-                      ))}
+              {/* Page Header */}
+              <header style={{ marginBottom:32, paddingBottom:24, borderBottom:'1px solid rgba(var(--overlay-rgb),0.06)' }}>
+                <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-end', flexWrap:'wrap', gap:20 }}>
+                  <div style={{ display:'flex', alignItems:'center', gap:20, flex:1, minWidth:300 }}>
+                    <div style={{ width:4, height:48, borderRadius:2, background:GOLD }} />
+                    <div>
+                      <h1 style={{ fontFamily: "var(--font-serif)", fontSize:'clamp(36px,5vw,52px)', fontWeight:400, color:TEXT, margin:0, letterSpacing:'-0.03em', lineHeight:1 }}>
+                        {isHindi ? 'विश्लेषण और सत्यापन' : 'Analyze & Verify.'}
+                      </h1>
+                      <p style={{ fontSize:15, color:MUTED, margin:'10px 0 0', lineHeight:1.5, maxWidth:600 }}>
+                        {isHindi ? 'सत्यापित खुफिया स्रोतों के विरुद्ध दावों की जिरह करें। URL पेस्ट करें, दावा टाइप करें या मीडिया अपलोड करें।' : 'Cross-examine claims against verified intelligence sources. AI-driven forensic interrogation for the digital age.'}
+                      </p>
                     </div>
                   </div>
-
-                  <div>
-                    <p className="vf-wb-mode-label" style={{ fontFamily:'DM Mono,monospace', fontSize:9, color:DIM, textTransform:'uppercase', letterSpacing:'0.14em', marginBottom:12 }}>{t.language}</p>
-                    <div style={{ display: 'flex', gap: 6, background: 'rgba(255,255,255,0.03)', border: `1px solid ${LINE}`, borderRadius: 10, padding: 4 }}>
-                      <button onClick={() => setLang('en')} style={{ flex: 1, padding: '8px 0', borderRadius: 7, border: 'none', background: lang === 'en' ? GOLD_L : 'transparent', color: lang === 'en' ? GOLD : DIM, fontSize: 11, fontWeight: 700, cursor: 'pointer', transition: 'all 0.2s' }}>EN</button>
-                      <button onClick={() => setLang('hi')} style={{ flex: 1, padding: '8px 0', borderRadius: 7, border: 'none', background: lang === 'hi' ? GOLD_L : 'transparent', color: lang === 'hi' ? GOLD : DIM, fontSize: 11, fontWeight: 700, cursor: 'pointer', transition: 'all 0.2s' }}>हिंदी</button>
-                    </div>
+                  <div style={{ display:'flex', alignItems:'center', gap:14 }}>
+                    {/* Live Status Pill */}
+                    
+                    {!user && (
+                      <div style={{ display:'flex', alignItems:'center', gap:7, padding:'6px 14px', background:'rgba(201,168,76,0.08)', border:'1px solid rgba(201,168,76,0.2)', borderRadius:100 }}>
+                        <Zap size={11} color={GOLD} />
+                        <span style={{ fontFamily:"var(--font-mono)", fontSize:10, fontWeight:700, color:GOLD, letterSpacing:'0.08em' }}>{credits} / 3 {isHindi ? 'क्रेडिट्स' : 'Credits'}</span>
+                      </div>
+                    )}
                   </div>
                 </div>
+              </header>
+              <style>{`@keyframes ap-pulse { 0%,100% { opacity:1 } 50% { opacity:.4 } }`}</style>
 
+              {/* Mode + Language — single row */}
+              <section style={{ display:'flex', alignItems:'flex-end', gap:20, marginBottom:20, flexWrap:'wrap' }}>
+                <div style={{ flex:1, minWidth:0 }}>
+                  <span style={{ display:'block', fontFamily:"var(--font-mono)", fontSize:9, color:DIM, letterSpacing:'0.14em', textTransform:'uppercase', marginBottom:10 }}>{isHindi ? 'विश्लेषण मोड' : 'Analysis Mode'}</span>
+                  <div className="v-mode-grid" style={{ display:'grid', gridTemplateColumns:'repeat(4, 1fr)', gap:8 }}>
+                    {MODES.map(m => (
+                      <button key={m.id} className={`v-mode-card ${mode === m.id ? 'active' : ''}`} onClick={() => setMode(m.id)}>
+                        <div style={{ width:32, height:32, borderRadius:8, background: mode === m.id ? `${m.color}18` : 'rgba(var(--overlay-rgb),0.04)', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, transition:'background 0.2s' }}>
+                          <m.icon size={15} color={mode === m.id ? m.color : DIM} />
+                        </div>
+                        <div>
+                          <div style={{ fontSize:13, fontWeight:600, color: mode === m.id ? TEXT : MUTED, lineHeight:1.15 }}>{m.label}</div>
+                          <div style={{ fontSize:10, color:DIM, marginTop:2 }}>{m.desc}</div>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div style={{ flexShrink:0 }}>
+                  <span style={{ display:'block', fontFamily:"var(--font-mono)", fontSize:9, color:DIM, letterSpacing:'0.14em', textTransform:'uppercase', marginBottom:10 }}>{isHindi ? 'भाषा' : 'Language'}</span>
+                  <div style={{ display:'inline-flex', padding:3, background:'rgba(var(--overlay-rgb),0.04)', borderRadius:10, border:'1px solid rgba(var(--overlay-rgb),0.06)' }}>
+                    {[{id:'en', label:'English'},{id:'hi', label:'हिंदी'}].map(l => (
+                      <button key={l.id} onClick={() => setLang(l.id)} style={{ padding:'8px 18px', borderRadius:7, border:'none', cursor:'pointer', fontSize:12, fontWeight:600, background: lang === l.id ? 'rgba(201,168,76,0.15)' : 'transparent', color: lang === l.id ? GOLD : DIM, transition:'all 0.2s', fontFamily:"'DM Sans',system-ui,sans-serif" }}>
+                        {l.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </section>
 
-              <div className="vf-wb-grid">
-                {/* Left: inputs */}
-                <div style={{ display:'flex', flexDirection:'column', gap:16, minWidth:0 }}>
+              {/* Input Card */}
+              <div style={{
+                padding:'24px 28px', borderRadius:18,
+                background:'rgba(var(--overlay-rgb),0.015)',
+                border:'1px solid rgba(var(--overlay-rgb),0.06)',
+                marginBottom:18,
+                position:'relative', overflow:'hidden'
+              }}>
+                {/* Card top accent */}
+                <div style={{ position:'absolute', top:0, left:0, right:0, height:1, background:'linear-gradient(90deg, transparent, rgba(201,168,76,0.2), transparent)' }} />
+
+                <section className="v-input-grid" style={{ display:'grid', gridTemplateColumns: mode === 'adversarial' ? '1fr 1fr' : '1fr', gap:20 }}>
+
+                  {/* Source A / Primary */}
                   <div>
-                    <label style={{ display:'block', fontFamily:'DM Mono,monospace', fontSize:9, color:DIM, textTransform:'uppercase', letterSpacing:'0.12em', marginBottom:8 }}>
-                      Source URL
-                    </label>
+                    <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:10, minHeight:28 }}>
+                      <span style={{ fontFamily:"var(--font-mono)", fontSize:9, color:DIM, letterSpacing:'0.12em', textTransform:'uppercase', display:'flex', alignItems:'center', gap:6 }}>
+                        <Search size={10} color={DIM} />
+                        {mode === 'adversarial' ? (isHindi ? 'स्रोत क' : 'Source A') : (isHindi ? 'स्रोत इनपुट' : 'Source Input')}
+                      </span>
+                      <label style={{ display:'flex', alignItems:'center', gap:6, cursor:'pointer', fontSize:10, color:GOLD, fontFamily:"var(--font-mono)", transition:'opacity 0.2s', padding:'4px 10px', borderRadius:6, background:'rgba(201,168,76,0.06)', border:'1px solid rgba(201,168,76,0.12)' }}
+                        onMouseEnter={e => { e.currentTarget.style.background = 'rgba(201,168,76,0.12)'; e.currentTarget.style.borderColor = 'rgba(201,168,76,0.25)'; }}
+                        onMouseLeave={e => { e.currentTarget.style.background = 'rgba(201,168,76,0.06)'; e.currentTarget.style.borderColor = 'rgba(201,168,76,0.12)'; }}
+                      >
+                        <Upload size={10} /> {isHindi ? 'अपलोड करें' : 'Upload'}
+                        <input type="file" style={{ display:'none' }} onChange={handleFileAudit} />
+                      </label>
+                    </div>
+
+                    {/* URL Input */}
+                    <div style={{ position:'relative', marginBottom:10 }}>
+                      <LinkIcon size={14} color={DIM} style={{ position:'absolute', left:16, top:'50%', transform:'translateY(-50%)', pointerEvents:'none' }} />
+                      <input
+                        type="text" value={url} onChange={e => setUrl(e.target.value)}
+                        placeholder="https://example.com/article"
+                        className="v-input-field"
+                        style={{ height:46, paddingLeft:42, paddingRight:16, fontSize:14 }}
+                      />
+                    </div>
+
+                    {/* Text Input */}
                     <div style={{ position:'relative' }}>
-                      <LinkIcon size={14} color={DIM} style={{ position:'absolute', left:13, top:'50%', transform:'translateY(-50%)', pointerEvents:'none' }}/>
-                      <input type="text" value={url} onChange={e => setUrl(e.target.value)}
-                        placeholder={isDeepfake ? "Paste media URL (image/video/audio)" : "https://example.com/article"} className="vf-input vf-url"/>
+                      <textarea
+                        value={text + (listening === 'text' ? interim : '')}
+                        onChange={e => listening !== 'text' && setText(e.target.value)}
+                        className="v-input-field"
+                        placeholder={isHindi ? 'दावा, विवरण दर्ज करें या लेख का टेक्स्ट पेस्ट करें...' : "Enter a claim, statement, or paste article text…"}
+                        style={{ minHeight:140, maxHeight:200, padding:'14px 48px 14px 18px', fontSize:14, lineHeight:1.6, resize:'vertical' }}
+                      />
+                      {voiceReady && (
+                        <button onClick={() => toggleVoice('text')} style={{
+                          position:'absolute', bottom:12, right:12,
+                          width:36, height:36, borderRadius:'50%',
+                          display:'flex', alignItems:'center', justifyContent:'center',
+                          background: listening === 'text' ? '#ec4899' : 'rgba(var(--overlay-rgb),0.06)',
+                          border:'none', cursor:'pointer',
+                          transition:'all 0.2s',
+                          boxShadow: listening === 'text' ? '0 0 20px rgba(236,72,153,0.4)' : 'none'
+                        }}>
+                          {listening === 'text' ? <MicOff size={14} color="#fff" /> : <Mic size={14} color={DIM} />}
+                        </button>
+                      )}
+                      <div style={{ position:'absolute', bottom:14, left:18, fontSize:10, color:DIM, fontFamily:"var(--font-mono)" }}>
+                        {text.length}/8000
+                      </div>
                     </div>
                   </div>
 
-                  {/* Deepfake Toggle */}
-                  <label style={{ 
-                    display:'flex', alignItems:'center', gap:10, padding:'14px 16px', background:isDeepfake ? 'rgba(236,72,153,0.08)' : 'rgba(255,255,255,0.02)', 
-                    border:isDeepfake ? `1px solid ${MIC_C}40` : `1px solid ${LINE}`, borderRadius:12, cursor:'pointer', transition:'all 0.2s'
-                  }}>
-                    <div style={{ position:'relative', width:36, height:20, flexShrink:0 }}>
-                      <input type="checkbox" checked={isDeepfake} onChange={e => setIsDeepfake(e.target.checked)} style={{ display:'none' }}/>
-                      <div style={{ position:'absolute', inset:0, background:isDeepfake ? MIC_C : 'rgba(255,255,255,0.1)', borderRadius:100, transition:'.3s' }}/>
-                      <div style={{ position:'absolute', top:2, left:isDeepfake ? 18 : 2, width:16, height:16, background:'#fff', borderRadius:'50%', transition:'.3s', boxShadow:'0 2px 5px rgba(0,0,0,0.2)' }}/>
-                    </div>
-                    <div style={{ flex:1 }}>
-                      <div style={{ fontSize:13, fontWeight:700, color:isDeepfake ? MIC_C : TEXT }}>Forensic Deepfake Shield™</div>
-                      <div style={{ fontSize:10, color:DIM }}>Detect AI-generated video, image, or audio clones.</div>
-                    </div>
-                    {isDeepfake && <Zap size={14} color={MIC_C} style={{ animation:'ap-pulse 2s infinite' }}/>}
-                  </label>
-
-                  {!isDeepfake && (
-                    <>
-                      <div style={{ display:'flex', alignItems:'center', gap:12 }}>
-                        <div style={{ flex:1, height:1, background:LINE }}/><span style={{ fontSize:11, color:DIM }}>or paste text</span><div style={{ flex:1, height:1, background:LINE }}/>
+                  {/* Source B (Adversarial only) */}
+                  {mode === 'adversarial' && (
+                    <div>
+                      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:10, minHeight:28 }}>
+                        <span style={{ fontFamily:"var(--font-mono)", fontSize:9, color:DIM, letterSpacing:'0.12em', textTransform:'uppercase', display:'flex', alignItems:'center', gap:6 }}>
+                          <Search size={10} color={DIM} />
+                          {isHindi ? 'स्रोत ख (जवाब)' : 'Source B (Counter)'}
+                        </span>
+                        <label style={{ display:'flex', alignItems:'center', gap:6, cursor:'pointer', fontSize:10, color:GOLD, fontFamily:"var(--font-mono)", transition:'opacity 0.2s', padding:'4px 10px', borderRadius:6, background:'rgba(201,168,76,0.06)', border:'1px solid rgba(201,168,76,0.12)' }}
+                          onMouseEnter={e => { e.currentTarget.style.background = 'rgba(201,168,76,0.12)'; e.currentTarget.style.borderColor = 'rgba(201,168,76,0.25)'; }}
+                          onMouseLeave={e => { e.currentTarget.style.background = 'rgba(201,168,76,0.06)'; e.currentTarget.style.borderColor = 'rgba(201,168,76,0.12)'; }}
+                        >
+                          <Upload size={10} /> Upload
+                          <input type="file" style={{ display:'none' }} onChange={handleFileAudit} />
+                        </label>
                       </div>
-
-                      <div>
-                        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:8, flexWrap:'wrap', gap:8 }}>
-                          <label style={{ fontFamily:'DM Mono,monospace', fontSize:9, color:DIM, textTransform:'uppercase', letterSpacing:'0.12em' }}>
-                            Claim or article text
-                          </label>
-                          <div style={{ display:'flex', alignItems:'center', gap:10 }}>
-                            <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', opacity: 0.7, transition: 'opacity 0.2s' }} onMouseOver={e => e.currentTarget.style.opacity = '1'} onMouseOut={e => e.currentTarget.style.opacity = '0.7'}>
-                              <Upload size={12} color={GOLD} />
-                              <span style={{ fontSize: 9, color: GOLD, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>{t.uploadDossier}</span>
-                              <input type="file" style={{ display: 'none' }} accept=".pdf,.doc,.docx,.txt" onChange={handleFileUpload} />
-                            </label>
-                            {listening && (
-                              <div style={{ display:'flex', alignItems:'center', gap:7 }}>
-                                <div className="vf-wave"><span/><span/><span/><span/><span/></div>
-                                <span style={{ fontFamily:'DM Mono,monospace', fontSize:9, color:MIC_C }}>Listening…</span>
-                              </div>
-                            )}
-                            <span style={{ fontFamily:'DM Mono,monospace', fontSize:10, color:DIM }}>{(text+interim).length}/8,000</span>
-                          </div>
-                   </div>
-                   <div style={{ position:'relative' }}>
-                          <textarea value={text+(interim?(text?' ':'')+interim:'')}
-                            onChange={e => { if (!listening) setText(e.target.value); }}
-                            readOnly={listening} maxLength={8000}
-                            placeholder={t.placeholder}
-                            className="vf-input vf-area"/>
-                          {listening && interim && (
-                            <div className="vf-transcript">
-                              <span style={{ fontSize:10, opacity:0.5, marginTop:2 }}>[LIVE TRANSCRIPT]</span>
-                              <span style={{ lineHeight:1.4 }}>{interim}</span>
-                            </div>
-                          )}
-                          {voiceReady && (
-                            <button onClick={toggleVoice} className={`vf-mic ${listening?'on':''}`} title={listening?'Stop recording':'Start voice input'}>
-                              {listening ? <MicOff size={14} color={MIC_C}/> : <Mic size={14} color={DIM}/>}
-                            </button>
-                          )}
-                        </div>
+                      <div style={{ position:'relative', marginBottom:10 }}>
+                        <LinkIcon size={14} color={DIM} style={{ position:'absolute', left:16, top:'50%', transform:'translateY(-50%)', pointerEvents:'none' }} />
+                        <input type="text" value={url2} onChange={e => setUrl2(e.target.value)} placeholder="https://example.com/counter-article" className="v-input-field" style={{ height:46, paddingLeft:42, paddingRight:16, fontSize:14 }} />
+                      </div>
+                      <div style={{ position:'relative' }}>
+                        <textarea
+                          value={text2 + (listening === 'text2' ? interim : '')}
+                          onChange={e => listening !== 'text2' && setText2(e.target.value)}
+                          className="v-input-field"
+                          placeholder={isHindi ? 'वैकल्पिक दावा या जवाबी नरेटिव दर्ज करें...' : "Enter alternative claim or counter-narrative…"}
+                          style={{ minHeight:140, maxHeight:200, padding:'14px 48px 14px 18px', fontSize:14, lineHeight:1.6, resize:'vertical' }}
+                        />
                         {voiceReady && (
-                          <div style={{ display:'flex', alignItems:'center', gap:6, marginTop:8, flexWrap:'wrap' }}>
-                            <Zap size={11} color={DIM}/>
-                            <span style={{ fontSize:11, color:DIM }}>
-                              {listening ? <>Say <strong style={{ color:MIC_C }}>"analyze"</strong> to trigger verification hands-free</> : <>{t.voice} · say <strong style={{ color:GOLD }}>"analyze"</strong> to run automatically</>}
+                          <button onClick={() => toggleVoice('text2')} style={{
+                            position:'absolute', bottom:12, right:12,
+                            width:36, height:36, borderRadius:'50%',
+                            display:'flex', alignItems:'center', justifyContent:'center',
+                            background: listening === 'text2' ? '#ec4899' : 'rgba(var(--overlay-rgb),0.06)',
+                            border:'none', cursor:'pointer', transition:'all 0.2s'
+                          }}>
+                            {listening === 'text2' ? <MicOff size={14} color="#fff" /> : <Mic size={14} color={DIM} />}
+                          </button>
+                        )}
+                        <div style={{ position:'absolute', bottom:14, left:18, fontSize:10, color:DIM, fontFamily:"var(--font-mono)" }}>
+                          {text2.length}/8000
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </section>
+              </div>
+
+              {/* Action Bar */}
+              <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', flexWrap:'wrap', gap:12 }}>
+                <div style={{ display:'flex', alignItems:'center', gap:14 }}>
+                  <button className="v-cta-btn" onClick={handleVerify} disabled={!canRun}>
+                    <Gavel size={16} />
+                    {mode === 'adversarial' ? 'Compare Perspectives' : 'Run Verification'}
+                  </button>
+                  {(url || text) && (
+                    <button onClick={resetAll} style={{ background:'none', border:'1px solid rgba(var(--overlay-rgb),0.08)', borderRadius:10, padding:'10px 16px', cursor:'pointer', color:DIM, fontSize:12, display:'flex', alignItems:'center', gap:6, transition:'all 0.2s', fontFamily:"'DM Sans',system-ui,sans-serif" }}
+                      onMouseEnter={e => { e.currentTarget.style.color = TEXT; e.currentTarget.style.borderColor = 'rgba(var(--overlay-rgb),0.15)'; }} onMouseLeave={e => { e.currentTarget.style.color = DIM; e.currentTarget.style.borderColor = 'rgba(var(--overlay-rgb),0.08)'; }}
+                    >
+                      <RotateCcw size={12} /> {isHindi ? 'साफ करें' : 'Clear'}
+                    </button>
+                  )}
+                  {error && <span style={{ fontSize:12, color:'#f87171', fontWeight:500 }}>{error}</span>}
+                </div>
+                {/* Trust badges */}
+                <div style={{ display:'flex', alignItems:'center', gap:16 }}>
+                  {[
+                    { icon: ShieldCheck, label: 'Multi-source audit' },
+                    { icon: Globe, label: 'OSINT indexed' },
+                    { icon: Fingerprint, label: 'AI detection' },
+                  ].map((b, i) => (
+                    <div key={i} style={{ display:'flex', alignItems:'center', gap:5 }}>
+                      <b.icon size={11} color={DIM} />
+                      <span style={{ fontSize:10, color:DIM, fontFamily:"var(--font-mono)" }}>{b.label}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Recent Reports — compact */}
+              {recentReports.length > 0 && (
+                <section style={{ marginTop:20, paddingTop:16, borderTop:`1px solid rgba(var(--overlay-rgb),0.06)` }}>
+                  <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:16 }}>
+                    <span style={{ fontFamily:"var(--font-mono)", fontSize:9, color:DIM, letterSpacing:'0.14em', textTransform:'uppercase' }}>Recent Audits</span>
+                    <button onClick={() => navigate('/history')} style={{ background:'none', border:'none', cursor:'pointer', fontSize:10, color:GOLD, fontFamily:"var(--font-mono)", letterSpacing:'0.06em' }}>
+                      View All →
+                    </button>
+                  </div>
+                  <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(280px, 1fr))', gap:12 }}>
+                    {recentReports.slice(0, 3).map((d, i) => (
+                      <div key={i} onClick={() => navigate(`/history/${d.id}`)} style={{
+                        padding:16, borderRadius:14,
+                        background:'rgba(var(--overlay-rgb),0.02)', border:'1px solid rgba(var(--overlay-rgb),0.06)',
+                        cursor:'pointer', transition:'all 0.2s',
+                        display:'flex', alignItems:'center', gap:14
+                      }}
+                        onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(201,168,76,0.25)'; e.currentTarget.style.background = 'rgba(var(--overlay-rgb),0.04)'; }}
+                        onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(var(--overlay-rgb),0.06)'; e.currentTarget.style.background = 'rgba(var(--overlay-rgb),0.02)'; }}
+                      >
+                        <div style={{ width:40, height:40, borderRadius:10, background:'rgba(201,168,76,0.08)', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+                          <span style={{ fontFamily:"'DM Serif Display',serif", fontSize:16, fontWeight:400, color:GOLD }}>{Math.round(d.truth_score || d.truthScore || 0)}</span>
+                        </div>
+                        <div style={{ flex:1, minWidth:0 }}>
+                          <p style={{ margin:0, fontSize:13, color:TEXT, fontWeight:500, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+                            {d.input_text || d.input || 'Analysis'}
+                          </p>
+                          <div style={{ display:'flex', alignItems:'center', gap:8, marginTop:4 }}>
+                            <span style={{ fontSize:10, color:DIM, fontFamily:"var(--font-mono)" }}>
+                              {new Date(d.timestamp || d.created_at).toLocaleDateString()}
+                            </span>
+                            <span style={{ fontSize:10, color:DIM }}>·</span>
+                            <span style={{ fontSize:10, color:DIM, fontFamily:"var(--font-mono)" }}>
+                              {d.claims_count || d.claimsCount || 0} claims
                             </span>
                           </div>
-                        )}
-                      </div>
-                    </>
-                  )}
-
-                  <div className="vf-btn-row" style={{ display:'flex', flexWrap:'wrap', alignItems:'center', gap:12, paddingTop:4 }}>
-                    <button id="vfy-run-btn" className="vf-run" onClick={handleVerify} disabled={!canRun}>
-                      <Gavel size={15}/> {t.runAudit}
-                    </button>
-                    <input type="file" ref={fileRef} style={{ display:'none' }} accept="image/*,video/*,audio/*" onChange={handleFileAudit}/>
-                    <button className="vf-ghost" onClick={() => fileRef.current?.click()}>
-                      <Upload size={13}/> Import File
-                    </button>
-                    {error && <span style={{ fontSize:12, color:'#f87171' }}>{error}</span>}
-                  </div>
-                </div>
-
-                {/* Right: engine + recent */}
-                <div style={{ display:'flex', flexDirection:'column', gap:20, minWidth:0 }}>
-                  <div style={{ background:SURF, border:`1px solid ${LINE}`, borderRadius:12, padding:'18px 18px' }}>
-                    <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:14, paddingBottom:12, borderBottom:`1px solid ${LINE}` }}>
-                      <span style={{ fontFamily:'DM Mono,monospace', fontSize:9, color:DIM, letterSpacing:'0.12em', textTransform:'uppercase' }}>Engine</span>
-                      <div style={{ display:'flex', alignItems:'center', gap:6 }}>
-                       
-                      </div>
-                    </div>
-                    {[['Neural Engine','v1.0'],['Fact Index',`${engineStats.factIndex}m ago`],['Latency',`${engineStats.latency} ms`]].map(([k,v],i) => (
-                      <div key={i} style={{ display:'flex', justifyContent:'space-between', marginBottom:i<2?10:0 }}>
-                        <span style={{ fontSize:12, color:MUTED }}>{k}</span>
-                        <span style={{ fontFamily:'DM Mono,monospace', fontSize:11, color:DIM, transition:'all 0.5s ease' }}>{v}</span>
+                        </div>
+                        <ChevronRight size={14} color={DIM} />
                       </div>
                     ))}
                   </div>
-
-                  <div>
-                    <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:12, flexWrap:'wrap', gap:10 }}>
-                      <span style={{ fontFamily:'DM Mono,monospace', fontSize:9, color:DIM, letterSpacing:'0.12em', textTransform:'uppercase' }}>Recent</span>
-                      <div style={{ display:'flex', gap:4, flexWrap:'wrap' }}>
-                        {['All','Verified','Refuted'].map(f => (
-                          <button key={f} onClick={() => setActiveFilter(f)} className={`vf-tab ${activeFilter===f?'on':''}`}>{f}</button>
-                        ))}
-                      </div>
-                    </div>
-                    <div style={{ display:'flex', flexDirection:'column', gap:7 }}>
-                      {filteredReports.map((h,i) => {
-                        const v = h.topClaims?.[0]?.verdict || h.claims?.[0]?.verdict || '';
-                        return (
-                          <div key={i} className="vf-dos" onClick={() => navigate(`/history/${h.id}`)}>
-                            <div style={{ flex:1, minWidth:0 }}>
-                              <div style={{ marginBottom:5 }}><VerdictBadge verdict={v}/></div>
-                              <p style={{ fontSize:12, color:MUTED, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis', marginBottom:5 }}>{h.input||'Redacted'}</p>
-                              <div style={{ display:'flex', gap:10, flexWrap:'wrap' }}>
-                                <span className="vf-chip"><FileText size={9}/> {h.claims?.length||0} claims</span>
-                                <span className="vf-chip"><ShieldCheck size={9}/> {Math.round(h.truthScore)}%</span>
-                                <span className="vf-chip"><Clock size={9}/> {new Date(h.timestamp).toLocaleDateString()}</span>
-                              </div>
-                            </div>
-                            <ChevronRight size={12} color={DIM} style={{ flexShrink:0, marginTop:3 }}/>
-                          </div>
-                        );
-                      })}
-                      {filteredReports.length===0 && (
-                        <div style={{ padding:'20px 12px', textAlign:'center', border:'1px dashed rgba(255,255,255,.07)', borderRadius:10, fontSize:12, color:DIM }}>
-                          No {activeFilter==='All'?'':activeFilter.toLowerCase()} dossiers yet.
-                        </div>
-                      )}
-                    </div>
-                    <button className="vf-link" onClick={() => navigate('/history')} style={{ marginTop:10, display:'block' }}>
-                      View full history →
-                    </button>
-                  </div>
-                </div>
-              </div>
+                </section>
+              )}
             </motion.div>
           )}
 
+          {/* ═══════════ LOADING STATE ═══════════ */}
           {loading && (
-            <motion.div key="load" initial={{ opacity:0 }} animate={{ opacity:1 }} exit={{ opacity:0 }} style={{ width:'100%' }}>
-              <AnalysisProcessing elapsed={elapsed} step={step} logs={logs} inputTitle={url||text.substring(0,100)} onCancel={handleCancel} listening={listening} interim={interim}/>
+            <motion.div key="load" initial={{ opacity:0 }} animate={{ opacity:1 }} exit={{ opacity:0 }}>
+              <AnalysisProcessing elapsed={elapsed} step={step} logs={logs} inputTitle={url || text.slice(0,60)} onCancel={handleCancel} listening={listening} interim={interim} lang={lang} />
             </motion.div>
           )}
 
+          {/* ═══════════ RESULTS STATE ═══════════ */}
           {results && !loading && (
-            <motion.div key="res" ref={reportRef}
-              initial={{ opacity:0, y:12 }} animate={{ opacity:1, y:0 }}
-              style={{ paddingTop:40, paddingBottom:80, background:'var(--bg-main)' }}
-            >
-              <div className="vf-score-header" style={{ marginBottom: 32, border: 'none', background: 'none', padding: 0 }}>
-                <VerdictHero score={results.truthScore} mode={results.pipelineMeta?.mode} language={lang} />
-              </div>
+            <motion.div key="results" initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }} transition={{ duration:0.5 }} style={{ display:'flex', flexDirection:'column', gap:32 }}>
 
-              {mode === 'adversarial' && results.narrativeAnalysis && (
-                <NarrativeDuel analysis={results.narrativeAnalysis} language={lang} />
-              )}
+              {/* Verdict Hero */}
+              <VerdictHero score={results.truthScore} claims={results.claims || []} summary={results.summary} />
 
-              <QuickAuditSummary claims={results.claims} language={lang} />
+              {/* Narrative Duel (if adversarial) */}
+              {results.narrativeAnalysis && <NarrativeDuel analysis={results.narrativeAnalysis} />}
 
-              <div className="vf-score-header">
-                <div style={{ position:'relative', width:112, height:112, flexShrink:0, display:'flex', alignItems:'center', justifyContent:'center' }}>
-                  <ScoreArc score={results.truthScore}/>
-                  <div style={{ position:'absolute', display:'flex', flexDirection:'column', alignItems:'center' }}>
-                    <span style={{ fontFamily:"'DM Serif Display',Georgia,serif", fontSize:28, fontWeight:400, color:TEXT, lineHeight:1 }}>{Math.round(results.truthScore)}</span>
-                    <span style={{ fontFamily:'DM Mono,monospace', fontSize:8, color:GOLD, letterSpacing:'0.08em' }}>/100</span>
-                  </div>
-                </div>
-                <div style={{ flex:1, minWidth:0 }}>
-                  <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:10 }}>
-                    <Sparkles size={13} color={GOLD}/>
-                    <span style={{ fontFamily:'DM Mono,monospace', fontSize:10, color:GOLD, letterSpacing:'0.12em', textTransform:'uppercase' }}>{t.forensicSummary}</span>
-                  </div>
-                  <h2 style={{ fontFamily:"'DM Serif Display',Georgia,serif", fontSize:'clamp(22px,3vw,30px)', fontWeight:400, color:TEXT, letterSpacing:'-0.018em', marginBottom:8, lineHeight:1.15 }}>
-                    {t.auditComplete}
-                  </h2>
-                  <p style={{ fontSize:14, color:MUTED, lineHeight:1.65 }}>
-                    {t.confidenceLevel} <strong style={{ color:TEXT }}>{Math.round(results.truthScore)}%</strong> {t.derivedFrom} {results.claims?.length} {t.verifiedAssertions}
-                  </p>
-                </div>
-                <div className="vf-score-actions" style={{ display:'flex', flexDirection:'column', gap:8, flexShrink:0 }}>
-                  <button data-html2canvas-ignore className="vf-run" onClick={() => navigate(`/history/${results.reportId}`)} style={{ justifyContent:'center' }}>
-                    {t.viewReport} <ChevronRight size={14}/>
-                  </button>
-                  <button data-html2canvas-ignore className="vf-ghost" onClick={handleExportPDF} style={{ justifyContent:'center', border:`1px solid ${GOLD_L}`, color:GOLD }}>
-                    {t.exportPDF}
-                  </button>
-                  <button data-html2canvas-ignore className="vf-link" style={{ textAlign:'center' }}
-                    onClick={() => { setResults(null); setUrl(''); setText(''); }}>
-                    {t.startNew}
-                  </button>
-                </div>
-
-              </div>
-
-              {results.aiTextDetection && (
-                <div className="vf-ai-row">
-                  <div style={{ flex:1, padding:'20px 24px', background:SURF, border:`1px solid ${LINE}`, borderRadius:16 }}>
-                    <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:12 }}>
-                      <Activity size={16} color={results.aiTextDetection.score>50?'#f87171':'#4ade80'}/>
-                      <span style={{ fontSize:11, fontFamily:"'DM Mono',monospace", textTransform:'uppercase', letterSpacing:'0.12em', color:DIM }}>{t.aiTextProb}</span>
+              {/* AI Detection & Bias Metrics */}
+              <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(200px, 1fr))', gap:12 }}>
+                {[
+                  { label:'AI Text Detection', value: results.aiTextDetection?.score != null ? `${results.aiTextDetection.score}%` : 'N/A', desc: results.aiTextDetection?.explanation || 'Baseline', icon: Fingerprint, color:'#a78bfa' },
+                  { label:'Bias Spectrum',      value: results.biasSpectrum?.leaning || 'Neutral', desc: `Score: ${results.biasSpectrum?.score ?? 0}`, icon: BarChart3, color:'#f472b6' },
+                  { label:'Claims Analyzed',    value: results.claims?.length || 0, desc: `Truth Index: ${Math.round(results.truthScore)}%`, icon: Scale, color: GOLD },
+                  { label:'Forensic Engine',    value: results.meta?.models?.adjudication || 'Truecast Core', desc: `Latency: ${results.meta?.latency || '0s'}`, icon: Zap, color:'#4ade80' },
+                ].map((m, i) => (
+                  <motion.div
+                    key={m.label}
+                    initial={{ opacity:0, y:12 }}
+                    animate={{ opacity:1, y:0 }}
+                    transition={{ delay: 0.1 + i * 0.08 }}
+                    style={{
+                      padding:20, borderRadius:16,
+                      background:'rgba(var(--overlay-rgb),0.02)',
+                      border:'1px solid rgba(var(--overlay-rgb),0.06)'
+                    }}
+                  >
+                    <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:12 }}>
+                      <m.icon size={14} color={m.color} />
+                      <span style={{ fontSize:10, fontWeight:700, color:DIM, letterSpacing:'0.1em', textTransform:'uppercase', fontFamily:"var(--font-mono)" }}>{m.label}</span>
                     </div>
-                    <div style={{ display:'flex', alignItems:'flex-end', gap:14, flexWrap:'wrap' }}>
-                      <span style={{ fontFamily:"'DM Serif Display',Georgia,serif", fontSize:36, color:TEXT, lineHeight:1 }}>{results.aiTextDetection.score}%</span>
-                      <span style={{ fontSize:13, color:MUTED, paddingBottom:4 }}>{results.aiTextDetection.score>50?t.likelySynth:t.likelyHuman}</span>
-                    </div>
-                    <p style={{ fontSize:12, color:DIM, marginTop:12, lineHeight:1.5 }}>{results.aiTextDetection.explanation}</p>
-                  </div>
-                  {results.aiMediaDetection && (
-                    <div style={{ flex:1, padding:'20px 24px', background:SURF, border:`1px solid ${LINE}`, borderRadius:16 }}>
-                      <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:12 }}>
-                        <ShieldAlert size={16} color={results.aiMediaDetection.score>0?'#fb923c':'#4ade80'}/>
-                        <span style={{ fontSize:11, fontFamily:"'DM Mono',monospace", textTransform:'uppercase', letterSpacing:'0.12em', color:DIM }}>{t.mediaAuth}</span>
-                      </div>
-                      <div style={{ display:'flex', alignItems:'flex-end', gap:14 }}>
-                        <span style={{ fontFamily:"'DM Serif Display',Georgia,serif", fontSize:36, color:TEXT, lineHeight:1 }}>{results.aiMediaDetection.verdict==='Clear'?t.clear:results.aiMediaDetection.verdict}</span>
-                      </div>
-                      <p style={{ fontSize:12, color:DIM, marginTop:12, lineHeight:1.5 }}>{results.aiMediaDetection.summary}</p>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {(results.forensicReference||results.aiMediaDetection?.results?.[0]?.url) && (
-                <div style={{ marginBottom:44 }}>
-                  <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:20, paddingBottom:14, borderBottom:`1px solid ${GOLD_L}` }}>
-                    <ShieldCheck size={18} color={GOLD}/>
-                    <h3 style={{ fontFamily:"'DM Serif Display',Georgia,serif", fontSize:'clamp(18px,2.5vw,26px)', fontWeight:400, color:TEXT }}>
-                      A/B Forensic Comparison.
-                    </h3>
-                  </div>
-                  <div className="vf-forensic-grid">
-                    <div style={{ background:SURF, border:`1px solid ${LINE}`, borderRadius:16, overflow:'hidden' }}>
-                      <div style={{ padding:'10px 14px', background:'rgba(255,255,255,0.03)', borderBottom:`1px solid ${LINE}`, display:'flex', justifyContent:'space-between' }}>
-                        <span style={{ fontSize:9, fontFamily:"'DM Mono',monospace", color:DIM, textTransform:'uppercase', letterSpacing:'0.1em' }}>Evidence Source</span>
-                        <span style={{ fontSize:9, fontFamily:"'DM Mono',monospace", color:'#f87171' }}>[SUBJECT]</span>
-                      </div>
-                      <div style={{ height:220, background:'#000', display:'flex', alignItems:'center', justifyContent:'center' }}>
-                        <img src={results.aiMediaDetection?.results?.[0]?.url||results.forensicReference||'https://images.unsplash.com/photo-1511367461989-f85a21fda167?ixlib=rb-4.0.3&auto=format&fit=crop&w=512&q=80'} alt="Evidence Source" style={{ width:'100%', height:'100%', objectFit:'contain' }} onError={e=>{ e.target.onerror=null; e.target.src='https://images.unsplash.com/photo-1511367461989-f85a21fda167?ixlib=rb-4.0.3&auto=format&fit=crop&w=512&q=80'; }}/>
-                      </div>
-                    </div>
-                    <div style={{ background:SURF, border:`1px solid ${GOLD_L}`, borderRadius:16, overflow:'hidden' }}>
-                      <div style={{ padding:'10px 14px', background:'rgba(201,168,76,0.05)', borderBottom:`1px solid ${GOLD_L}`, display:'flex', justifyContent:'space-between' }}>
-                        <span style={{ fontSize:9, fontFamily:"'DM Mono',monospace", color:GOLD, textTransform:'uppercase', letterSpacing:'0.1em' }}>AI Target Reference</span>
-                        <span style={{ fontSize:9, fontFamily:"'DM Mono',monospace", color:'#4ade80' }}>[VERIFIED]</span>
-                      </div>
-                      <div style={{ height:220, background:'#000', display:'flex', alignItems:'center', justifyContent:'center' }}>
-                        <img src={results.forensicReference||results.aiMediaDetection?.results?.[0]?.url||'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?ixlib=rb-4.0.3&auto=format&fit=crop&w=512&q=80'} alt="Reference" style={{ width:'100%', height:'100%', objectFit:'contain' }} onError={e=>{ e.target.onerror=null; e.target.src='https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?ixlib=rb-4.0.3&auto=format&fit=crop&w=512&q=80'; }}/>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* PROVENANCE/REVERSE SEARCH RESULTS */}
-                  {results.aiMediaDetection?.results?.[0]?.provenance?.found && (
-                    <div style={{ marginTop: 24, padding: 20, background: 'rgba(59,130,246,0.04)', border: '1px solid rgba(59,130,246,0.15)', borderRadius: 16 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
-                        <Search size={16} color="#3b82f6" />
-                        <span style={{ fontSize: 11, fontFamily: "'DM Mono', monospace", color: "#3b82f6", fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em' }}>Provenance Analysis (Reverse Lookup)</span>
-                      </div>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                        {results.aiMediaDetection.results[0].provenance.matches.map((m, i) => (
-                          <a key={i} href={m.url} target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'none', display: 'block', padding: '12px', background: 'rgba(0,0,0,0.2)', borderRadius: 10, border: '1px solid rgba(255,255,255,0.05)', transition: 'background 0.2s' }}
-                            onMouseOver={e => e.currentTarget.style.background = 'rgba(255,255,255,0.05)'}
-                            onMouseOut={e => e.currentTarget.style.background = 'rgba(0,0,0,0.2)'}
-                          >
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-                              <span style={{ fontSize: 13, fontWeight: 600, color: TEXT }}>{m.title}</span>
-                              <LinkIcon size={12} color={DIM} />
-                            </div>
-                            <p style={{ fontSize: 11, color: DIM, margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{m.url}</p>
-                          </a>
-                        ))}
-                      </div>
-                      <p style={{ fontSize: 11, color: MUTED, marginTop: 12, fontStyle: 'italic' }}>
-                        ↳ Digital fingerprints found in public repositories. Cross-referencing against known viral media records.
-                      </p>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:14, flexWrap:'wrap', gap:8 }}>
-                <h3 style={{ fontFamily:"'DM Serif Display',Georgia,serif", fontSize:'clamp(18px,2.5vw,24px)', fontWeight:400, color:TEXT, letterSpacing:'-0.01em' }}>
-                  Verified Assertions
-                </h3>
-                <span style={{ fontFamily:'DM Mono,monospace', fontSize:10, color:DIM }}>{results.claims?.length} claims reviewed</span>
-              </div>
-
-              <div style={{ background:'rgba(255,255,255,0.02)', border:`1px solid ${LINE}`, borderRadius:14, overflow:'hidden' }}>
-                <div className="vf-claim-header">
-                  {['Verdict','Assertion & Reasoning','Confidence'].map(h => (
-                    <span key={h} style={{ fontFamily:'DM Mono,monospace', fontSize:9, fontWeight:700, letterSpacing:'0.12em', color:DIM, textTransform:'uppercase' }}>{h}</span>
-                  ))}
-                </div>
-                {results.claims?.map((c,i) => (
-                  <motion.div key={i} className="vf-claim"
-                    initial={{ opacity:0, x:-8 }} animate={{ opacity:1, x:0 }}
-                    transition={{ delay:i*.05, duration:.28 }}>
-                    <div style={{ paddingTop:2 }}><VerdictBadge verdict={c.verdict}/></div>
-                    <div>
-                      <div style={{ display:'flex', alignItems:'flex-start', gap:8, marginBottom:5, flexWrap:'wrap' }}>
-                        <p style={{ fontSize:14, fontWeight:500, color:TEXT, lineHeight:1.55, margin:0 }}>{c.claim}</p>
-                        {c.isTimeSensitive && (
-                          <span style={{ fontFamily:"'DM Mono',monospace", fontSize:9, color:'#fbbf24', display:'inline-flex', alignItems:'center', gap:4, background:'rgba(251,191,36,0.1)', padding:'2px 6px', borderRadius:4, whiteSpace:'nowrap' }}>
-                            <AlertTriangle size={9}/> Time Sensitive
-                          </span>
-                        )}
-                      </div>
-                      <p style={{ fontSize:12, color:DIM, lineHeight:1.55 }}>{c.reasoning}</p>
-                    </div>
-                    <div style={{ textAlign:'right' }}>
-                      <span style={{ fontFamily:'DM Mono,monospace', fontSize:18, fontWeight:500, color: (c.confidence > 1 ? c.confidence : (c.confidence||0)*100) >= 70 ? GOLD : DIM }}>
-                        {Math.round(c.confidence > 1 ? c.confidence : (c.confidence||0)*100)}<span style={{ fontSize:10, opacity:.5 }}>%</span>
-                      </span>
-                    </div>
+                    <div style={{ fontSize:20, fontWeight:600, color:TEXT, fontFamily:"'DM Serif Display',serif", marginBottom:4 }}>{m.value}</div>
+                    <div style={{ fontSize:11, color:MUTED }}>{m.desc}</div>
                   </motion.div>
                 ))}
               </div>
+
+              {/* Claims Section */}
+              <section>
+                <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:20, paddingBottom:14, borderBottom:'1px solid rgba(var(--overlay-rgb),0.06)' }}>
+                  <div>
+                    <h3 style={{ fontFamily:"var(--font-serif)", fontSize:'clamp(22px,3vw,30px)', fontWeight:400, color:TEXT, margin:0 }}>
+                      Claim Analysis
+                    </h3>
+                    <p style={{ margin:'4px 0 0', fontSize:12, color:DIM }}>{results.claims?.length} assertions verified · click to expand evidence</p>
+                  </div>
+                </div>
+                <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
+                  {results.claims?.map((c, i) => (
+                    <ClaimCard key={i} claim={c} index={i} delay={0.06 * i} />
+                  ))}
+                </div>
+              </section>
+
+              {/* Action Footer */}
+              <div style={{
+                display:'flex', alignItems:'center', justifyContent:'space-between', flexWrap:'wrap', gap:16,
+                padding:'28px 32px',
+                background:'rgba(201,168,76,0.04)',
+                border:'1px solid rgba(201,168,76,0.12)',
+                borderRadius:20
+              }}>
+                <div>
+                  <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:6 }}>
+                    <Sparkles size={14} color={GOLD} />
+                    <span style={{ fontFamily:"var(--font-mono)", fontSize:10, fontWeight:700, color:GOLD, letterSpacing:'0.12em', textTransform:'uppercase' }}>Audit Complete</span>
+                  </div>
+                  <p style={{ fontSize:13, color:MUTED, margin:0 }}>
+                    Confidence level of <strong style={{ color:TEXT }}>{Math.round(results.truthScore)}%</strong> across {results.claims?.length} verified assertions.
+                  </p>
+                </div>
+                <div style={{ display:'flex', gap:10, flexWrap:'wrap' }}>
+                  <button className="v-cta-btn" onClick={() => navigate(`/history/${results.id || results.reportId}`)} style={{ height:44, fontSize:13 }}>
+                    {isHindi ? 'पूरी रिपोर्ट' : 'Full Report'} <ChevronRight size={15} />
+                  </button>
+                  <button className="v-ghost-btn" onClick={() => setShowExportModal(true)}>
+                    <Download size={14} /> {isHindi ? 'PDF निर्यात करें' : 'Export PDF'}
+                  </button>
+                  <button onClick={resetAll} style={{
+                    height:44, padding:'0 18px', background:'none', border:'1px solid rgba(var(--overlay-rgb),0.1)',
+                    borderRadius:12, color:DIM, fontSize:12, fontWeight:600, cursor:'pointer',
+                    display:'flex', alignItems:'center', gap:6, transition:'all 0.2s',
+                    fontFamily:"var(--font-body)"
+                  }}
+                    onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(var(--overlay-rgb),0.2)'; e.currentTarget.style.color = TEXT; }}
+                    onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(var(--overlay-rgb),0.1)'; e.currentTarget.style.color = DIM; }}
+                  >
+                    <RotateCcw size={12} /> {isHindi ? 'नया ऑडिट' : 'New Audit'}
+                  </button>
+                </div>
+              </div>
+
             </motion.div>
           )}
         </AnimatePresence>
       </main>
 
+      {/* ═══════════ MODALS ═══════════ */}
       <AnimatePresence>
         {showExportModal && (
           <motion.div initial={{ opacity:0 }} animate={{ opacity:1 }} exit={{ opacity:0 }}
-            style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.85)', backdropFilter:'blur(4px)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:10000, padding:20 }}>
-            <motion.div initial={{ scale:0.95, y:10 }} animate={{ scale:1, y:0 }} exit={{ scale:0.95, y:10 }}
-              style={{ background:'#111118', border:`1px solid ${LINE}`, borderRadius:16, width:'100%', maxWidth:400, padding:32 }}>
-              <h3 style={{ fontFamily:"'DM Serif Display',serif", fontSize:24, color:TEXT, marginBottom:12 }}>Download Report</h3>
-              <p style={{ color:MUTED, fontSize:14, marginBottom:24, lineHeight:1.5 }}>Enter your name for the official forensic record.</p>
+            style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.85)', backdropFilter:'blur(12px)', zIndex:9999, display:'flex', alignItems:'center', justifyContent:'center', padding:24 }}
+            onClick={() => setShowExportModal(false)}
+          >
+            <motion.div initial={{ scale:0.95, y:16 }} animate={{ scale:1, y:0 }} exit={{ scale:0.95, y:16 }}
+              onClick={e => e.stopPropagation()}
+              style={{ width:'100%', maxWidth:440, background:'var(--bg-main)', border:'1px solid rgba(var(--overlay-rgb),0.1)', borderRadius:28, padding:'40px 36px', position:'relative', overflow:'hidden' }}
+            >
+              <div style={{ position:'absolute', top:0, left:0, right:0, height:2, background:`linear-gradient(90deg, transparent, ${GOLD}, transparent)` }} />
+              <h3 style={{ fontFamily:"var(--font-serif)", fontSize:28, fontWeight:400, margin:'0 0 8px', color:TEXT }}>Export Report</h3>
+              <p style={{ fontSize:13, color:MUTED, lineHeight:1.6, margin:'0 0 28px' }}>Enter your name to sign the verified intelligence dossier.</p>
               <div style={{ marginBottom:24 }}>
-                <label style={{ display:'block', fontSize:9, fontFamily:"'DM Mono',monospace", color:DIM, textTransform:'uppercase', letterSpacing:'0.1em', marginBottom:8 }}>Report Author</label>
-                <input type="text" value={exportName} onChange={e => setExportName(e.target.value)}
-                  placeholder="e.g. Himanshu Jha" autoFocus
-                  style={{ width:'100%', boxSizing:'border-box', padding:'12px 14px', background:'rgba(255,255,255,0.04)', border:`1px solid ${LINE}`, borderRadius:8, color:TEXT, fontSize:14, outline:'none' }}
-                  onKeyDown={e => e.key==='Enter' && executePDFExport()}/>
+                <span style={{ display:'block', fontFamily:"var(--font-mono)", fontSize:9, color:DIM, letterSpacing:'0.1em', textTransform:'uppercase', marginBottom:8 }}>{isHindi ? 'लेखक के हस्ताक्षर' : 'Author Signature'}</span>
+                <input type="text" value={exportName} onChange={e => setExportName(e.target.value)} placeholder="e.g. Agent J. Smith"
+                  className="v-input-field" style={{ height:48, padding:'0 18px', fontSize:14 }} autoFocus />
               </div>
               <div style={{ display:'flex', gap:12 }}>
-                <button onClick={() => setShowExportModal(false)}
-                  style={{ flex:1, padding:'12px', background:'rgba(255,255,255,0.04)', border:`1px solid ${LINE}`, borderRadius:8, color:MUTED, fontSize:13, fontWeight:500, cursor:'pointer' }}>
-                  Cancel
-                </button>
-                <button onClick={executePDFExport}
-                  style={{ flex:1, padding:'12px', background:GOLD, border:'none', borderRadius:8, color:'var(--bg-main)', fontSize:13, fontWeight:600, cursor:'pointer' }}>
+                <button onClick={() => setShowExportModal(false)} style={{
+                  flex:1, height:48, borderRadius:12, border:'1px solid rgba(var(--overlay-rgb),0.1)',
+                  background:'transparent', color:MUTED, fontWeight:600, fontSize:13,
+                  cursor:'pointer', transition:'all 0.2s', fontFamily:"var(--font-body)"
+                }}>Cancel</button>
+                <button onClick={() => { setShowExportModal(false); generatePDF(results, exportName, user?.organization||'', user?.logoUrl||''); }}
+                  className="v-cta-btn" style={{ flex:1, justifyContent:'center' }}>
                   Download PDF
                 </button>
               </div>
@@ -1387,29 +1126,30 @@ export default function Verify() {
         )}
 
         {showCreditModal && (
-          <motion.div initial={{ opacity:0, backdropFilter:'blur(0px)' }} animate={{ opacity:1, backdropFilter:'blur(8px)' }} exit={{ opacity:0, backdropFilter:'blur(0px)' }}
-            style={{ position:'fixed', inset:0, background:'var(--bg-overlay)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:10001, padding:24 }}>
-            <motion.div initial={{ scale:0.92, y:20 }} animate={{ scale:1, y:0 }} exit={{ scale:0.92, y:20 }}
-              style={{ background:'var(--bg-main)', border:`1px solid ${GOLD}`, borderRadius:24, width:'100%', maxWidth:440, padding:'48px 40px', textAlign:'center', boxShadow:`0 0 60px rgba(201,168,76,0.12)`, position:'relative', overflow:'hidden' }}>
-              <div style={{ position:'absolute', top:0, left:0, width:'100%', height:2, background:`linear-gradient(90deg, transparent, ${GOLD}, transparent)` }} />
-              <div style={{ width: 72, height: 72, borderRadius: 20, background: GOLD_L, border: `1px solid ${GOLD}`, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 28px', transform:'rotate(5deg)' }}>
-                <Zap size={36} color={GOLD} fill={GOLD}/>
+          <motion.div initial={{ opacity:0 }} animate={{ opacity:1 }} exit={{ opacity:0 }}
+            style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.92)', backdropFilter:'blur(16px)', zIndex:10000, display:'flex', alignItems:'center', justifyContent:'center', padding:24 }}
+          >
+            <motion.div initial={{ scale:0.9, y:30 }} animate={{ scale:1, y:0 }}
+              style={{ width:'100%', maxWidth:480, padding:'56px 48px', background:'var(--bg-main)', border:'1px solid rgba(201,168,76,0.2)', borderRadius:32, textAlign:'center', position:'relative', overflow:'hidden' }}
+            >
+              <div style={{ position:'absolute', top:0, left:0, right:0, height:2, background:`linear-gradient(90deg, transparent, ${GOLD}, transparent)` }} />
+              <div style={{ width:64, height:64, borderRadius:20, background:'rgba(201,168,76,0.1)', border:'1px solid rgba(201,168,76,0.25)', display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 24px' }}>
+                <Zap size={32} color={GOLD} />
               </div>
-              <h3 style={{ fontFamily:"'DM Serif Display',serif", fontSize:32, color:TEXT, marginBottom:16, letterSpacing:'-0.01em' }}>Investigative Limit Reached</h3>
-              <p style={{ color:MUTED, fontSize:15, marginBottom:40, lineHeight:1.6, padding:'0 10px' }}>You have completed your 3 complimentary forensic audits. Sign in to your Truecast account to unlock unlimited high-precision research and secure archive storage.</p>
-              
-              <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
-                <button onClick={() => navigate('/auth')}
-                  style={{ width:'100%', padding:'16px', background:GOLD, border:'none', borderRadius:12, color:'var(--bg-main)', fontSize:14, fontWeight:700, cursor:'pointer', boxShadow:`0 8px 30px rgba(201,168,76,0.25)`, transition:'transform 0.2s' }}
-                  onMouseOver={e => e.currentTarget.style.transform='translateY(-2px)'}
-                  onMouseOut={e => e.currentTarget.style.transform='none'}>
-                  Join Truecast — Unlimited Access
-                </button>
-                <button onClick={() => setShowCreditModal(false)}
-                  style={{ width:'100%', padding:'14px', background:'transparent', border:`1px solid ${LINE}`, borderRadius:12, color:MUTED, fontSize:13, fontWeight:500, cursor:'pointer' }}>
-                  Return to Dashboard
-                </button>
-              </div>
+              <h3 style={{ fontFamily:"var(--font-serif)", fontSize:32, fontWeight:400, margin:'0 0 12px', color:TEXT }}>Limit Reached.</h3>
+              <p style={{ fontSize:15, color:MUTED, lineHeight:1.65, margin:'0 0 36px' }}>
+                Free access allows 3 analyses. Sign up for unlimited audits, full reports, and more.
+              </p>
+              <button className="v-cta-btn" onClick={() => navigate('/auth')} style={{ width:'100%', justifyContent:'center', height:52, fontSize:15, marginBottom:12 }}>
+                Get Full Access
+              </button>
+              <button onClick={() => setShowCreditModal(false)} style={{
+                width:'100%', height:44, background:'transparent', border:'1px solid rgba(var(--overlay-rgb),0.1)', borderRadius:14,
+                color:MUTED, fontWeight:600, fontSize:13, cursor:'pointer', transition:'all 0.2s',
+                fontFamily:"var(--font-body)"
+              }}>
+                Return to Dashboard
+              </button>
             </motion.div>
           </motion.div>
         )}

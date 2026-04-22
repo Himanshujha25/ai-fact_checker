@@ -6,6 +6,7 @@ import {
   Mail, Lock, User, Loader2, Building2
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { GoogleLogin } from '@react-oauth/google';
 
 const GOLD = 'var(--gold)';
 const GOLD2 = 'rgba(201,168,76,0.10)';
@@ -26,8 +27,22 @@ export default function Signup() {
   const [error,        setError]        = useState('');
   const [success,      setSuccess]      = useState('');
 
-  const { signup } = useAuth();
+  const { signup, googleLogin } = useAuth();
   const navigate   = useNavigate();
+
+  const handleGoogleSignup = async (credentialResponse) => {
+    setLoading(true); setError('');
+    try {
+      if (!credentialResponse.credential) throw new Error('No credential received');
+      await googleLogin(credentialResponse.credential);
+      setSuccess('Google Profile Authenticated. Redirecting…');
+      setTimeout(() => navigate('/verify'), 1000);
+    } catch (err) {
+      setError(err.message || 'Google Sign-up failed');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -66,7 +81,7 @@ export default function Signup() {
 
         .su-input {
           width:100%; box-sizing:border-box;
-          background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.08);
+          background:rgba(var(--overlay-rgb),0.03); border:1px solid rgba(var(--overlay-rgb),0.08);
           border-radius:9px; color:${TEXT};
           font-family:'DM Sans',system-ui,sans-serif;
           font-size:14px; font-weight:400; outline:none;
@@ -90,8 +105,8 @@ export default function Signup() {
         .su-btn-gold:disabled { opacity:0.35; cursor:default; }
 
         .su-oauth {
-          flex:1; background:rgba(255,255,255,0.03);
-          border:1px solid rgba(255,255,255,0.07);
+          flex:1; background:rgba(var(--overlay-rgb),0.03);
+          border:1px solid rgba(var(--overlay-rgb),0.07);
           border-radius:9px; height:46px;
           display:flex; align-items:center; justify-content:center; gap:8px;
           cursor:pointer;
@@ -99,7 +114,7 @@ export default function Signup() {
           font-size:13px; font-weight:500; color:${MUTED};
           transition:border-color 0.2s,color 0.2s;
         }
-        .su-oauth:hover { border-color:rgba(255,255,255,0.15); color:${TEXT}; }
+        .su-oauth:hover { border-color:rgba(var(--overlay-rgb),0.15); color:${TEXT}; }
 
         .su-link { color:${GOLD}; text-decoration:none; font-weight:500; transition:opacity 0.2s; }
         .su-link:hover { opacity:0.75; }
@@ -140,7 +155,7 @@ export default function Signup() {
       {/* ── Nav ── */}
       <header className="su-header">
         <Link to="/" style={{ textDecoration:'none', display:'flex', alignItems:'center', gap:10 }}>
-          <div style={{ width:22, height:22, borderRadius:5, overflow:'hidden', border:`1px solid ${LINE}`, background:'rgba(255,255,255,0.03)' }}>
+          <div style={{ width:22, height:22, borderRadius:5, overflow:'hidden', border:`1px solid ${LINE}`, background:'rgba(var(--overlay-rgb),0.03)' }}>
             <img 
                src="/lady_justice.png"
                alt="Logo" style={{ width:'100%', height:'100%', objectFit:'cover' }}
@@ -225,7 +240,7 @@ export default function Signup() {
                 </div>
                 {password.length > 0 && (
                   <div style={{ marginTop:8 }}>
-                    <div style={{ height:2, background:'rgba(255,255,255,0.06)', borderRadius:4, overflow:'hidden' }}>
+                    <div style={{ height:2, background:'rgba(var(--overlay-rgb),0.06)', borderRadius:4, overflow:'hidden' }}>
                       <div style={{ height:'100%', width:`${(strength/4)*100}%`, background:strengthColor, borderRadius:4, transition:'width 0.3s ease,background 0.3s ease' }}/>
                     </div>
                     <div style={{ display:'flex', justifyContent:'flex-end', marginTop:5, fontFamily:"'DM Mono',monospace", fontSize:9, color:strengthColor, letterSpacing:'0.08em', textTransform:'uppercase', opacity:0.8 }}>
@@ -265,27 +280,17 @@ export default function Signup() {
               <div style={{ flex:1, height:1, background:LINE }}/>
             </div>
 
-            <div style={{ display:'flex', gap:10 }}>
-              <button 
-                onClick={async () => {
-                   setLoading(true); setError('');
-                   await new Promise(r => setTimeout(r, 1500));
-                   try {
-                     await login('guest@vericheck.ai', 'vericheck_secret_key_2026'); // Guest for now
-                     setSuccess('Google Profile Authenticated. Redirecting…');
-                     setTimeout(() => navigate('/verify'), 1000);
-                   } catch(e) { setError('Google Sign-up Error'); setLoading(false); }
-                }}
-                className="su-oauth" style={{ width: '100%', flex: 'none', background:'rgba(255,255,255,0.04)', border:`1px solid ${LINE}`, borderRadius:12 }}
-              >
-                <svg width="18" height="18" viewBox="0 0 24 24" style={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.2))' }}>
-                  <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"/>
-                  <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-                  <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/>
-                  <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
-                </svg>
-                <span style={{ marginLeft: 8 }}>Sign up with Google</span>
-              </button>
+            <div style={{ display:'flex', justifyContent: 'center' }}>
+              <div style={{ width: '100%', display: 'flex', justifyContent: 'center' }}>
+                <GoogleLogin
+                  onSuccess={handleGoogleSignup}
+                  onError={() => setError('Google Sign-up Failed')}
+                  theme="filled_black"
+                  shape="pill"
+                  width="100%"
+                  text="signup_with"
+                />
+              </div>
             </div>
           </div>
 

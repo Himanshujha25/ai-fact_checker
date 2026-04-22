@@ -7,11 +7,12 @@ import {
   ShieldAlert, AlertTriangle
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useVoice } from '../context/VoiceContext';
 
 const GOLD = 'var(--gold)';
 const GOLD_D = 'rgba(201,168,76,0.1)';
 const SURF = 'var(--surf)';
-const SURF2 = 'rgba(255,255,255,0.055)';
+const SURF2 = 'rgba(var(--overlay-rgb),0.055)';
 const LINE = 'var(--line)';
 const TEXT = 'var(--text-main)';
 const MUTED = 'var(--text-muted)';
@@ -42,50 +43,25 @@ function Counter({ target, suffix = '' }) {
   return <span ref={ref}>{display}{unit}{suffix}</span>;
 }
 
-function PipelineCard({ num, icon: Icon, title, body, children, style = {}, delay = 0 }) {
+function PipelineCard({ num, icon: Icon, title, body, children, className = "", delay = 0 }) {
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true }}
       transition={{ duration: 0.5, delay, ease: [0.4, 0, 0.2, 1] }}
-      style={{
-        background: SURF,
-        border: `1px solid ${LINE}`,
-        borderRadius: 16,
-        padding: '32px 32px',
-        position: 'relative',
-        overflow: 'hidden',
-        transition: 'border-color 0.25s',
-        ...style,
-      }}
-      whileHover={{ borderColor: 'rgba(255,255,255,0.13)' }}
+      className={`bg-surf border border-line rounded-2xl p-8 relative overflow-hidden transition-colors hover:border-[rgba(var(--overlay-rgb),0.13)] ${className}`}
     >
-      <span style={{
-        position: 'absolute', top: 20, right: 24,
-        fontFamily: "'DM Serif Display', Georgia, serif",
-        fontSize: 72, fontWeight: 400, lineHeight: 1,
-        color: 'rgba(255,255,255,0.04)',
-        userSelect: 'none', pointerEvents: 'none',
-      }}>
+      <span className="absolute top-5 right-6 font-serif text-[72px] font-normal庆 text-[rgba(var(--overlay-rgb),0.04)] select-none pointer-events-none leading-none">
         {num}
       </span>
-      <div style={{
-        width: 36, height: 36, borderRadius: 9,
-        background: GOLD_D,
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        marginBottom: 22,
-      }}>
-        <Icon size={17} color={GOLD} />
+      <div className="w-9 h-9 rounded-[9px] bg-gold/10 flex items-center justify-center mb-5.5">
+        <Icon size={17} className="text-gold" />
       </div>
-      <h3 style={{
-        fontFamily: "'DM Serif Display', Georgia, serif",
-        fontSize: 22, fontWeight: 400,
-        color: TEXT, marginBottom: 10, letterSpacing: '-0.01em',
-      }}>
+      <h3 className="font-serif text-[22px] font-normal text-text-main mb-2.5 tracking-tight">
         {title}
       </h3>
-      <p style={{ fontSize: 13, color: MUTED, lineHeight: 1.7 }}>{body}</p>
+      <p className="text-[13px] text-text-muted leading-[1.7]">{body}</p>
       {children}
     </motion.div>
   );
@@ -94,11 +70,11 @@ function PipelineCard({ num, icon: Icon, title, body, children, style = {}, dela
 function SourceCard({ name, url, label, confidence, category, delay = 0 }) {
   const isTrusted = label === 'Trusted';
   const isBiased = label === 'Biased';
-  const isUnreliable = label === 'Unreliable';
 
-  const labelColor = isTrusted ? '#4ade80' : isBiased ? '#fbbf24' : '#f87171';
-  const labelBg = isTrusted ? 'rgba(74,222,128,0.08)' : isBiased ? 'rgba(251,191,36,0.08)' : 'rgba(248,113,113,0.08)';
-  const labelBorder = isTrusted ? 'rgba(74,222,128,0.2)' : isBiased ? 'rgba(251,191,36,0.2)' : 'rgba(248,113,113,0.2)';
+  const labelColorClass = isTrusted ? 'text-green-400' : isBiased ? 'text-amber-400' : 'text-red-400';
+  const labelBgClass = isTrusted ? 'bg-green-400/8' : isBiased ? 'bg-amber-400/8' : 'bg-red-400/8';
+  const labelBorderClass = isTrusted ? 'border-green-400/20' : isBiased ? 'border-amber-400/20' : 'border-red-400/20';
+  const dotColorClass = isTrusted ? 'bg-green-400' : isBiased ? 'bg-amber-400' : 'bg-red-400';
 
   return (
     <motion.div
@@ -106,96 +82,54 @@ function SourceCard({ name, url, label, confidence, category, delay = 0 }) {
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true }}
       transition={{ duration: 0.45, delay }}
-      whileHover={{ y: -6, borderColor: 'rgba(201,168,76,0.4)', background: 'rgba(255,255,255,0.05)' }}
-      style={{
-        background: SURF,
-        border: `1px solid ${LINE}`,
-        borderRadius: 18,
-        padding: '28px',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: 20,
-        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-        boxShadow: '0 10px 30px -10px rgba(0,0,0,0.3)',
-      }}
+      whileHover={{ y: -6, borderColor: 'rgba(201,168,76,0.4)', background: 'rgba(var(--overlay-rgb),0.05)' }}
+      className="bg-surf border border-line rounded-[18px] p-7 flex flex-col gap-5 transition-all duration-300 ease-in-out shadow-[0_10px_30px_-10px_rgba(0,0,0,0.3)]"
     >
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', gap: 12 }}>
-        <div style={{ display: 'flex', gap: 12, alignItems: 'center', minWidth: 0 }}>
-          <div style={{
-            width: 40, height: 40, borderRadius: 10,
-            background: isTrusted ? 'rgba(74,222,128,0.06)' : 'rgba(255,255,255,0.03)',
-            border: `1px solid ${isTrusted ? 'rgba(74,222,128,0.15)' : LINE}`,
-            display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0
-          }}>
-            {isTrusted ? <ShieldCheck size={18} color="#4ade80" /> : isBiased ? <ShieldAlert size={18} color="#fbbf24" /> : <AlertTriangle size={18} color="#f87171" />}
+      <div className="flex justify-between items-start gap-3">
+        <div className="flex gap-3 items-center min-w-0">
+          <div className={`w-10 h-10 rounded-max bg-[rgba(var(--overlay-rgb),0.03)] border border-line flex items-center justify-center flex-shrink-0 ${isTrusted ? 'bg-green-400/6 border-green-400/15' : ''}`}>
+            {isTrusted ? <ShieldCheck size={18} className="text-green-400" /> : isBiased ? <ShieldAlert size={18} className="text-amber-400" /> : <AlertTriangle size={18} className="text-red-400" />}
           </div>
-          <div style={{ minWidth: 0 }}>
-            <h4 style={{ fontSize: 16, fontWeight: 600, color: TEXT, marginBottom: 4, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{name}</h4>
-            <span style={{
-              fontSize: 10, color: DIM, fontFamily: "'DM Mono', monospace",
-              textTransform: 'uppercase', letterSpacing: '0.08em',
-              display: 'flex', alignItems: 'center', gap: 6
-            }}>
-              <div style={{ width: 4, height: 4, borderRadius: '50%', background: labelColor }} />
+          <div className="min-w-0">
+            <h4 className="text-base font-semibold text-text-main mb-1 truncate">{name}</h4>
+            <span className="text-[10px] text-text-dim font-mono uppercase tracking-[0.08em] flex items-center gap-1.5">
+              <div className={`w-1 h-1 rounded-full ${dotColorClass}`} />
               {category}
             </span>
           </div>
         </div>
-        <div style={{
-          padding: '5px 12px', borderRadius: 6,
-          background: labelBg, border: `1px solid ${labelBorder}`,
-          color: labelColor, fontSize: 10, fontWeight: 700,
-          textTransform: 'uppercase', letterSpacing: '0.1em',
-          fontFamily: "'DM Mono', monospace", flexShrink: 0,
-          boxShadow: `0 0 15px ${labelColor}15`
-        }}>
+        <div className={`px-3 py-1.25 rounded-md border ${labelBgClass} ${labelBorderClass} ${labelColorClass} text-[10px] font-bold uppercase tracking-[0.1em] font-mono flex-shrink-0 shadow-[0_0_15px_rgba(var(--overlay-rgb),0.05)]`}>
           {label}
         </div>
       </div>
 
-      <div style={{ flex: 1, minWidth: 0 }}>
+      <div className="flex-1 min-w-0">
         <a href={url} target="_blank" rel="noopener noreferrer"
-          style={{
-            fontSize: 13, color: GOLD, textDecoration: 'none',
-            display: 'flex', alignItems: 'center', gap: 8,
-            opacity: 0.75, transition: 'all 0.2s ease',
-            padding: '10px 14px', background: 'rgba(255,255,255,0.02)',
-            borderRadius: 8, border: `1px solid ${LINE}`
-          }}
-          onMouseOver={e => {
-            e.currentTarget.style.opacity = 1;
-            e.currentTarget.style.borderColor = 'rgba(201,168,76,0.2)';
-            e.currentTarget.style.background = 'rgba(201,168,76,0.05)';
-          }}
-          onMouseOut={e => {
-            e.currentTarget.style.opacity = 0.75;
-            e.currentTarget.style.borderColor = LINE;
-            e.currentTarget.style.background = 'rgba(255,255,255,0.02)';
-          }}
+          className="text-[13px] text-gold no-underline flex items-center gap-2 opacity-75 transition-all duration-200 px-3.5 py-2.5 bg-[rgba(var(--overlay-rgb),0.02)] rounded-lg border border-line hover:opacity-100 hover:border-gold/20 hover:bg-gold/5"
         >
           <LinkIcon size={13} />
-          <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>{url.replace(/https?:\/\/(www\.)?/, '')}</span>
-          <ExternalLink size={11} style={{ opacity: 0.5 }} />
+          <span className="truncate flex-1">{url.replace(/https?:\/\/(www\.)?/, '')}</span>
+          <ExternalLink size={11} className="opacity-50" />
         </a>
       </div>
 
-      <div style={{ paddingTop: 20, borderTop: `1px solid ${LINE}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-          <span style={{ fontSize: 9, color: DIM, textTransform: 'uppercase', letterSpacing: '0.12em', fontFamily: "'DM Mono', monospace", fontWeight: 600 }}>Forensic Authenticity</span>
-          <span style={{ fontSize: 12, color: MUTED }}>Decision Confidence</span>
+      <div className="pt-5 border-t border-line flex justify-between items-center">
+        <div className="flex flex-col gap-1">
+          <span className="text-[9px] text-text-dim uppercase tracking-[0.12em] font-mono font-semibold">Forensic Authenticity</span>
+          <span className="text-[12px] text-text-muted">Decision Confidence</span>
         </div>
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 8 }}>
-          <div style={{ width: 80, height: 5, background: 'rgba(255,255,255,0.06)', borderRadius: 3, overflow: 'hidden' }}>
+        <div className="flex flex-col items-end gap-2">
+          <div className="w-20 h-1.25 bg-[rgba(var(--overlay-rgb),0.06)] rounded-full overflow-hidden">
             <motion.div
               initial={{ width: 0 }}
               whileInView={{ width: `${confidence}%` }}
               viewport={{ once: true }}
               transition={{ duration: 1.2, delay: delay + 0.3, ease: [0.34, 1.56, 0.64, 1] }}
-              style={{ height: '100%', background: confidence > 85 ? '#4ade80' : confidence > 50 ? GOLD : '#f87171', borderRadius: 3 }}
+              className={`h-full rounded-full ${confidence > 85 ? 'bg-green-400' : confidence > 50 ? 'bg-gold' : 'bg-red-400'}`}
             />
           </div>
-          <span style={{ fontSize: 20, fontWeight: 700, color: confidence > 85 ? '#4ade80' : confidence > 50 ? GOLD : '#f87171', fontFamily: "'DM Mono', monospace", lineHeight: 1 }}>
-            {confidence}<span style={{ fontSize: 12, opacity: 0.6 }}>%</span>
+          <span className={`text-xl font-bold font-mono leading-none ${confidence > 85 ? 'text-green-400' : confidence > 50 ? 'text-gold' : 'text-red-400'}`}>
+            {confidence}<span className="text-[12px] opacity-60">%</span>
           </span>
         </div>
       </div>
@@ -205,6 +139,15 @@ function SourceCard({ name, url, label, confidence, category, delay = 0 }) {
 
 export default function Home() {
   const navigate = useNavigate();
+  const { speak } = useVoice();
+
+  useEffect(() => {
+    // Initial Neural Briefing
+    const timer = setTimeout(() => {
+      speak("Welcome to Truecast Forensic. System initialized. Global veracity index is nominal. Monitoring one hundred plus sources for narrative drift.");
+    }, 1200);
+    return () => clearTimeout(timer);
+  }, []);
 
   const stats = [
     { label: 'Claims Audited', value: '100+   ', raw: '100' },
@@ -214,50 +157,9 @@ export default function Home() {
   ];
 
   return (
-    <div style={{ background: 'var(--bg-main)', color: TEXT, fontFamily: "'DM Sans', system-ui, sans-serif", minHeight: '100vh', overflowX: 'hidden' }}>
+    <div className="bg-bg-main text-text-main font-sans min-h-screen overflow-x-hidden">
       <style>{`
-        /* ── Buttons ── */
-        .hm-btn-gold {
-          background: ${GOLD}; color: var(--bg-main); border: none; border-radius: 9px;
-          padding: 14px 30px; font-family: 'DM Sans', system-ui, sans-serif;
-          font-weight: 600; font-size: 13px; letter-spacing: 0.02em; cursor: pointer;
-          display: inline-flex; align-items: center; gap: 8px;
-          transition: opacity 0.2s, transform 0.15s; white-space: nowrap;
-        }
-        .hm-btn-gold:hover { opacity: 0.85; transform: translateY(-1px); }
-        .hm-btn-gold:active { transform: translateY(0); }
-
-        .hm-btn-ghost {
-          background: ${SURF}; color: ${MUTED}; border: 1px solid ${LINE};
-          border-radius: 9px; padding: 14px 28px;
-          font-family: 'DM Sans', system-ui, sans-serif;
-          font-weight: 500; font-size: 13px; cursor: pointer;
-          display: inline-flex; align-items: center; gap: 8px;
-          transition: border-color 0.2s, color 0.2s; white-space: nowrap;
-        }
-        .hm-btn-ghost:hover { border-color: rgba(255,255,255,0.15); color: rgba(232,228,220,0.75); }
-
-        .hm-cta-block {
-          background: ${GOLD_D}; border: 1px solid rgba(201,168,76,0.22);
-          border-radius: 16px; padding: 40px 36px;
-          display: flex; flex-direction: column; align-items: center;
-          justify-content: center; text-align: center; cursor: pointer;
-          transition: border-color 0.25s, background 0.25s;
-          position: relative; overflow: hidden;
-        }
-        .hm-cta-block:hover { border-color: rgba(201,168,76,0.45); background: rgba(201,168,76,0.14); }
-
-        .verdict-pill {
-          display: inline-flex; align-items: center;
-          font-size: 9px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase;
-          padding: 4px 10px; border-radius: 4px; font-family: 'DM Mono', monospace;
-        }
-
-        /* ── Stats row ── */
-        .stat-item { border-left: 1px solid ${LINE}; padding: 0 0 0 32px; }
-        .stat-item:first-child { border-left: none; padding-left: 0; }
-
-        /* ── Animations ── */
+        /* ── Custom Animations & Effects ── */
         @keyframes scan-line {
           0%   { top: 0%;   opacity: 0.4; }
           50%  {             opacity: 0.8; }
@@ -267,125 +169,51 @@ export default function Home() {
 
         @keyframes blink { 0%,100% { opacity: 1; } 50% { opacity: 0; } }
         .cursor-blink { animation: blink 1.1s step-start infinite; }
-
-        /* ══════════ RESPONSIVE LAYOUT ══════════════════════════ */
-
-        /* Hero */
-        .hero-section {
-          min-height: 92vh;
-          display: flex; align-items: center;
-          padding: 80px 64px;
-          max-width: 1280px; margin: 0 auto;
-          gap: 72px;
-        }
-        .hero-copy   { flex: 1 1 0; min-width: 0; }
-        .hero-card   { flex: 0 0 420px; max-width: 420px; }
-
-        /* Pipeline */
-        .pipeline-section { padding: 100px 64px; border-top: 1px solid ${LINE}; max-width: 1280px; margin: 0 auto; }
-        .pipeline-grid    { display: grid; grid-template-columns: repeat(12, 1fr); gap: 14px; }
-        .col-4  { grid-column: span 4; }
-        .col-5  { grid-column: span 5; }
-        .col-7  { grid-column: span 7; }
-        .col-8  { grid-column: span 8; }
-
-        /* Stats */
-        .stats-section { border-top: 1px solid ${LINE}; padding: 80px 64px; max-width: 1280px; margin: 0 auto; }
-        .stats-grid    { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0; }
-
-        /* ── Tablet (≤ 1024px) ── */
-        @media (max-width: 1024px) {
-          .hero-section   { padding: 60px 40px; gap: 48px; }
-          .hero-card      { flex: 0 0 360px; max-width: 360px; }
-          .pipeline-section { padding: 80px 40px; }
-          .stats-section  { padding: 60px 40px; }
-          .col-4  { grid-column: span 6; }
-          .col-8  { grid-column: span 6; }
-          .col-7  { grid-column: span 7; }
-          .col-5  { grid-column: span 5; }
-        }
-
-        /* ── Mobile-large (≤ 768px) ── */
-        @media (max-width: 768px) {
-          .hero-section {
-            flex-direction: column;
-            align-items: flex-start;
-            min-height: unset;
-            padding: 48px 24px 56px;
-            gap: 40px;
-          }
-          .hero-card { flex: unset; max-width: 100%; width: 100%; }
-
-          .pipeline-section { padding: 64px 24px; }
-          .pipeline-grid    { grid-template-columns: 1fr; }
-          .col-4, .col-5, .col-7, .col-8 { grid-column: span 1; }
-
-          .stats-section { padding: 56px 24px; }
-          .stats-grid    { grid-template-columns: repeat(2, 1fr); gap: 32px 0; }
-          .stat-item                  { border-left: 1px solid ${LINE}; padding-left: 24px; }
-          .stat-item:nth-child(odd)   { border-left: none; padding-left: 0; }
-        }
-
-        /* ── Mobile-small (≤ 480px) ── */
-        @media (max-width: 480px) {
-          .hero-section   { padding: 36px 20px 48px; }
-          .pipeline-section { padding: 52px 20px; }
-          .stats-section  { padding: 44px 20px; }
-          .stats-grid     { grid-template-columns: 1fr 1fr; gap: 28px 0; }
-          .hm-btn-gold, .hm-btn-ghost { padding: 12px 20px; font-size: 12px; }
-          .hm-cta-block   { padding: 32px 24px; }
-        }
       `}</style>
 
       {/* ══════════ HERO ══════════════════════════════════════════ */}
-      <section className="hero-section">
+      <section className="min-h-[92vh] flex items-center px-6 py-20 md:px-10 lg:px-16 max-w-[1280px] mx-auto flex-col md:flex-row gap-12 lg:gap-[72px]">
 
         {/* Left copy */}
         <motion.div
-          className="hero-copy"
+          className="flex-1 min-w-0"
           initial={{ opacity: 0, x: -24 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.55, ease: [0.4, 0, 0.2, 1] }}
         >
-          {/* <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 28 }}>
-            <div style={{ width: 6, height: 6, borderRadius: '50%', background: GOLD }} />
-            <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 10, fontWeight: 500, letterSpacing: '0.16em', color: GOLD, textTransform: 'uppercase' }}>
-              Digital Jurist Protocol v1.0
-            </span>
-          </div> */}
-
-          <h1 style={{
-            fontFamily: "'DM Serif Display', Georgia, serif",
-            fontSize: 'clamp(38px, 5.5vw, 76px)',
-            fontWeight: 400, color: TEXT,
-            lineHeight: 1.07, letterSpacing: '-0.025em', marginBottom: 24,
-          }}>
+          <h1 className="font-serif text-[38px] sm:text-[48px] lg:text-[76px] font-normal text-text-main leading-[1.07] tracking-tighter mb-6">
             The Standard for<br />
-            <span style={{ color: GOLD }}>Truth</span>{' '}Representation.
+            <span className="text-gold">Truth</span> Representation.
           </h1>
 
-          <p style={{ fontSize: 16, color: MUTED, lineHeight: 1.75, maxWidth: 480, marginBottom: 40 }}>
+          <p className="text-base text-text-muted leading-[1.75] max-w-[480px] mb-10">
             We don't just fact-check — we adjudicate. The Digital Jurist Protocol transforms raw information into legally-sound evidence through a transparent, editorial-grade verification pipeline.
           </p>
 
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
-            <button className="hm-btn-gold" onClick={() => navigate('/verify')}>
+          <div className="flex flex-wrap gap-3">
+            <button 
+              className="bg-gold text-bg-main rounded-lg px-8 py-3.5 font-bold text-[13px] tracking-wide inline-flex items-center gap-2 transition-all hover:opacity-85 hover:-translate-y-px active:translate-y-0 whitespace-nowrap"
+              onClick={() => navigate('/verify')}
+            >
               Start New Analysis <ArrowRight size={15} />
             </button>
-            <button className="hm-btn-ghost" onClick={() => navigate('/architecture')}>
-              View Documentation
+            <button 
+              className="bg-surf text-text-muted border border-line rounded-lg px-7 py-3.5 font-medium text-[13px] inline-flex items-center gap-2 transition-all hover:border-[rgba(var(--overlay-rgb),0.15)] hover:text-text-main/75 whitespace-nowrap"
+              onClick={() => navigate('/architecture')}
+            >
+              System Roadmap
             </button>
           </div>
 
-          <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 16, marginTop: 48, paddingTop: 28, borderTop: `1px solid ${LINE}` }}>
+          <div className="flex flex-wrap items-center gap-4 mt-12 pt-7 border-t border-line">
             {[
               { icon: Database, label: '100+ sources indexed' },
               { icon: ShieldCheck, label: '99.98% accuracy' },
               { icon: Globe, label: 'Live OSINT streams' },
             ].map(({ icon: Ic, label }, i) => (
-              <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-                <Ic size={12} color={DIM} />
-                <span style={{ fontSize: 11, color: DIM, fontWeight: 500 }}>{label}</span>
+              <div key={i} className="flex items-center gap-1.75">
+                <Ic size={12} className="text-text-dim" />
+                <span className="text-[11px] text-text-dim font-medium">{label}</span>
               </div>
             ))}
           </div>
@@ -393,77 +221,73 @@ export default function Home() {
 
         {/* Right: Statue Hero */}
         <motion.div
-          className="hero-card"
+          className="relative flex justify-center perspective-1000 w-full md:w-[420px] max-w-[420px]"
           initial={{ opacity: 0, x: 24, scale: 0.96 }}
           animate={{ opacity: 1, x: 0, scale: 1 }}
           transition={{ duration: 0.8, delay: 0.15, ease: [0.4, 0, 0.2, 1] }}
-          style={{ position:'relative', display:'flex', justifyContent:'center', perspective: 1000 }}
         >
           {/* Ambient Glow */}
-          <div style={{ position: 'absolute', inset: -60, background: `radial-gradient(circle, ${GOLD}10 0%, transparent 60%)`, filter: 'blur(40px)', zIndex: 0 }} />
+          <div className="absolute -inset-15 bg-radial-[circle] from-gold/10 via-transparent to-transparent blur-[40px] z-0" />
           
-          <div style={{ position:'relative', zIndex: 1, flex: 1 }}>
+          <div className="relative z-1 flex-1">
             <motion.img 
               src="/lady_justice.png"
               alt="Truecast Lady Justice" 
-              style={{ width: '100%', maxWidth: 520, borderRadius: 24, boxShadow: '0 50px 100px rgba(0,0,0,0.6)', border: `1px solid ${LINE}` }}
+              className="w-full max-w-[520px] rounded-3xl shadow-[0_50px_100px_rgba(0,0,0,0.6)] border border-line"
               animate={{ y: [0, -15, 0] }}
               transition={{ duration: 6, repeat: Infinity, ease: 'easeInOut' }}
             />
-            
-            {/* Status Overlay */}
-            
           </div>
         </motion.div>
       </section>
 
       {/* ══════════ PIPELINE ══════════════════════════════════════ */}
-      <section className="pipeline-section">
+      <section className="px-6 py-24 md:px-10 lg:px-16 border-t border-line max-w-[1280px] mx-auto">
         <motion.header
           initial={{ opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }} transition={{ duration: 0.45 }}
-          style={{ marginBottom: 56 }}
+          className="mb-14"
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
-            <div style={{ width: 24, height: 1, background: GOLD, opacity: 0.55 }} />
-            <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 10, fontWeight: 500, color: GOLD, letterSpacing: '0.14em', textTransform: 'uppercase' }}>
+          <div className="flex items-center gap-2.5 mb-4">
+            <div className="w-6 h-px bg-gold/55" />
+            <span className="font-mono text-[10px] font-medium text-gold tracking-[0.14em] uppercase">
               The Process
             </span>
           </div>
-          <h2 style={{ fontFamily: "'DM Serif Display', Georgia, serif", fontSize: 'clamp(28px, 4vw, 52px)', fontWeight: 400, letterSpacing: '-0.02em', color: TEXT, marginBottom: 14, lineHeight: 1.1 }}>
+          <h2 className="font-serif text-[28px] sm:text-[40px] lg:text-[52px] font-normal tracking-tight text-text-main mb-3.5 leading-[1.1]">
             The Adjudication Pipeline.
           </h2>
-          <p style={{ fontSize: 15, color: MUTED, lineHeight: 1.7, maxWidth: 520 }}>
+          <p className="text-[15px] text-text-muted leading-[1.7] max-w-[520px]">
             A rigorous three-stage mechanism ensuring every verdict is backed by immutable proof and peer-reviewed citations.
           </p>
         </motion.header>
 
-        <div className="pipeline-grid">
-          <div className="col-4">
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-3.5">
+          <div className="md:col-span-6 lg:col-span-4 h-full">
             <PipelineCard num="01" icon={Edit3} title="Ingest & Isolate"
               body="Every incoming claim is atomized into its core propositions. We strip rhetorical noise to isolate the verifiable intent."
-              delay={0} style={{ height: '100%' }} />
+              delay={0} className="h-full" />
           </div>
 
-          <div className="col-8">
+          <div className="md:col-span-6 lg:col-span-8 h-full">
             <PipelineCard num="02" icon={Network} title="Evidence Mapping"
               body="Our protocol cross-references 12,000+ primary sources — from legislative archives to live data feeds — creating a weighted web of evidence."
-              delay={0.1} style={{ height: '100%' }}>
-              <div style={{ marginTop: 28, display: 'flex', flexDirection: 'column', gap: 8 }}>
+              delay={0.1} className="h-full">
+              <div className="mt-7 flex flex-col gap-2">
                 {[
                   { label: 'Academic archives', w: 88 },
                   { label: 'Live OSINT feeds', w: 63 },
                   { label: 'Government indices', w: 94 },
                   { label: 'Cross-validation', w: 71 },
                 ].map((bar, i) => (
-                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-                    <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 10, color: DIM, width: 130, flexShrink: 0 }}>{bar.label}</span>
-                    <div style={{ flex: 1, height: 3, background: 'rgba(255,255,255,0.06)', borderRadius: 4, overflow: 'hidden' }}>
+                  <div key={i} className="flex items-center gap-3.5">
+                    <span className="font-mono text-[10px] text-text-dim w-32 flex-shrink-0">{bar.label}</span>
+                    <div className="flex-1 h-0.75 bg-[rgba(var(--overlay-rgb),0.06)] rounded-full overflow-hidden">
                       <motion.div initial={{ width: 0 }} whileInView={{ width: `${bar.w}%` }} viewport={{ once: true }}
                         transition={{ delay: 0.3 + i * 0.1, duration: 1, ease: 'easeOut' }}
-                        style={{ height: '100%', background: i === 2 ? GOLD : 'rgba(232,228,220,0.18)', borderRadius: 4 }} />
+                        className={`h-full rounded-full ${i === 2 ? 'bg-gold' : 'bg-[rgba(232,228,220,0.18)]'}`} />
                     </div>
-                    <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 10, color: i === 2 ? GOLD : DIM, width: 28, textAlign: 'right' }}>
+                    <span className={`font-mono text-[10px] w-7 text-right ${i === 2 ? 'text-gold' : 'text-text-dim'}`}>
                       {bar.w}%
                     </span>
                   </div>
@@ -472,35 +296,36 @@ export default function Home() {
             </PipelineCard>
           </div>
 
-          <div className="col-7">
+          <div className="md:col-span-7 h-full">
             <PipelineCard num="03" icon={Gavel} title="The Verdict Release"
               body="A final judgment is rendered based on the Digital Jurist scoring rubric. Every verdict includes a direct evidence trail for public audit."
-              delay={0.2} style={{ height: '100%' }}>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 22 }}>
-                <span className="verdict-pill" style={{ background: 'rgba(74,222,128,0.08)', color: '#4ade80', border: '1px solid rgba(74,222,128,0.2)' }}>True</span>
-                <span className="verdict-pill" style={{ background: 'rgba(248,113,113,0.08)', color: '#f87171', border: '1px solid rgba(248,113,113,0.2)' }}>False</span>
-                <span className="verdict-pill" style={{ background: 'rgba(251,191,36,0.08)', color: '#fbbf24', border: '1px solid rgba(251,191,36,0.2)' }}>Partial</span>
+              delay={0.2} className="h-full">
+              <div className="flex flex-wrap gap-2 mt-5.5">
+                <span className="px-2.5 py-1 rounded-[4px] border font-mono text-[9px] font-bold uppercase tracking-widest bg-green-400/8 text-green-400 border-green-400/20">True</span>
+                <span className="px-2.5 py-1 rounded-[4px] border font-mono text-[9px] font-bold uppercase tracking-widest bg-red-400/8 text-red-400 border-red-400/20">False</span>
+                <span className="px-2.5 py-1 rounded-[4px] border font-mono text-[9px] font-bold uppercase tracking-widest bg-amber-400/8 text-amber-400 border-amber-400/20">Partial</span>
               </div>
             </PipelineCard>
           </div>
 
-          <div className="col-5">
-            <motion.div className="hm-cta-block" style={{ height: '100%' }} onClick={() => navigate('/verify')}
+          <div className="md:col-span-5 h-full">
+            <motion.div className="bg-gold/10 border border-gold/22 rounded-2xl p-9 lg:p-10 flex flex-col items-center justify-center text-center cursor-pointer transition-all duration-250 relative overflow-hidden h-full hover:border-gold/45 hover:bg-gold/14" 
+              onClick={() => navigate('/verify')}
               initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }} transition={{ duration: 0.45, delay: 0.3 }}
               whileHover={{ scale: 1.01 }}>
-              <div style={{ position: 'absolute', top: -60, right: -60, width: 200, height: 200, background: `radial-gradient(circle, ${GOLD} 0%, transparent 70%)`, opacity: 0.07, pointerEvents: 'none', borderRadius: '50%' }} />
-              <div style={{ position: 'relative', zIndex: 1 }}>
-                <div style={{ width: 44, height: 44, borderRadius: 11, background: GOLD_D, border: '1px solid rgba(201,168,76,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px' }}>
-                  <Gavel size={20} color={GOLD} />
+              <div className="absolute -top-15 -right-15 w-[200px] h-[200px] bg-radial-[circle] from-gold to-transparent opacity-[0.07] pointer-events-none rounded-full" />
+              <div className="relative z-1">
+                <div className="w-11 h-11 rounded-11 bg-gold/10 border border-gold/30 flex items-center justify-center mx-auto mb-5">
+                  <Gavel size={20} className="text-gold" />
                 </div>
-                <h3 style={{ fontFamily: "'DM Serif Display', Georgia, serif", fontSize: 26, fontWeight: 400, color: TEXT, marginBottom: 8, letterSpacing: '-0.01em' }}>
+                <h3 className="font-serif text-[26px] font-normal text-text-main mb-2 tracking-tight">
                   Ready to audit?
                 </h3>
-                <p style={{ fontSize: 13, color: MUTED, marginBottom: 24 }}>
+                <p className="text-[13px] text-text-muted mb-6">
                   Open the workbench and run your first verification.
                 </p>
-                <button className="hm-btn-gold" style={{ pointerEvents: 'none' }}>
+                <button className="bg-gold text-bg-main rounded-lg px-8 py-3.5 font-bold text-[13px] tracking-wide inline-flex items-center gap-2 transition-all pointer-events-none">
                   Open Workbench <ArrowRight size={14} />
                 </button>
               </div>
@@ -510,35 +335,35 @@ export default function Home() {
       </section>
 
       {/* ══════════ SOURCES ══════════════════════════════════════ */}
-      <section className="pipeline-section" style={{ borderTop: `1px solid ${LINE}`, paddingTop: 100 }}>
+      <section className="px-6 py-24 md:px-10 lg:px-16 border-t border-line max-w-[1280px] mx-auto">
         <motion.header
           initial={{ opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }} transition={{ duration: 0.45 }}
-          style={{ marginBottom: 56 }}
+          className="mb-14"
         >
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
-            <div style={{ width: 24, height: 1, background: GOLD, opacity: 0.55 }} />
-            <span style={{ fontFamily: "'DM Mono', monospace", fontSize: 10, fontWeight: 500, color: GOLD, letterSpacing: '0.14em', textTransform: 'uppercase' }}>
+          <div className="flex items-center gap-2.5 mb-4">
+            <div className="w-6 h-px bg-gold/55" />
+            <span className="font-mono text-[10px] font-medium text-gold tracking-[0.14em] uppercase">
               Transparency
             </span>
           </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', flexWrap: 'wrap', gap: 24 }}>
-            <div style={{ maxWidth: 600 }}>
-              <h2 style={{ fontFamily: "'DM Serif Display', Georgia, serif", fontSize: 'clamp(28px, 4vw, 52px)', fontWeight: 400, letterSpacing: '-0.02em', color: TEXT, marginBottom: 14, lineHeight: 1.1 }}>
+          <div className="flex justify-between items-end flex-wrap gap-6">
+            <div className="max-w-[600px]">
+              <h2 className="font-serif text-[28px] sm:text-[40px] lg:text-[52px] font-normal tracking-tight text-text-main mb-3.5 leading-[1.1]">
                 High-Fidelity Evidence.
               </h2>
-              <p style={{ fontSize: 15, color: MUTED, lineHeight: 1.7 }}>
+              <p className="text-[15px] text-text-muted leading-[1.7]">
                 Sources are never obscured. We provide direct access to the primary material used for adjudication, classified by our proprietary trust scoring algorithm.
               </p>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 18px', background: 'rgba(255,255,255,0.03)', border: `1px solid ${LINE}`, borderRadius: 10 }}>
-              <ShieldCheck size={14} color="#4ade80" />
-              <span style={{ fontSize: 11, color: DIM, fontWeight: 500, fontFamily: "'DM Mono', monospace" }}>OSINT INDEXED: 12.4K</span>
+            <div className="flex items-center gap-2 px-[18px] py-2.5 bg-[rgba(var(--overlay-rgb),0.03)] border border-line rounded-xl">
+              <ShieldCheck size={14} className="text-green-400" />
+              <span className="text-[11px] text-text-dim font-medium font-mono">OSINT INDEXED: 12.4K</span>
             </div>
           </div>
         </motion.header>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 24 }}>
+        <div className="grid grid-cols-1 sm:grid-cols-[repeat(auto-fill,minmax(320px,1fr))] gap-6">
           {[
             { name: 'Reuters World News', url: 'https://www.reuters.com/world/exclusive-report-2026', label: 'Trusted', confidence: 98, category: 'Legacy Media' },
             { name: 'The Associated Press', url: 'https://apnews.com/article/financial-audit-protocol', label: 'Trusted', confidence: 96, category: 'News Agency' },
@@ -551,30 +376,14 @@ export default function Home() {
           ))}
         </div>
 
-        <div style={{
-          marginTop: 64,
-          padding: '32px',
-          background: 'rgba(248,113,113,0.05)',
-          border: '1px solid rgba(248,113,113,0.15)',
-          borderRadius: 20,
-          display: 'flex',
-          alignItems: 'center',
-          gap: 24,
-          position: 'relative',
-          overflow: 'hidden'
-        }}>
-          <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: 4, background: '#f87171' }} />
-          <div style={{
-            width: 48, height: 48, borderRadius: '50%',
-            background: 'rgba(248,113,113,0.12)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            flexShrink: 0, border: '1px solid rgba(248,113,113,0.2)'
-          }}>
-            <AlertTriangle size={24} color="#f87171" strokeWidth={2.5} />
+        <div className="mt-16 p-8 bg-red-400/5 border border-red-400/15 rounded-[20px] flex items-center gap-6 relative overflow-hidden">
+          <div className="absolute left-0 top-0 bottom-0 w-1 bg-red-400" />
+          <div className="w-12 h-12 rounded-full bg-red-400/12 flex items-center justify-center flex-shrink-0 border border-red-400/20">
+            <AlertTriangle size={24} className="text-red-400" strokeWidth={2.5} />
           </div>
           <div>
-            <h5 style={{ fontSize: 15, fontWeight: 700, color: '#f87171', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Zero-Tolerance for Source Hallucination</h5>
-            <p style={{ fontSize: 13, color: 'rgba(232,228,220,0.6)', lineHeight: 1.7, maxWidth: 800 }}>
+            <h5 className="text-[15px] font-bold text-red-400 mb-1.5 uppercase tracking-wider">Zero-Tolerance for Source Hallucination</h5>
+            <p className="text-[13px] text-[rgba(232,228,220,0.6)] leading-[1.7] max-w-[800px]">
               Unlike generic AI tools that may fabricate citations or mislabel sources to fit a narrative, Truecast enforces a strict <strong>Forensic Handshake™</strong>. Every source undergoing adjudication must pass a multi-vector validation check—verifying its cryptographic SSL certificate, domain authority, and historical neutrality index before it enters our ledger.
             </p>
           </div>
@@ -582,17 +391,17 @@ export default function Home() {
       </section>
 
       {/* ══════════ STATS ═════════════════════════════════════════ */}
-      <section className="stats-section">
-        <div className="stats-grid">
+      <section className="px-6 py-20 md:px-10 lg:px-16 border-t border-line max-w-[1280px] mx-auto">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-8 md:gap-0">
           {stats.map((s, i) => (
             <motion.div key={i} initial={{ opacity: 0, y: 14 }} whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }} transition={{ delay: i * 0.08, duration: 0.4 }}
-              className="stat-item">
-              <div style={{ fontFamily: "'DM Serif Display', Georgia, serif", fontSize: 'clamp(36px, 4vw, 60px)', fontWeight: 400, letterSpacing: '-0.03em', color: TEXT, lineHeight: 1, marginBottom: 10 }}>
+              className="px-0 md:px-8 border-l border-line first:border-l-0 first:pl-0">
+              <div className="font-serif text-[36px] md:text-[60px] font-normal tracking-tighter text-text-main leading-none mb-2.5">
                 <Counter target={s.raw} />
-                <span style={{ fontSize: '0.55em', opacity: 0.4 }}>{s.value.replace(/[0-9.]/g, '')}</span>
+                <span className="text-[0.55em] opacity-40">{s.value.replace(/[0-9.]/g, '')}</span>
               </div>
-              <div style={{ fontFamily: "'DM Mono', monospace", fontSize: 10, fontWeight: 500, color: DIM, letterSpacing: '0.12em', textTransform: 'uppercase' }}>
+              <div className="font-mono text-[10px] font-medium text-text-dim tracking-[0.12em] uppercase">
                 {s.label}
               </div>
             </motion.div>

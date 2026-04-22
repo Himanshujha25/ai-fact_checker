@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { NavLink, useNavigate, useLocation } from 'react-router-dom';
-import { Search, Bell, Settings, LogOut, Key, Moon, Sun, Home, Gavel, Clock, User, X } from 'lucide-react';
+import { Search, Bell, Settings, LogOut, Key, Moon, Sun, Home, Gavel, Clock, User, X, ArrowLeftRight, Globe } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -13,8 +13,11 @@ const DIM = 'var(--text-dim)';
 const BG    = 'var(--bg-overlay)';
 
 const LINKS = [
-  { to: '/',        label: 'Overview', end: true },
-  { to: '/verify',  label: 'Workbench'           },
+  { to: '/',          label: 'Overview', end: true },
+  { to: '/verify',    label: 'Workbench'           },
+  { to: '/intel',     label: 'Command'             },
+  { to: '/history',   label: 'Archive'             },
+  { to: '/developers', label: 'API'                },
 ];
 
 /* Mobile bottom nav tabs */
@@ -69,7 +72,7 @@ export default function SubNavbar() {
   }, [lastScrollY]);
 
   const initials = user
-    ? (user.name ? user.name.charAt(0) : user.email.charAt(0)).toUpperCase()
+    ? (user.fullName ? user.fullName.charAt(0) : (user.email ? user.email.charAt(0) : '?')).toUpperCase()
     : '';
 
   const isActive = (to, end) => end
@@ -109,8 +112,8 @@ export default function SubNavbar() {
           transition: transform 0.25s ease;
         }
         .nav-link:hover { color: ${MUTED}; }
-        .nav-link.active { color: ${TEXT}; }
-        .nav-link.active::after { transform: scaleX(1); }
+        .nav-link.active { color: ${TEXT}; font-weight: 600; }
+        .nav-link.active::after { transform: scaleX(1); height: 1.5px; bottom: -2px; }
 
         .nav-icon-btn {
           background: none; border: none; cursor: pointer; padding: 0;
@@ -121,8 +124,8 @@ export default function SubNavbar() {
 
         .nav-search {
           height: 34px; width: 170px;
-          background: rgba(255,255,255,0.04);
-          border: 1px solid rgba(255,255,255,0.07);
+          background: rgba(var(--overlay-rgb),0.04);
+          border: 1px solid rgba(var(--overlay-rgb),0.07);
           border-radius: 100px;
           padding: 0 14px 0 36px;
           font-family: 'DM Mono', monospace;
@@ -153,12 +156,12 @@ export default function SubNavbar() {
         .nav-user-pill {
           display: flex; align-items: center; gap: 10px;
           padding: 4px 12px 4px 10px;
-          background: rgba(255,255,255,0.03);
-          border: 1px solid rgba(255,255,255,0.07);
+          background: rgba(var(--overlay-rgb),0.03);
+          border: 1px solid rgba(var(--overlay-rgb),0.07);
           border-radius: 100px; cursor: pointer;
           transition: border-color 0.2s;
         }
-        .nav-user-pill:hover { border-color: rgba(255,255,255,0.14); }
+        .nav-user-pill:hover { border-color: rgba(var(--overlay-rgb),0.14); }
 
         .nav-logout-overlay {
           position: absolute; inset: 0; border-radius: 50%;
@@ -175,7 +178,7 @@ export default function SubNavbar() {
           height: 64px;
           background: var(--bg-overlay);
           backdrop-filter: blur(24px);
-          border-top: 1px solid rgba(255,255,255,0.08);
+          border-top: 1px solid rgba(var(--overlay-rgb),0.08);
           z-index: 200;
           padding: 0 8px;
           padding-bottom: env(safe-area-inset-bottom, 0px);
@@ -216,7 +219,7 @@ export default function SubNavbar() {
         }
         .mob-search-input {
           width: 100%; box-sizing: border-box;
-          background: rgba(255,255,255,0.05);
+          background: rgba(var(--overlay-rgb),0.05);
           border: 1px solid rgba(201,168,76,0.35);
           border-radius: 12px;
           padding: 16px 20px;
@@ -264,7 +267,7 @@ export default function SubNavbar() {
       {/* ══════════ MOBILE TOP NAV ══════════════════════════════ */}
       <nav className="mob-top-nav">
         <div onClick={() => navigate('/')} style={{ cursor:'pointer', display:'flex', alignItems:'center', gap:10 }}>
-          <div style={{ width:24, height:24, borderRadius:5, overflow:'hidden', border:`1px solid ${LINE}`, background:'rgba(255,255,255,0.03)' }}>
+          <div style={{ width:24, height:24, borderRadius:5, overflow:'hidden', border:`1px solid ${LINE}`, background:'rgba(var(--overlay-rgb),0.03)' }}>
             <img
               src="/lady_justice.png"
               alt="Logo" style={{ width:'100%', height:'100%', objectFit:'cover' }}
@@ -277,7 +280,7 @@ export default function SubNavbar() {
           {user && (
             <>
               <p style={{ fontFamily:"'DM Mono',monospace", fontSize:9, color:DIM, textTransform:'uppercase', letterSpacing:'0.05em' }}>
-                {user.email.split('@')[0]}
+                {user.email ? user.email.split('@')[0] : 'User'}
               </p>
               <button
                 onClick={logout}
@@ -307,7 +310,7 @@ export default function SubNavbar() {
         {/* Brand + links */}
         <div style={{ display:'flex', alignItems:'center', gap:24 }}>
           <div onClick={() => navigate('/')} style={{ cursor:'pointer', display:'flex', alignItems:'center', gap:14 }}>
-            <div style={{ width:28, height:28, borderRadius:6, overflow:'hidden', border:`1px solid ${LINE}`, background:'rgba(255,255,255,0.03)' }}>
+            <div style={{ width:28, height:28, borderRadius:6, overflow:'hidden', border:`1px solid ${LINE}`, background:'rgba(var(--overlay-rgb),0.03)' }}>
               <img
                 src="/lady_justice.png"
                 alt="Logo" style={{ width:'100%', height:'100%', objectFit:'cover' }}
@@ -316,6 +319,17 @@ export default function SubNavbar() {
             <span style={{ fontFamily:"'DM Serif Display',Georgia,serif", fontSize:16, fontWeight:400, color:TEXT, letterSpacing:'-0.01em', userSelect:'none' }}>
               Truecast
             </span>
+            <div 
+              onClick={(e) => { e.stopPropagation(); navigate('/architecture'); }}
+              style={{ 
+                fontSize: 8, fontFamily: "'DM Mono', monospace", color: GOLD, 
+                background: 'rgba(201,168,76,0.1)', border: '1px solid rgba(201,168,76,0.3)', 
+                padding: '2px 6px', borderRadius: 4, marginLeft: -4, cursor: 'pointer',
+                letterSpacing: '0.05em', fontWeight: 700
+              }}
+            >
+              V2
+            </div>
           </div>
 
           <div style={{ width:1, height:18, background:LINE }}/>
@@ -347,21 +361,25 @@ export default function SubNavbar() {
             <div className="nav-user-pill">
               <div style={{ textAlign:'right' }}>
                 <p style={{ fontFamily:"'DM Sans',system-ui,sans-serif", fontSize:12, fontWeight:500, color:TEXT, lineHeight:1.2 }}>
-                  {user.name || user.email.split('@')[0]}
+                  {user.fullName || (user.email ? user.email.split('@')[0] : 'Guest')}
                 </p>
                 <p style={{ fontFamily:"'DM Mono',monospace", fontSize:8, color:DIM, letterSpacing:'0.08em', textTransform:'uppercase', lineHeight:1 }}>
                   Verified User
                 </p>
               </div>
-              <div className="nav-avatar" onClick={logout}>
-                {initials}
+              <div className="nav-avatar" onClick={logout} style={{ overflow: 'hidden' }}>
+                {user.picture ? (
+                  <img src={user.picture} alt={user.fullName} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                ) : (
+                  initials
+                )}
                 <div className="nav-logout-overlay"><LogOut size={11} color="#fff"/></div>
               </div>
             </div>
           ) : (
             <NavLink to="/auth" style={{ textDecoration:'none' }}>
               {({ isActive: ia }) => (
-                <div style={{ width:34, height:34, borderRadius:'50%', background:ia?GOLD_L:'rgba(255,255,255,0.04)', border:`1px solid ${ia?'rgba(201,168,76,0.35)':LINE}`, display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', transition:'background 0.2s, border-color 0.2s' }}>
+                <div style={{ width:34, height:34, borderRadius:'50%', background:ia?GOLD_L:'rgba(var(--overlay-rgb),0.04)', border:`1px solid ${ia?'rgba(201,168,76,0.35)':LINE}`, display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', transition:'background 0.2s, border-color 0.2s' }}>
                   <Key size={15} color={ia?GOLD:DIM}/>
                 </div>
               )}
@@ -369,7 +387,7 @@ export default function SubNavbar() {
           )}
 
           <div style={{ width:1, height:18, background:LINE, marginLeft: 6, marginRight: 6 }}/>
-          <button onClick={toggleTheme} className="nav-icon-btn" style={{ width: 34, height: 34, borderRadius: '50%', background: 'rgba(255,255,255,0.04)', border:`1px solid ${LINE}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <button onClick={toggleTheme} className="nav-icon-btn" style={{ width: 34, height: 34, borderRadius: '50%', background: 'rgba(var(--overlay-rgb),0.04)', border:`1px solid ${LINE}`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             {theme === 'dark' ? <Sun size={15} color={DIM} /> : <Moon size={15} color={DIM} />}
           </button>
         </div>
@@ -377,7 +395,7 @@ export default function SubNavbar() {
 
       {/* ══════════ MOBILE BOTTOM BAR ═══════════════════════════ */}
       <nav className="mob-bar">
-        {MOB_TABS.filter(tab => !(tab.to === '/auth' && user)).map(tab => {
+        {MOB_TABS.map(tab => {
           const active = isActive(tab.to, tab.end);
           const Ic = tab.icon;
 
@@ -389,11 +407,10 @@ export default function SubNavbar() {
               className="mob-tab"
               style={{ textDecoration:'none' }}
             >
-              {/* Active indicator pip */}
-              <div style={{ width:32, height:32, borderRadius:10, background:active?GOLD_L:'transparent', border:active?`1px solid rgba(201,168,76,0.25)`:'1px solid transparent', display:'flex', alignItems:'center', justifyContent:'center', transition:'background 0.2s, border-color 0.2s', marginBottom:1 }}>
-                <Ic size={17} color={active ? GOLD : DIM} strokeWidth={active ? 2 : 1.5}/>
+              <div style={{ width:32, height:32, borderRadius:10, background:active?GOLD_L:'transparent', border:active?`1px solid rgba(201,168,76,0.25)`:'1px solid transparent', display:'flex', alignItems:'center', justifyContent:'center', transition:'all 0.2s', marginBottom:1 }}>
+                <Ic size={17} color={active ? GOLD : DIM} strokeWidth={active ? 2.5 : 1.5}/>
               </div>
-              <span className="mob-tab-label" style={{ color: active ? GOLD : DIM }}>
+              <span className="mob-tab-label" style={{ color: active ? GOLD : DIM, fontWeight: active ? 700 : 500 }}>
                 {tab.label}
               </span>
             </NavLink>

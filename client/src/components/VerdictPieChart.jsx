@@ -66,7 +66,7 @@ export default function VerdictPieChart({ claims }) {
           <circle
             cx={CX} cy={CY} r={(R_OUTER + R_INNER) / 2}
             fill="none"
-            stroke="rgba(255,255,255,0.04)"
+            stroke="rgba(var(--overlay-rgb),0.04)"
             strokeWidth={STROKE}
           />
 
@@ -108,7 +108,7 @@ export default function VerdictPieChart({ claims }) {
                 {slices.find(s=>s.key===activeKey)?.pct}%
               </text>
               <text x={CX} y={CY + 8} textAnchor="middle"
-                fill="rgba(255,255,255,0.3)"
+                fill="rgba(var(--overlay-rgb),0.3)"
                 fontSize="7" fontWeight="700" fontFamily="inherit"
                 style={{ textTransform:'uppercase', letterSpacing:'0.08em' }}>
                 {COLORS[activeKey].label}
@@ -117,12 +117,12 @@ export default function VerdictPieChart({ claims }) {
           ) : (
             <>
               <text x={CX} y={CY - 5} textAnchor="middle"
-                fill="rgba(255,255,255,0.85)"
+                fill="rgba(var(--overlay-rgb),0.85)"
                 fontSize="16" fontWeight="900" fontFamily="inherit">
                 {total}
               </text>
               <text x={CX} y={CY + 9} textAnchor="middle"
-                fill="rgba(255,255,255,0.2)"
+                fill="rgba(var(--overlay-rgb),0.2)"
                 fontSize="7" fontWeight="700" fontFamily="inherit"
                 style={{ textTransform:'uppercase', letterSpacing:'0.08em' }}>
                 Claims
@@ -154,11 +154,11 @@ export default function VerdictPieChart({ claims }) {
               {/* Text */}
               <div className="flex items-baseline gap-2">
                 <span className="text-[10px] font-black uppercase tracking-widest transition-colors duration-200"
-                  style={{ color: isActive ? s.color.stroke : 'rgba(255,255,255,0.45)' }}>
+                  style={{ color: isActive ? s.color.stroke : 'rgba(var(--overlay-rgb),0.45)' }}>
                   {s.color.label}
                 </span>
                 <span className="text-[10px] font-semibold"
-                  style={{ color: isActive ? 'rgba(255,255,255,0.7)' : 'rgba(255,255,255,0.2)' }}>
+                  style={{ color: isActive ? 'rgba(var(--overlay-rgb),0.7)' : 'rgba(var(--overlay-rgb),0.2)' }}>
                   {s.pct}%
                 </span>
               </div>

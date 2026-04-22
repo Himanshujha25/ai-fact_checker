@@ -31,6 +31,33 @@ const INTEGRITY = [
   { icon: Network,     badge: 'Redundant', badgeColor: GOLD,      title: 'Multi-Node Consensus',   desc: 'Verdicts require 3+ independent LLM agents to reach the same conclusion — mitigating hallucination and single-agent bias.' },
 ];
 
+const ROADMAP = [
+  { 
+    version: 'V1', 
+    title: 'Forensic Foundation', 
+    date: 'March 2026', 
+    status: 'Completed',
+    color: '#94a3b8',
+    features: ['Standard Verification', 'Basic OSINT Extraction', 'Legacy API Grid']
+  },
+  { 
+    version: 'V2', 
+    title: 'Intelligence Expansion', 
+    date: 'April 2026', 
+    status: 'Current',
+    color: GOLD,
+    features: ['Google OAuth Integration', 'Intel Dashboard HUD', 'Regional Radar Hubs', 'Weighted Adjudication'] 
+  },
+  { 
+    version: 'V3', 
+    title: 'Strategic Real-time', 
+    date: 'Q2 2026', 
+    status: 'Planned',
+    color: '#a78bfa',
+    features: ['WebSocket Live Streams', 'Redis Neural Cache', 'Narrative Duel Mode', 'Forensic PDF Export'] 
+  }
+];
+
 const BARS = [1,2,3,4,5,6,7,8,9,10,11,12];
 
 /* ─── Intelligence modes ──────────────────────────────────────── */
@@ -142,15 +169,15 @@ function SourceSkeleton({ i }) {
     <div style={{
       display: 'flex', alignItems: 'center', gap: 12,
       padding: '11px 14px', borderRadius: 10,
-      background: 'rgba(255,255,255,0.025)',
-      border: '1px solid rgba(255,255,255,0.06)',
+      background: 'rgba(var(--overlay-rgb),0.025)',
+      border: '1px solid rgba(var(--overlay-rgb),0.06)',
     }}>
-      <div style={{ width: 30, height: 30, borderRadius: 8, background: 'rgba(255,255,255,0.06)', animation: `arch-shimmer 1.4s ease-in-out ${i * 0.1}s infinite` }} />
+      <div style={{ width: 30, height: 30, borderRadius: 8, background: 'rgba(var(--overlay-rgb),0.06)', animation: `arch-shimmer 1.4s ease-in-out ${i * 0.1}s infinite` }} />
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 5 }}>
-        <div style={{ width: '55%', height: 10, borderRadius: 4, background: 'rgba(255,255,255,0.06)', animation: `arch-shimmer 1.4s ease-in-out ${i * 0.1}s infinite` }} />
-        <div style={{ width: '80%', height: 8, borderRadius: 4, background: 'rgba(255,255,255,0.04)', animation: `arch-shimmer 1.4s ease-in-out ${i * 0.1 + 0.15}s infinite` }} />
+        <div style={{ width: '55%', height: 10, borderRadius: 4, background: 'rgba(var(--overlay-rgb),0.06)', animation: `arch-shimmer 1.4s ease-in-out ${i * 0.1}s infinite` }} />
+        <div style={{ width: '80%', height: 8, borderRadius: 4, background: 'rgba(var(--overlay-rgb),0.04)', animation: `arch-shimmer 1.4s ease-in-out ${i * 0.1 + 0.15}s infinite` }} />
       </div>
-      <div style={{ width: 36, height: 10, borderRadius: 4, background: 'rgba(255,255,255,0.06)', animation: `arch-shimmer 1.4s ease-in-out ${i * 0.1}s infinite` }} />
+      <div style={{ width: 36, height: 10, borderRadius: 4, background: 'rgba(var(--overlay-rgb),0.06)', animation: `arch-shimmer 1.4s ease-in-out ${i * 0.1}s infinite` }} />
     </div>
   );
 }
@@ -250,34 +277,34 @@ Rules:
 
 
         .arch-pipeline-card {
-          background: rgba(255,255,255,0.03);
-          border: 1px solid rgba(255,255,255,0.07);
+          background: rgba(var(--overlay-rgb),0.03);
+          border: 1px solid rgba(var(--overlay-rgb),0.07);
           border-radius: 14px; padding: 24px 22px;
           position: relative; overflow: hidden;
           transition: border-color 0.25s, background 0.25s;
           display: flex; flex-direction: column; gap: 14px;
         }
-        .arch-pipeline-card:hover { border-color: rgba(255,255,255,0.13); background: rgba(255,255,255,0.05); }
+        .arch-pipeline-card:hover { border-color: rgba(var(--overlay-rgb),0.13); background: rgba(var(--overlay-rgb),0.05); }
         .arch-pipeline-card.highlight { background: ${GOLD2}; border-color: rgba(201,168,76,0.3); }
         .arch-pipeline-card.highlight:hover { border-color: rgba(201,168,76,0.5); }
 
         .arch-integrity-card {
-          background: rgba(255,255,255,0.035);
-          border: 1px solid rgba(255,255,255,0.07);
+          background: rgba(var(--overlay-rgb),0.035);
+          border: 1px solid rgba(var(--overlay-rgb),0.07);
           border-radius: 14px; padding: 24px;
           transition: border-color 0.2s;
         }
-        .arch-integrity-card:hover { border-color: rgba(255,255,255,0.13); }
+        .arch-integrity-card:hover { border-color: rgba(var(--overlay-rgb),0.13); }
 
         .arch-source-row {
           display: flex; align-items: center; gap: 12px;
           padding: 11px 14px; border-radius: 10px;
-          background: rgba(255,255,255,0.025);
-          border: 1px solid rgba(255,255,255,0.06);
+          background: rgba(var(--overlay-rgb),0.025);
+          border: 1px solid rgba(var(--overlay-rgb),0.06);
           transition: border-color 0.2s, background 0.2s;
           position: relative;
         }
-        .arch-source-row:hover { background: rgba(255,255,255,0.045); border-color: rgba(255,255,255,0.11); }
+        .arch-source-row:hover { background: rgba(var(--overlay-rgb),0.045); border-color: rgba(var(--overlay-rgb),0.11); }
 
         .arch-refresh-btn {
           background: none; border: none; cursor: pointer; padding: 4px;
@@ -340,7 +367,7 @@ Rules:
               <motion.div key={i} className={`arch-pipeline-card ${step.id === '05' ? 'highlight' : ''}`}
                 initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.07, duration: 0.35 }}>
-                <span style={{ position: 'absolute', top: 14, right: 16, fontFamily: "'DM Serif Display',Georgia,serif", fontSize: 52, fontWeight: 400, lineHeight: 1, color: step.id === '05' ? 'rgba(201,168,76,0.12)' : 'rgba(255,255,255,0.04)', userSelect: 'none', pointerEvents: 'none' }}>{step.id}</span>
+                <span style={{ position: 'absolute', top: 14, right: 16, fontFamily: "'DM Serif Display',Georgia,serif", fontSize: 52, fontWeight: 400, lineHeight: 1, color: step.id === '05' ? 'rgba(201,168,76,0.12)' : 'rgba(var(--overlay-rgb),0.04)', userSelect: 'none', pointerEvents: 'none' }}>{step.id}</span>
                 <div style={{ width: 32, height: 32, borderRadius: 8, flexShrink: 0, background: step.id === '05' ? 'rgba(201,168,76,0.15)' : SURF, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   <step.icon size={15} color={step.id === '05' ? GOLD : DIM} />
                 </div>
@@ -353,6 +380,62 @@ Rules:
                     <ArrowRight size={14} />
                   </div>
                 )}
+              </motion.div>
+            ))}
+          </div>
+        </section>
+
+        {/* ── Project Evolution Roadmap ── */}
+        <section style={{ marginBottom: 52 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 24 }}>
+            <h2 style={{ fontFamily: "'DM Serif Display', Georgia, serif", fontSize: 24, fontWeight: 400, color: TEXT, whiteSpace: 'nowrap' }}>System Evolution Roadmap</h2>
+            <div style={{ flex: 1, height: 1, background: LINE }} />
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
+            {ROADMAP.map((item, i) => (
+              <motion.div
+                key={i}
+                initial={{ opacity: 0, y: 14 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: i * 0.1, duration: 0.4 }}
+                style={{
+                  background: 'rgba(var(--overlay-rgb), 0.02)',
+                  border: `1px solid ${i === 1 ? GOLD + '40' : LINE}`,
+                  borderRadius: 20,
+                  padding: 24,
+                  position: 'relative',
+                  overflow: 'hidden'
+                }}
+              >
+                {i === 1 && <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 2, background: GOLD }} />}
+                
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
+                  <div>
+                    <span style={{ 
+                      fontFamily: "'DM Mono', monospace", fontSize: 10, fontWeight: 700, 
+                      color: item.color, background: `${item.color}15`, 
+                      padding: '3px 10px', borderRadius: 6, display: 'inline-block',
+                      marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.05em'
+                    }}>
+                      {item.version}
+                    </span>
+                    <h3 style={{ fontSize: 17, fontWeight: 600, color: TEXT }}>{item.title}</h3>
+                  </div>
+                  <div style={{ textAlign: 'right' }}>
+                    <div style={{ fontSize: 10, color: DIM, fontFamily: "'DM Mono', monospace" }}>{item.date}</div>
+                    <div style={{ fontSize: 9, color: item.color, fontWeight: 700, textTransform: 'uppercase', marginTop: 4 }}>• {item.status}</div>
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  {item.features.map((f, fi) => (
+                    <div key={fi} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <div style={{ width: 4, height: 4, borderRadius: '50%', background: item.color }} />
+                      <span style={{ fontSize: 12, color: MUTED }}>{f}</span>
+                    </div>
+                  ))}
+                </div>
               </motion.div>
             ))}
           </div>
@@ -379,7 +462,7 @@ Rules:
                 whileHover={{ borderColor: `${mode.color}40` }}
                 style={{
                   background: SURF,
-                  border: `1px solid rgba(255,255,255,0.07)`,
+                  border: `1px solid rgba(var(--overlay-rgb),0.07)`,
                   borderRadius: 14,
                   padding: '22px 20px',
                   display: 'flex',
@@ -417,7 +500,7 @@ Rules:
                     <span style={{ fontFamily: "'DM Mono',monospace", fontSize: 9, color: DIM, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Forensic Depth</span>
                     <span style={{ fontFamily: "'DM Mono',monospace", fontSize: 9, color: mode.color }}>{mode.depth}%</span>
                   </div>
-                  <div style={{ height: 3, borderRadius: 2, background: 'rgba(255,255,255,0.07)', overflow: 'hidden' }}>
+                  <div style={{ height: 3, borderRadius: 2, background: 'rgba(var(--overlay-rgb),0.07)', overflow: 'hidden' }}>
                     <motion.div
                       initial={{ width: 0 }}
                       animate={{ width: `${mode.depth}%` }}
@@ -444,6 +527,7 @@ Rules:
             ))}
           </div>
         </section>
+
 
         {/* ── System Integrity + Live Sources ── */}
         <div className="arch-bottom-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 280px', gap: 24 }}>

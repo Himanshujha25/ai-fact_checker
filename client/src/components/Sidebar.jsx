@@ -9,7 +9,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 const GOLD = 'var(--gold)';
 const GOLDD = 'rgba(201,168,76,0.15)';
 const LINE = 'var(--line)';
-const SURF  = 'rgba(255,255,255,0.03)';
+const SURF  = 'rgba(var(--overlay-rgb),0.03)';
 const TEXT = 'var(--text-main)';
 const MUTED = 'var(--text-muted)';
 const DIM = 'var(--text-dim)';
@@ -25,13 +25,13 @@ const FILTERS = [
   { icon: CheckCircle2,  label: 'Verified',    dot: '#4ade80'               },
   { icon: XCircle,       label: 'Refuted',     dot: '#f87171'               },
   { icon: HelpCircle,    label: 'Inconclusive',dot: '#fbbf24'               },
-  { icon: RefreshCw,     label: 'Processing',  dot: GOLD                    },
-  { icon: AlertTriangle, label: 'Flagged',     dot: '#fb923c'               },
 ];
 
 export default function Sidebar({ activeFilter, onFilterChange, onExport, onShare, ...props }) {
   const navigate = useNavigate();
   const location = useLocation();
+  const isHindi = document.body.classList.contains('hi-mode');
+  const hasToken = localStorage.getItem('token');
 
   const handleNewAnalysis = () => {
     navigate('/verify');
@@ -137,7 +137,7 @@ export default function Sidebar({ activeFilter, onFilterChange, onExport, onShar
       {/* ── Navigation ── */}
       <div style={{ marginBottom: 32 }}>
         <p style={{ fontFamily:"'DM Mono',monospace", fontSize:9, fontWeight:500, color:DIM, textTransform:'uppercase', letterSpacing:'0.12em', paddingLeft:14, marginBottom:12 }}>
-          System Navigation
+          {isHindi ? 'सिस्टम नेविगेशन' : 'System Navigation'}
         </p>
         <nav>
           {NAV_ITEMS.map((item, i) => {
@@ -145,7 +145,11 @@ export default function Sidebar({ activeFilter, onFilterChange, onExport, onShar
             return (
               <button key={i} className={`nav-btn ${active?'active':''}`} onClick={() => navigate(item.path)}>
                 <item.icon size={16} strokeWidth={active ? 2.2 : 1.8}/>
-                {item.label}
+                {isHindi ? (
+                  item.label === 'Workbench' ? 'कार्यक्षेत्र' :
+                  item.label === 'History' ? 'इतिहास' :
+                  item.label === 'Insights' ? 'इनसाइट्स' : item.label
+                ) : item.label}
               </button>
             );
           })}
@@ -156,15 +160,22 @@ export default function Sidebar({ activeFilter, onFilterChange, onExport, onShar
       {(location.pathname.includes('/history') || location.pathname.includes('/explorer')) && (
         <div style={{ flex:1 }}>
           <p style={{ fontFamily:"'DM Mono',monospace", fontSize:9, fontWeight:500, color:DIM, textTransform:'uppercase', letterSpacing:'0.12em', paddingLeft:14, marginBottom:12 }}>
-            Audit Filters
+            {isHindi ? 'ऑडिट फिल्टर्स' : 'Audit Filters'}
           </p>
           <div style={{ display:'flex', flexDirection:'column', gap:2 }}>
             {FILTERS.map((item, i) => {
               const active = activeFilter === item.label;
               return (
                 <button key={i} className={`filt-btn ${active?'active':''}`} onClick={() => onFilterChange && onFilterChange(item.label)}>
-                  <div style={{ width:6, height:6, borderRadius:'50%', background:active?item.dot:'rgba(255,255,255,0.1)', transition:'0.2s' }}/>
-                  {item.label}
+                  <div style={{ width:6, height:6, borderRadius:'50%', background:active?item.dot:'rgba(var(--overlay-rgb),0.1)', transition:'0.2s' }}/>
+                  {isHindi ? (
+                    item.label === 'All' ? 'सभी' :
+                    item.label === 'Verified' ? 'सत्यापित' :
+                    item.label === 'Refuted' ? 'खंडित' :
+                    item.label === 'Inconclusive' ? 'मिश्रित' :
+                    item.label === 'Processing' ? 'प्रगति पर' :
+                    item.label === 'Flagged' ? 'चिह्नित' : item.label
+                  ) : item.label}
                 </button>
               );
             })}
@@ -178,15 +189,18 @@ export default function Sidebar({ activeFilter, onFilterChange, onExport, onShar
       <div style={{ borderTop:`1px solid ${LINE}`, paddingTop:20 }}>
 
         <button className="action-btn" onClick={() => navigate('/architecture')}>
-          <Info size={12} style={{ opacity:0.5 }}/> System Protocols
+          <Info size={12} style={{ opacity:0.5 }}/> {isHindi ? 'सिस्टम प्रोटोकॉल' : 'System Protocols'}
         </button>
 
-        <div className="sidebar-divider" style={{ opacity:0.5 }}/>
-
-        <button className="nav-btn" style={{ color:'#f87171' }}
-          onClick={() => { if (window.confirm('Confirm secure termination of current session?')) { window.location.href = '/auth'; } }}>
-          <XCircle size={16}/> Secure Logout
-        </button>
+        {hasToken && (
+          <>
+            <div className="sidebar-divider" style={{ opacity:0.5 }}/>
+            <button className="nav-btn" style={{ color:'#f87171' }}
+              onClick={() => { if (window.confirm(isHindi ? 'सत्र समाप्त करें?' : 'Confirm secure termination of current session?')) { localStorage.removeItem('token'); window.location.href = '/auth'; } }}>
+              <XCircle size={16}/> {isHindi ? 'सुरक्षित लॉगआउट' : 'Secure Logout'}
+            </button>
+          </>
+        )}
       </div>
     </aside>
   );

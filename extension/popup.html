@@ -112,6 +112,24 @@
       line-height: 1.5;
       text-align: center;
     }
+    .reputation-card {
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.07);
+      border-radius: 10px;
+      padding: 12px;
+      margin-top: 16px;
+      display: none;
+    }
+    .badge {
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+    .badge-verified { background: #059669; color: #fff; }
+    .badge-caution { background: #d97706; color: #fff; }
+    .badge-hazard { background: #dc2626; color: #fff; }
   </style>
 </head>
 <body>
@@ -123,7 +141,15 @@
   </div>
 
   <div class="main">
-    <div class="title">
+    <div id="reputationCard" class="reputation-card">
+      <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 8px;">
+        <div style="font-size: 12px; font-weight: 600; color: #C9A84C;" id="domainLabel">Current Site</div>
+        <span id="reputationBadge" class="badge">Checking...</span>
+      </div>
+      <div id="reputationReason" style="font-size: 11px; color: rgba(232,228,220,0.6);">Scanning domain for forensic signals...</div>
+    </div>
+
+    <div class="title" style="margin-top: 16px;">
       <div style="width: 6px; height: 6px; border-radius: 50%; background: #4ade80; box-shadow: 0 0 8px #4ade80;"></div>
       Direct Adjudication
     </div>
@@ -148,7 +174,7 @@
     </button>
 
     <div class="status">
-      You can also select any text on a webpage and click the <b>Truecast</b> icon to audit it instantly.
+      You can also select any text on a webpage and right-click to <b>Audit with Truecast</b>.
     </div>
   </div>
   <script src="popup.js"></script>
